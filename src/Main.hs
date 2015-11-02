@@ -20,7 +20,7 @@ main :: IO ()
 main =
   do
     (dlp, viewerParameters, _) <- setup "Parallel Planes"
-    location <- newIORef (Vector3 0 0 (-1) :: Vector3 GLfloat)
+    location <- newIORef (Vector3 0 0 (-1.5) :: Vector3 GLfloat)
     tracking <- newIORef $ def {trackPosition = Vector3 0 0 1.1}
     spaceNavigatorCallback $=! Just (spaceNavigator tracking)
     keyboardMouseCallback $=! Just (keyboardPosition (Vector3 (-0.05) (-0.05) (-0.05)) location)
