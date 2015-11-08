@@ -17,15 +17,20 @@ cabal-version:       >=1.10
 
 executable infovis-parallel
   main-is:             Main.hs
-  other-modules:       Graphics.Rendering.Handa.Viewer
+  other-modules:       Graphics.Rendering.Handa.Shape
+                       Graphics.Rendering.Handa.Viewer
                        Graphics.Rendering.Handa.Util
                        Graphics.UI.Handa.Keyboard
                        Graphics.UI.Handa.Setup
                        Graphics.UI.Handa.Util
+                       InfoVis.Parallel.Planes.Configuration
                        InfoVis.Parallel.Planes.Grid
   build-depends:       base >=4.6 && <4.7
+               ,       array
+               ,       containers
                ,       data-default
                ,       GLUT
+               ,       handa-data
                ,       opengl-dlp-stereo
                ,       opengl-spacenavigator
                ,       OpenGL
