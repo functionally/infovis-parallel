@@ -12,7 +12,7 @@ module InfoVis.Parallel.Planes.Grid (
 ) where
 
 
-import Control.Applicative ((<$>))
+import Control.Applicative ((<$>), (<|>))
 import Control.Monad (guard, zipWithM)
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
@@ -22,7 +22,7 @@ import Graphics.Rendering.Handa.Util (coneFaces)
 import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, scale)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
-import qualified Data.Set as Set (delete, empty, fromList, insert, member, notMember, singleton, union, unions)
+import qualified Data.Set as Set (delete, empty, fromList, insert, member, notMember, null, singleton, union, unions)
 
 
 data Grids =
@@ -93,15 +93,24 @@ updateGrids :: GridsAction -> Vector3 GLfloat -> Grids -> IO Grids
 updateGrids gridsAction location grids@Grids{..} =
   let
     cellses  = map snd3 layers
-    grids' = 
-      do
-        cell <- findSelection configuration location
-        cellses' <- updateCells cellses gridsAction cell
-        return $ remakeGrids cellses' grids
   in
-    fromMaybe (return grids) grids'
+    fromMaybe (return grids)
+      $ flip remakeGrids grids
+        <$> (
+              (updateCells cellses gridsAction =<< findSelection configuration location)
+              <|>
+              clearHighlights cellses
+            )
 
 
+clearHighlights :: [Cells] -> Maybe [Cells]
+clearHighlights [background, selected, highlighted] =
+  do
+    guard $ not $ Set.null highlighted
+    return [background `Set.union` highlighted, selected, Set.empty]
+clearHighlights _ = undefined
+
+    
 updateCells :: [Cells] -> GridsAction -> Cell -> Maybe [Cells]
 updateCells [background, selected, _] SelectGrids cell =
   do

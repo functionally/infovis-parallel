@@ -42,7 +42,7 @@ main =
 spaceNavigator :: IORef Track -> SpaceNavigatorCallback
 spaceNavigator tracking =
   quantize defaultQuantization
-    $ \input -> track defaultTracking tracking input >> get tracking >>= print
+    $ track defaultTracking tracking
 
 
 updateIORef :: (a -> IO a) -> IORef a -> IO ()
