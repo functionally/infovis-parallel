@@ -37,7 +37,7 @@ instance Default Configuration where
     , planeFaceColor      = Color4 0.2 0.2 0.2 0.2
     , planeSelectColor    = Color4 0.6 0.6 0.0 0.6
     , planeHighlightColor = Color4 0.6 0.0 0.0 0.8
-    , lineNormalColor     = Color4 0.8 0.8 0.8 0.8
+    , lineNormalColor     = Color4 0.6 0.6 0.6 0.6
     , lineSelectedColor   = Color4 1.0 1.0 0.0 1.0
     , lineHighlightColor  = Color4 1.0 0.0 0.0 1.0
     , selectorColor       = Color4 0.5 0.3 0.2 1.0

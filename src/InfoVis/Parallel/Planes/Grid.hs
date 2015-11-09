@@ -24,7 +24,7 @@ import Graphics.Rendering.Handa.Util (coneFaces)
 import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, scale)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
-import qualified Data.Set as Set (delete, empty, fromList, insert, member, notMember, null, singleton, toList, union, unions)
+import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, member, notMember, null, partition, singleton, toList, union, unions)
 
 
 data Grids =
@@ -71,12 +71,15 @@ allCells Configuration{..} =
 
 addPoints :: Grids -> [[Double]] -> IO Grids
 addPoints grids@Grids{..} rawPoints =
-  let
-    remakeProjection :: Points -> Projection -> IO Projection
-    remakeProjection points' (planesType, _, shape) = (planesType, points', ) <$> remakeLines configuration shape points'
-  in do
-    projections' <- zipWithM remakeProjection [Set.fromList rawPoints, Set.empty, Set.empty] projections
+  do
+    projections' <- zipWithM (remakeProjection configuration) [Set.fromList rawPoints, Set.empty, Set.empty] projections
     return $ grids {projections = projections'}
+
+
+remakeProjection :: Configuration -> Points -> Projection -> IO Projection
+remakeProjection configuration points' (planesType, _, shape) =
+  (planesType, points', )
+     <$> remakeLines configuration shape points'
 
 
 makeGrids :: Configuration -> IO Grids
@@ -96,15 +99,36 @@ makeGrids configuration =
 
 remakeGrids :: [Cells] -> Grids -> IO Grids
 remakeGrids cellses grids@Grids{..} =
+  do
+    layers' <- zipWithM (remakeLayer configuration) cellses layers
+    let
+      pointses = categorizePoints configuration (tail $ map snd3 layers) (Set.unions $ map snd3 projections)
+    projections' <- zipWithM (remakeProjection configuration) pointses projections
+    return $ grids {layers = layers', projections = projections'}
+
+
+categorizePoints :: Configuration -> [Cells] -> Points -> [Points]
+categorizePoints Configuration{..} [_, highlighted] points =
   let
-    remakeLayer :: Cells -> Layer -> IO Layer
-    remakeLayer cells' layer@(planesType, cells, shape) =
-      if cells' == cells
-        then return layer
-        else (planesType, cells', ) <$> remakePlanes configuration shape cells'
-  in do
-    layers' <- zipWithM remakeLayer cellses layers
-    return $ grids {layers = layers'}
+    quantize :: Double -> Int
+    quantize = ceiling . (fromIntegral divisions *)
+    quantize' :: Int -> [Double] -> [Cell]
+    quantize' n (x : y : xys) =
+      (n, quantize x, quantize y) : quantize' (n + 1) xys
+    quantize' _ _ = undefined
+    checkHighlight :: [Double] -> Bool
+    checkHighlight = Set.null . Set.intersection highlighted . Set.fromList . take planes . quantize' 1
+    (normalPoints, highlightedPoints) = Set.partition checkHighlight points
+  in
+    [normalPoints, Set.empty, highlightedPoints]
+categorizePoints _ _ _ = undefined
+
+
+remakeLayer :: Configuration -> Cells -> Layer -> IO Layer
+remakeLayer configuration cells' layer@(planesType, cells, shape) =
+  if cells' == cells
+    then return layer
+    else (planesType, cells', ) <$> remakePlanes configuration shape cells'
 
 
 data GridsAction = SelectGrids | DeselectGrids | HighlightGrids | ClearGrids
