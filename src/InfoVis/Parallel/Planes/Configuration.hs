@@ -17,6 +17,9 @@ data Configuration =
   , planeFaceColor      :: Color4 GLfloat
   , planeSelectColor    :: Color4 GLfloat
   , planeHighlightColor :: Color4 GLfloat
+  , lineNormalColor     :: Color4 GLfloat
+  , lineSelectedColor   :: Color4 GLfloat
+  , lineHighlightColor  :: Color4 GLfloat
   , selectorColor       :: Color4 GLfloat
   , selectorRadius      :: GLfloat
   , selectorHeight      :: GLfloat
@@ -34,6 +37,9 @@ instance Default Configuration where
     , planeFaceColor      = Color4 0.2 0.2 0.2 0.2
     , planeSelectColor    = Color4 0.6 0.6 0.0 0.6
     , planeHighlightColor = Color4 0.6 0.0 0.0 0.8
+    , lineNormalColor     = Color4 0.8 0.8 0.8 0.8
+    , lineSelectedColor   = Color4 1.0 1.0 0.0 1.0
+    , lineHighlightColor  = Color4 1.0 0.0 0.0 1.0
     , selectorColor       = Color4 0.5 0.3 0.2 1.0
     , selectorRadius      = 0.03
     , selectorHeight      = 0.12

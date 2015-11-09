@@ -17,7 +17,7 @@ import Graphics.UI.Handa.Setup (setup)
 import Graphics.UI.Handa.Util (dlpViewerDisplay)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
-import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), drawGrids, drawSelector, makeGrids, updateGrids)
+import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
 
 
 main :: IO ()
@@ -31,7 +31,18 @@ main =
     let
       configuration = def {aspect = displayAspectRatio viewerParameters}
     grids' <- makeGrids configuration
-    grids <- newIORef grids'
+    grids'' <- 
+      addPoints grids'
+        [
+          [
+            (1 + sin (n * theta)) / 2
+          |
+            theta <- [1..10]
+          ]
+        |
+          n <- [1..100]
+        ]
+    grids <- newIORef grids''
     displayCallback $=!
       dlpViewerDisplay (display configuration grids location tracking)
       dlp

@@ -9,11 +9,13 @@ module InfoVis.Parallel.Planes.Grid (
 , drawGrids
 , GridsAction(..)
 , updateGrids
+, addPoints
 ) where
 
 
 import Control.Applicative ((<$>), (<|>))
 import Control.Monad (guard, zipWithM)
+import Data.List.Util (domain)
 import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import Data.Tuple.Util (snd3, trd3)
@@ -22,7 +24,7 @@ import Graphics.Rendering.Handa.Util (coneFaces)
 import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, scale)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
-import qualified Data.Set as Set (delete, empty, fromList, insert, member, notMember, null, singleton, union, unions)
+import qualified Data.Set as Set (delete, empty, fromList, insert, member, notMember, null, singleton, toList, union, unions)
 
 
 data Grids =
@@ -32,7 +34,12 @@ data Grids =
   , selector      :: Shape
   , grid          :: Shape
   , layers        :: [Layer]
+  , projections   :: [Projection]
   }
+
+
+data PlanesType = BackgroundPlanes | SelectedPlanes | HighlightedPlanes
+  deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
 
 type Layer = (PlanesType, Cells, Shape)
@@ -42,6 +49,12 @@ type Cell = (Int, Int, Int)
 
 
 type Cells = Set Cell
+
+
+type Projection = (PlanesType, Points, Shape)
+
+
+type Points = Set [Double]
 
 
 allCells :: Configuration -> Cells
@@ -56,8 +69,14 @@ allCells Configuration{..} =
   ]
 
 
-data PlanesType = BackgroundPlanes | SelectedPlanes | HighlightedPlanes
-  deriving (Enum, Eq, Ord, Read, Show)
+addPoints :: Grids -> [[Double]] -> IO Grids
+addPoints grids@Grids{..} rawPoints =
+  let
+    remakeProjection :: Points -> Projection -> IO Projection
+    remakeProjection points' (planesType, _, shape) = (planesType, points', ) <$> remakeLines configuration shape points'
+  in do
+    projections' <- zipWithM remakeProjection [Set.fromList rawPoints, Set.empty, Set.empty] projections
+    return $ grids {projections = projections'}
 
 
 makeGrids :: Configuration -> IO Grids
@@ -68,12 +87,15 @@ makeGrids configuration =
     let
       makeLayer :: PlanesType -> Cells -> IO Layer
       makeLayer planeType cells = (planeType, cells, ) <$> makePlanes configuration planeType cells
-    layers <- zipWithM makeLayer [BackgroundPlanes, SelectedPlanes, HighlightedPlanes] [allCells configuration, Set.empty, Set.empty]
+      makeProjection :: PlanesType -> IO Projection
+      makeProjection planeType = (planeType, Set.empty, ) <$> makeLines configuration planeType Set.empty
+    layers <- zipWithM makeLayer domain [allCells configuration, Set.empty, Set.empty]
+    projections <- mapM makeProjection domain
     return Grids{..}
 
 
 remakeGrids :: [Cells] -> Grids -> IO Grids
-remakeGrids planeCells grids@Grids{..} =
+remakeGrids cellses grids@Grids{..} =
   let
     remakeLayer :: Cells -> Layer -> IO Layer
     remakeLayer cells' layer@(planesType, cells, shape) =
@@ -81,12 +103,12 @@ remakeGrids planeCells grids@Grids{..} =
         then return layer
         else (planesType, cells', ) <$> remakePlanes configuration shape cells'
   in do
-    layers' <- zipWithM remakeLayer planeCells layers
+    layers' <- zipWithM remakeLayer cellses layers
     return $ grids {layers = layers'}
 
 
 data GridsAction = SelectGrids | DeselectGrids | HighlightGrids | ClearGrids
-  deriving (Enum, Eq, Ord, Read, Show)
+  deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
   
 updateGrids :: GridsAction -> Vector3 GLfloat -> Grids -> IO Grids
@@ -154,6 +176,7 @@ drawGrids Grids{..} =
     scale 1 (1 / aspect configuration) 1
     drawShape grid
     mapM_ (drawShape . trd3) layers
+    mapM_ (drawShape . trd3) projections
 
 
 makeSelector :: Configuration -> IO Shape
@@ -245,3 +268,38 @@ planesGeometry configuration@Configuration{..} visibles =
           z' =  fromIntegral k      * size    - 1
     , (i, j, k) `Set.member` visibles
     ]
+
+
+makeLines :: Configuration -> PlanesType -> Points -> IO Shape
+makeLines configuration planesType points =
+  makeShape 3 Float Lines (concatMap (linesGeometry configuration) $ Set.toList points)
+    $ colorLines configuration planesType
+
+
+remakeLines :: Configuration -> Shape -> Points -> IO Shape
+remakeLines configuration shape points =
+  remakeShape shape
+    $ concatMap (linesGeometry configuration)
+    $ Set.toList points
+   
+
+colorLines :: Configuration -> PlanesType -> IO ()
+colorLines Configuration{..} planesType =
+  color
+    $ case planesType of
+        BackgroundPlanes  -> lineNormalColor
+        SelectedPlanes    -> lineSelectedColor
+        HighlightedPlanes -> lineHighlightColor
+
+
+linesGeometry :: Configuration -> [Double] -> [Vertex3 GLfloat]
+linesGeometry configuration@Configuration{..} points =
+  let
+    (spacing, _) = spacingAndSize configuration
+    pointGeometry (u : v : ws) n =
+      p : p : pointGeometry ws (n + spacing)
+        where 
+          p = Vertex3 n (realToFrac $ 2 * u - 1) (realToFrac $ 2 * v - 1)
+    pointGeometry _ _ = undefined
+  in
+    init $ tail $ take (2 * planes) $ pointGeometry points (-1) 
