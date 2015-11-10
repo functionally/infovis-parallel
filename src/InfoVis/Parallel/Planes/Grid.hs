@@ -151,6 +151,8 @@ updateGrids gridsAction location grids@Grids{..} =
     fromMaybe (return grids)
       $ flip remakeGrids grids
         <$> (
+              (guard (gridsAction == ClearGrids) >> updateCells cellses gridsAction undefined)
+              <|>
               (selection >>= updateCells cellses gridsAction)
               <|>
               (noSelection >> clearHighlights cellses)
