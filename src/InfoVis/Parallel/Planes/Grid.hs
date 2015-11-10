@@ -146,7 +146,6 @@ updateGrids gridsAction location grids@Grids{..} =
   let
     cellses  = map snd3 layers
     selection = findSelection configuration location
-    noSelection = guard $ isNothing selection
   in
     fromMaybe (return grids)
       $ flip remakeGrids grids
@@ -155,7 +154,7 @@ updateGrids gridsAction location grids@Grids{..} =
               <|>
               (selection >>= updateCells cellses gridsAction)
               <|>
-              (noSelection >> clearHighlights cellses)
+              (guard (isNothing selection) >> clearHighlights cellses)
             )
 
 
