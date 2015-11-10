@@ -198,9 +198,9 @@ drawGrids :: Grids -> IO ()
 drawGrids Grids{..} =
   preservingMatrix $ do
     scale 1 (1 / aspect configuration) 1
+    mapM_ (drawShape . trd3) projections
     drawShape grid
     mapM_ (drawShape . trd3) layers
-    mapM_ (drawShape . trd3) projections
 
 
 makeSelector :: Configuration -> IO Shape
