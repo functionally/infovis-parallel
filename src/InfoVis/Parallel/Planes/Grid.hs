@@ -139,13 +139,15 @@ updateGrids :: GridsAction -> Vector3 GLfloat -> Grids -> IO Grids
 updateGrids gridsAction location grids@Grids{..} =
   let
     cellses  = map snd3 layers
+    selection = findSelection configuration location
+    noSelection = maybe (Just ()) (const Nothing) selection
   in
     fromMaybe (return grids)
       $ flip remakeGrids grids
         <$> (
-              (updateCells cellses gridsAction =<< findSelection configuration location)
+              (selection >>= updateCells cellses gridsAction)
               <|>
-              clearHighlights cellses
+              (noSelection >> clearHighlights cellses)
             )
 
 
