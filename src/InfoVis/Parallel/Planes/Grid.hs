@@ -16,7 +16,7 @@ module InfoVis.Parallel.Planes.Grid (
 import Control.Applicative ((<$>), (<|>))
 import Control.Monad (guard, zipWithM)
 import Data.List.Util (domain)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
 import Data.Tuple.Util (snd3, trd3)
 import Graphics.Rendering.Handa.Shape (Shape, drawShape, makeShape, remakeShape)
@@ -140,7 +140,7 @@ updateGrids gridsAction location grids@Grids{..} =
   let
     cellses  = map snd3 layers
     selection = findSelection configuration location
-    noSelection = maybe (Just ()) (const Nothing) selection
+    noSelection = guard $ isNothing selection
   in
     fromMaybe (return grids)
       $ flip remakeGrids grids
