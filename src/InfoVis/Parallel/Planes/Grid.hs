@@ -18,13 +18,13 @@ import Control.Monad (guard, zipWithM)
 import Data.List.Util (domain)
 import Data.Maybe (fromMaybe, isNothing)
 import Data.Set (Set)
-import Data.Tuple.Util (snd3, trd3)
+import Data.Tuple.Util (fst3, snd3, trd3)
 import Graphics.Rendering.Handa.Shape (Shape, drawShape, makeShape, remakeShape)
 import Graphics.Rendering.Handa.Util (coneFaces)
 import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, scale)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
-import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, member, notMember, null, partition, singleton, toList, union, unions)
+import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, map, member, notMember, null, partition, singleton, toList, union, unions)
 
 
 data Grids =
@@ -73,7 +73,8 @@ addPoints :: Grids -> [[Double]] -> IO Grids
 addPoints grids@Grids{..} rawPoints =
   do
     projections' <- zipWithM (remakeProjection configuration) [Set.fromList rawPoints, Set.empty, Set.empty] projections
-    return $ grids {projections = projections'}
+    remakeGrids (map snd3 layers)
+      $ grids {projections = projections'}
 
 
 remakeProjection :: Configuration -> Points -> Projection -> IO Projection
@@ -102,13 +103,13 @@ remakeGrids cellses grids@Grids{..} =
   do
     layers' <- zipWithM (remakeLayer configuration) cellses layers
     let
-      pointses = categorizePoints configuration (tail $ map snd3 layers) (Set.unions $ map snd3 projections)
+      pointses = categorizePoints configuration (tail $ map snd3 layers') (Set.unions $ map snd3 projections)
     projections' <- zipWithM (remakeProjection configuration) pointses projections
     return $ grids {layers = layers', projections = projections'}
 
 
 categorizePoints :: Configuration -> [Cells] -> Points -> [Points]
-categorizePoints Configuration{..} [_, highlighted] points =
+categorizePoints Configuration{..} [selected, highlighted] points =
   let
     quantize :: Double -> Int
     quantize = ceiling . (fromIntegral divisions *)
@@ -118,9 +119,14 @@ categorizePoints Configuration{..} [_, highlighted] points =
     quantize' _ _ = undefined
     checkHighlight :: [Double] -> Bool
     checkHighlight = Set.null . Set.intersection highlighted . Set.fromList . take planes . quantize' 1
-    (normalPoints, highlightedPoints) = Set.partition checkHighlight points
+    selectedPlanes :: Set Int
+    selectedPlanes = Set.map fst3 selected
+    checkSelect :: [Double] -> Bool
+    checkSelect = all (\cell -> fst3 cell `Set.notMember` selectedPlanes || cell `Set.member` selected) . take planes . quantize' 1
+    (candidatePoints, highlightedPoints) = Set.partition checkHighlight points
+    (selectedPoints, normalPoints) = Set.partition checkSelect candidatePoints
   in
-    [normalPoints, Set.empty, highlightedPoints]
+    [normalPoints, selectedPoints, highlightedPoints]
 categorizePoints _ _ _ = undefined
 
 
@@ -160,18 +166,18 @@ clearHighlights _ = undefined
 
     
 updateCells :: [Cells] -> GridsAction -> Cell -> Maybe [Cells]
-updateCells [background, selected, _] SelectGrids cell =
+updateCells [background, selected, highlighted] SelectGrids cell =
   do
     guard $ cell `Set.notMember` selected
-    return [cell `Set.delete` background, cell `Set.insert` selected, Set.empty]
-updateCells [background, selected, _] DeselectGrids cell =
+    return [cell `Set.delete` (background `Set.union` highlighted), cell `Set.insert` selected, Set.empty]
+updateCells [background, selected, highlighted] DeselectGrids cell =
   do
     guard $ cell `Set.member` selected
-    return [background, cell `Set.delete` selected, Set.singleton cell]
+    return [background `Set.union` highlighted, cell `Set.delete` selected, Set.singleton cell]
 updateCells [background, selected, highlighted] HighlightGrids cell =
   do
     guard $ cell `Set.member` background
-    return [(cell `Set.delete` background) `Set.union` highlighted, cell `Set.delete` selected, Set.singleton cell]
+    return [(cell `Set.delete` background) `Set.union` highlighted, selected, Set.singleton cell]
 updateCells cellses ClearGrids _ =
   Just [Set.unions cellses, Set.empty, Set.empty]
 updateCells _ _ _ = undefined
