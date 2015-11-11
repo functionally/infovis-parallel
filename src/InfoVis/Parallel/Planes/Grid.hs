@@ -21,7 +21,8 @@ import Data.Set (Set)
 import Data.Tuple.Util (fst3, snd3, trd3)
 import Graphics.Rendering.Handa.Shape (Shape, drawShape, makeShape, remakeShape)
 import Graphics.Rendering.Handa.Util (coneFaces)
-import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, scale)
+import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, rotate, scale, translate)
+import Graphics.UI.GLUT (StrokeFont(Roman), fontHeight, renderString)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
 import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, map, member, notMember, null, partition, singleton, toList, union, unions)
@@ -210,8 +211,41 @@ drawGrids Grids{..} =
     mapM_ (drawShape . trd3) projections
     drawShape grid
     mapM_ (drawShape . trd3) layers
+    drawAxisLabels configuration $ axisLabels configuration
 
 
+drawAxisLabels :: Configuration -> [String] -> IO ()
+drawAxisLabels configuration@Configuration{..} labels =
+  do
+    h <- fontHeight Roman
+    let
+      (spacing, _) = spacingAndSize configuration
+      s = 0.05 * 2
+      r = s / h
+    color labelColor
+    preservingMatrix $ do
+      translate (Vector3 (-1) (-1) 1 :: Vector3 GLfloat)
+      rotate 90 (Vector3 0 1 0 :: Vector3 GLfloat)
+      drawNextLabels s r spacing labels
+
+
+drawNextLabels :: GLfloat -> GLfloat -> GLfloat -> [String] -> IO ()
+drawNextLabels s r spacing (s1 : s2 : ss) =
+  do
+    preservingMatrix $ do
+      translate $ Vector3 0 (-1.2 * s) 0
+      scale r r r 
+      renderString Roman s1
+    preservingMatrix $ do
+      rotate 90 (Vector3 0 0 1 :: Vector3 GLfloat)
+      translate $ Vector3 0 (0.5 * s) 0
+      scale r r r
+      renderString Roman s2
+    translate $ Vector3 0 0 spacing
+    drawNextLabels s r spacing ss
+drawNextLabels _ _ _ _ = return ()
+
+  
 makeSelector :: Configuration -> IO Shape
 makeSelector Configuration{..} =
   let
