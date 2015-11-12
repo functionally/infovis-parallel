@@ -7,7 +7,12 @@ module Main (
 ) where
 
 
+import Control.Applicative ((<$>))
+import Control.Arrow ((&&&))
+import Control.Monad (replicateM)
 import Data.Default (Default, def)
+import Data.List (transpose)
+import Data.List.Split (splitOn)
 import Data.IORef (IORef, newIORef)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio))
 import Graphics.Rendering.OpenGL (ClearBuffer(..), GLfloat, Vector3(..), ($=!), clear, get, preservingMatrix, translate)
@@ -18,30 +23,39 @@ import Graphics.UI.Handa.Util (dlpViewerDisplay)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
-
+import System.Random (randomIO)
 
 main :: IO ()
 main =
   do
+    (columns : measurements) <- map (splitOn "\t") . lines <$> getContents   
     (dlp, viewerParameters, _) <- setup "Parallel Planes"
     location <- newIORef (Vector3 0 0 (-1.5) :: Vector3 GLfloat)
     tracking <- newIORef $ def {trackPosition = Vector3 0 0 1.1}
     spaceNavigatorCallback $=! Just (spaceNavigator tracking)
     keyboardMouseCallback $=! Just (keyboardPosition (Vector3 (-0.05) (-0.05) (-0.05)) location)
     let
-      configuration = def {aspect = displayAspectRatio viewerParameters}
+      n = 2 * (length columns `div` 2)
+      configuration =
+        def
+        {
+          planes = n `div` 2
+        , aspect = displayAspectRatio viewerParameters
+        , axisLabels = take n columns
+        }
+    normalized <-
+      sequence
+      [
+        do
+          jitter <- replicateM (length column) randomIO
+          return $ zipWith (\x r -> ((x - x0) / dx + 0.002 * (r - 0.5)) * 0.990 + 0.005) column jitter
+      |
+        column <- transpose $ map (map read) measurements
+      , let (x0, x1) = (minimum &&& maximum) column
+            dx = x1 - x0
+      ]
     grids' <- makeGrids configuration
-    grids'' <- 
-      addPoints grids'
-        [
-          [
-            (1 + sin (n * theta)) / 2
-          |
-            theta <- [1..10]
-          ]
-        |
-          n <- [1..100]
-        ]
+    grids'' <- addPoints grids' $ transpose normalized
     grids <- newIORef grids''
     displayCallback $=!
       dlpViewerDisplay (display configuration grids location tracking)

@@ -116,7 +116,7 @@ categorizePoints Configuration{..} [selected, highlighted] points =
     quantize = ceiling . (fromIntegral divisions *)
     quantize' :: Int -> [Double] -> [Cell]
     quantize' n (x : y : xys) =
-      (n, quantize x, quantize y) : quantize' (n + 1) xys
+      (n, quantize y, quantize (1 - x)) : quantize' (n + 1) xys
     quantize' _ _ = undefined
     checkHighlight :: [Double] -> Bool
     checkHighlight = Set.null . Set.intersection highlighted . Set.fromList . take planes . quantize' 1
@@ -208,7 +208,7 @@ drawGrids :: Grids -> IO ()
 drawGrids Grids{..} =
   preservingMatrix $ do
     scale 1 (1 / aspect configuration) 1
-    mapM_ (drawShape . trd3) projections
+    mapM_ (drawShape . trd3) $ reverse projections
     drawShape grid
     mapM_ (drawShape . trd3) layers
     drawAxisLabels configuration $ axisLabels configuration
@@ -366,7 +366,7 @@ linesGeometry configuration@Configuration{..} points =
     pointGeometry (u : v : ws) n =
       p : p : pointGeometry ws (n + spacing)
         where 
-          p = Vertex3 n (realToFrac $ 2 * u - 1) (realToFrac $ 2 * v - 1)
+          p = Vertex3 n (realToFrac $ 2 * v - 1) (realToFrac $ 1 - 2 * u)
     pointGeometry _ _ = undefined
   in
     init $ tail $ take (2 * planes) $ pointGeometry points (-1) 
