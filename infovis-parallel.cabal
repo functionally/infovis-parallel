@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                infovis-parallel
-version:             0.1.4.0
+version:             0.1.4.1
 -- synopsis:            
 -- description:         
 license:             MIT
@@ -16,6 +16,7 @@ build-type:          Simple
 cabal-version:       >=1.10
 data-dir: data
 data-files: test.tsv
+            ENB2012.md
             ENB2012.tsv
 
 executable infovis-parallel
