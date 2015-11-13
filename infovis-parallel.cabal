@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                infovis-parallel
-version:             0.1.4.2
+version:             0.1.4.3
 -- synopsis:            
 -- description:         
 license:             MIT
@@ -28,6 +28,7 @@ executable infovis-parallel
                        Graphics.UI.Handa.Setup
                        Graphics.UI.Handa.Util
                        InfoVis.Parallel.Planes.Configuration
+                       InfoVis.Parallel.Planes.Control
                        InfoVis.Parallel.Planes.Grid
   build-depends:       base >=4.6 && <4.7
                ,       array
