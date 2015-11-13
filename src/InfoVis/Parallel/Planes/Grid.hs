@@ -14,6 +14,7 @@ module InfoVis.Parallel.Planes.Grid (
 
 
 import Control.Applicative ((<$>), (<|>))
+import Control.Exception (IOException, catch)
 import Control.Monad (guard, zipWithM)
 import Data.List.Util (domain)
 import Data.Maybe (fromMaybe, isNothing)
@@ -22,7 +23,7 @@ import Data.Tuple.Util (fst3, snd3, trd3)
 import Graphics.Rendering.Handa.Shape (Shape, drawShape, makeShape, remakeShape)
 import Graphics.Rendering.Handa.Util (coneFaces)
 import Graphics.Rendering.OpenGL (DataType(Float), GLfloat, PrimitiveMode(..), Vector3(..), Vertex3(..), color, preservingMatrix, rotate, scale, translate)
-import Graphics.UI.GLUT (StrokeFont(Roman), fontHeight, renderString)
+import Graphics.UI.GLUT (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 
 import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, map, member, notMember, null, partition, singleton, toList, union, unions)
@@ -217,7 +218,9 @@ drawGrids Grids{..} =
 drawAxisLabels :: Configuration -> [String] -> IO ()
 drawAxisLabels configuration@Configuration{..} labels =
   do
-    h <- fontHeight Roman
+    h <-
+     catch (fontHeight Roman)
+       ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
     let
       (spacing, _) = spacingAndSize configuration
       s = 0.05 * 2
