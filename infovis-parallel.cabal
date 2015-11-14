@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                infovis-parallel
-version:             0.1.4.4
+version:             0.1.5.0
 -- synopsis:            
 -- description:         
 license:             MIT
@@ -26,18 +26,13 @@ library
                ,    data-default
                ,    GLUT
                ,    handa-data
+               ,    handa-opengl
                ,    opengl-dlp-stereo
                ,    opengl-spacenavigator
                ,    OpenGL
                ,    random
                ,    split
-  exposed-modules:  Graphics.Rendering.Handa.Shape
-                    Graphics.Rendering.Handa.Viewer
-                    Graphics.Rendering.Handa.Util
-                    Graphics.UI.Handa.Keyboard
-                    Graphics.UI.Handa.Setup
-                    Graphics.UI.Handa.Util
-                    InfoVis.Parallel.Planes.Configuration
+  exposed-modules:  InfoVis.Parallel.Planes.Configuration
                     InfoVis.Parallel.Planes.Control
                     InfoVis.Parallel.Planes.Grid
   hs-source-dirs:   src
@@ -54,6 +49,7 @@ executable infovis-parallel
                ,       data-default
                ,       GLUT
                ,       handa-data
+               ,       handa-opengl
                ,       opengl-dlp-stereo
                ,       opengl-spacenavigator
                ,       OpenGL

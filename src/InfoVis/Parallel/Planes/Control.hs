@@ -13,12 +13,12 @@ import Data.Default (Default, def)
 import Data.List (transpose)
 import Data.List.Split (splitOn)
 import Data.IORef (IORef, newIORef)
-import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio))
-import Graphics.Rendering.OpenGL (ClearBuffer(..), GLfloat, Vector3(..), ($=!), clear, get, preservingMatrix, translate)
-import Graphics.UI.GLUT (DisplayCallback, displayCallback, keyboardMouseCallback, mainLoop)
+import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
+import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio), dlpViewerDisplay)
+import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=!), get, preservingMatrix, translate)
+import Graphics.UI.GLUT (DisplayCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
 import Graphics.UI.Handa.Setup (setup)
-import Graphics.UI.Handa.Util (dlpViewerDisplay)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
@@ -31,10 +31,11 @@ main title content =
     (dlp, viewerParameters, _) <- setup title
     (configuration, grids) <- setupContent viewerParameters content
     (location, tracking) <- setupLocationTracking
-    displayCallback $=!
-      dlpViewerDisplay (display configuration grids location tracking)
-      dlp
-      viewerParameters
+    dlpDisplayCallback $=!
+      dlpViewerDisplay
+        dlp
+        viewerParameters
+        (display configuration grids location tracking)
     mainLoop
 
 
@@ -105,7 +106,6 @@ display Configuration{..} grids location tracking =
         | otherwise                         = HighlightGrids
     updateIORef (updateGrids gridsAction trackPosition) grids
     translate location'
-    clear [ColorBuffer, DepthBuffer]
     grids' <- get grids
     preservingMatrix $ do
       doTracking' tracking
