@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                infovis-parallel
-version:             0.1.4.3
+version:             0.1.4.4
 -- synopsis:            
 -- description:         
 license:             MIT
@@ -13,24 +13,42 @@ maintainer:          consult@brianwbush.info
 category:            Graphics
 build-type:          Simple
 -- extra-source-files:  
-cabal-version:       >=1.10
+cabal-version:       >= 1.10
 data-dir: data
 data-files: test.tsv
             ENB2012.md
             ENB2012.tsv
 
+library
+  build-depends:    base >= 4.6 && < 5
+               ,    array
+               ,    containers
+               ,    data-default
+               ,    GLUT
+               ,    handa-data
+               ,    opengl-dlp-stereo
+               ,    opengl-spacenavigator
+               ,    OpenGL
+               ,    random
+               ,    split
+  exposed-modules:  Graphics.Rendering.Handa.Shape
+                    Graphics.Rendering.Handa.Viewer
+                    Graphics.Rendering.Handa.Util
+                    Graphics.UI.Handa.Keyboard
+                    Graphics.UI.Handa.Setup
+                    Graphics.UI.Handa.Util
+                    InfoVis.Parallel.Planes.Configuration
+                    InfoVis.Parallel.Planes.Control
+                    InfoVis.Parallel.Planes.Grid
+  hs-source-dirs:   src
+  exposed:          True
+  buildable:        True
+  ghc-options:      -Wall
+  default-language: Haskell2010
+
 executable infovis-parallel
   main-is:             Main.hs
-  other-modules:       Graphics.Rendering.Handa.Shape
-                       Graphics.Rendering.Handa.Viewer
-                       Graphics.Rendering.Handa.Util
-                       Graphics.UI.Handa.Keyboard
-                       Graphics.UI.Handa.Setup
-                       Graphics.UI.Handa.Util
-                       InfoVis.Parallel.Planes.Configuration
-                       InfoVis.Parallel.Planes.Control
-                       InfoVis.Parallel.Planes.Grid
-  build-depends:       base >=4.6 && <4.7
+  build-depends:       base >= 4.6 && < 5
                ,       array
                ,       containers
                ,       data-default
@@ -42,4 +60,5 @@ executable infovis-parallel
                ,       random
                ,       split
   hs-source-dirs:      src
+  ghc-options:         -Wall
   default-language:    Haskell2010
