@@ -252,7 +252,7 @@ drawNextLabels _ _ _ _ = return ()
 makeSelector :: Configuration -> IO Shape
 makeSelector Configuration{..} =
   let
-    faces = concat $ coneFaces selectorHeight selectorRadius
+    faces = concat $ coneFaces 20 selectorHeight selectorRadius
   in
     makeShape 3 Float Triangles (map (\(x,y,z) -> Vertex3 x y z) faces)
       $ color selectorColor
