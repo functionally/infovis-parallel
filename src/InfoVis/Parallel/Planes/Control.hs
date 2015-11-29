@@ -11,8 +11,9 @@ import Control.Arrow ((&&&))
 import Control.Monad (replicateM)
 import Data.Default (Default, def)
 import Data.List (transpose)
-import Data.List.Split (splitOn)
 import Data.IORef (IORef, newIORef)
+import Data.Relational (Relation(names, toLists))
+import Data.Relational.Lists (Tabulation)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio), dlpViewerDisplay)
 import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=!), get, preservingMatrix, translate)
@@ -25,7 +26,7 @@ import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrid
 import System.Random (randomIO)
 
 
-main :: String -> String -> IO ()
+main :: String -> Tabulation Double -> IO ()
 main title content =
   do
     (dlp, viewerParameters, _) <- setup title
@@ -39,11 +40,12 @@ main title content =
     mainLoop
 
 
-setupContent :: ViewerParameters -> String -> IO (Configuration, IORef Grids)
+setupContent :: ViewerParameters -> Tabulation Double -> IO (Configuration, IORef Grids)
 setupContent viewerParameters content =
   do
     let
-      (columns : measurements) = map (splitOn "\t") $ lines content
+      columns = names content
+      measurements = toLists content
       n = 2 * (length columns `div` 2)
       configuration =
         def
@@ -59,7 +61,7 @@ setupContent viewerParameters content =
           jitter <- replicateM (length column) randomIO
           return $ zipWith (\x r -> ((x - x0) / dx + 0.002 * (r - 0.5)) * 0.990 + 0.005) column jitter
       |
-        column <- transpose $ map (map read) measurements
+        column <- transpose measurements
       , let (x0, x1) = (minimum &&& maximum) column
             dx = x1 - x0
       ]
