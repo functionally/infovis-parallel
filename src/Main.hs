@@ -54,10 +54,10 @@ parallelPlanes =
   {
     display     = def
                &= typ "HOST:DISPLAY.SCREEN" 
-               &= help "X11 display"
+               &= help "The X11 display."
   , geometry    = def
                &= typ "WxH+X+Y"
-               &= help "X11 geometry"
+               &= help "The X11 geometry."
   , stereo      = def
                &= typ "DLP|QuadBuffer|Cardboard|Mono"
                &= help "The stereo mode."
@@ -77,7 +77,7 @@ parallelPlanes =
   }
     &= name "planes"
     &= help "Information visualization using parallel planes."
-    &= details ["The input file (or /dev/stdin, if it is not present) must be a tab-separated value dataset whose first row is its header."]
+    &= details ["The input file (or /dev/stdin, if it is not present) must be a dataset in tab-separated-value format whose first row is its header."]
 
 
 main :: IO ()
