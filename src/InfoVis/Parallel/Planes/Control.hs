@@ -19,17 +19,17 @@ import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio), dl
 import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=!), get, preservingMatrix, translate)
 import Graphics.UI.GLUT (DisplayCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
-import Graphics.UI.Handa.Setup (setup)
+import Graphics.UI.Handa.Setup (Setup, setup)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
 import System.Random (randomIO)
 
 
-main :: String -> Tabulation Double -> IO ()
-main title content =
+main :: String -> String -> [String] -> Setup -> Tabulation Double -> IO ()
+main program title arguments setUp content =
   do
-    (dlp, viewerParameters, _) <- setup title
+    (dlp, viewerParameters, _) <- setup program title arguments setUp
     (configuration, grids) <- setupContent viewerParameters content
     (location, tracking) <- setupLocationTracking
     dlpDisplayCallback $=!
