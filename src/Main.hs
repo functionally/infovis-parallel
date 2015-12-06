@@ -7,7 +7,6 @@ module Main (
 ) where
 
 
-import Control.Applicative ((<$>))
 import Data.Data (Data)
 import Data.Default (def)
 import Data.Relational (cast, fromString)

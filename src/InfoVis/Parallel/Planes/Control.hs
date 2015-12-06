@@ -9,7 +9,7 @@ module InfoVis.Parallel.Planes.Control (
 
 import Control.Arrow ((&&&))
 import Control.Monad (replicateM)
-import Data.Default (Default, def)
+import Data.Default (def)
 import Data.List (transpose)
 import Data.IORef (IORef, newIORef)
 import Data.Relational (Relation(names, toLists))

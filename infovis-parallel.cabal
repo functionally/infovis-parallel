@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.1.6.1
+version:             0.2.0.0
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -27,19 +27,25 @@ source-repository head
   location: https://bwbush@bitbucket.org/bwbush/infovis-parallel.git
  
 library
-  build-depends:    base                   >= 4.6 && < 5
-               ,    array                  >= 0.4.0.1
-               ,    containers             >= 0.5
-               ,    data-default           >= 0.5.3
-               ,    GLUT                   >= 2.4
-               ,    handa-data             >= 0.2.10
-               ,    handa-opengl           >= 0.1.6.1
-               ,    handa-relational
-               ,    opengl-dlp-stereo      >= 0.1.4.1
-               ,    opengl-spacenavigator  >= 0.1.4.2
-               ,    OpenGL                 >= 2.8
-               ,    random                 >= 1.1
-  exposed-modules:  InfoVis.Parallel.Planes.Configuration
+  build-depends:    base                               >= 4.8.1 && < 5
+               ,    array                              >= 0.5.1
+               ,    bytestring                         >= 0.10.6
+               ,    containers                         >= 0.5.6.2
+               ,    data-default                       >= 0.5.3
+               ,    distributed-process                >= 0.5.5.1
+               ,    distributed-process-simplelocalnet >= 0.2.3.1
+               ,    GLUT                               >= 2.7.0.1
+               ,    handa-data                         >= 0.2.12.8
+               ,    handa-opengl                       >= 0.1.7.6
+               ,    handa-relational                   >= 0.2.1.2
+               ,    network                            >= 2.6.2.1
+               ,    network-transport                  >= 0.4.2
+               ,    opengl-dlp-stereo                  >= 0.1.5.1
+               ,    opengl-spacenavigator              >= 0.1.4.3
+               ,    OpenGL                             >= 2.12.0.1
+               ,    random                             >= 1.1
+  exposed-modules:  Control.Distributed.Process.Backend.SimpleWidenet
+                    InfoVis.Parallel.Planes.Configuration
                     InfoVis.Parallel.Planes.Control
                     InfoVis.Parallel.Planes.Grid
   hs-source-dirs:   src
@@ -52,13 +58,18 @@ executable infovis-parallel
   main-is:          Main.hs
   build-depends:    base
                ,    array
+               ,    bytestring
                ,    cmdargs
                ,    containers
                ,    data-default
+               ,    distributed-process
+               ,    distributed-process-simplelocalnet
                ,    GLUT
                ,    handa-data
                ,    handa-opengl
                ,    handa-relational
+               ,    network
+               ,    network-transport
                ,    opengl-dlp-stereo
                ,    opengl-spacenavigator
                ,    OpenGL

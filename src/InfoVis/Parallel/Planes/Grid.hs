@@ -13,7 +13,7 @@ module InfoVis.Parallel.Planes.Grid (
 ) where
 
 
-import Control.Applicative ((<$>), (<|>))
+import Control.Applicative ((<|>))
 import Control.Exception (IOException, catch)
 import Control.Monad (guard, zipWithM)
 import Data.List.Util (domain)
