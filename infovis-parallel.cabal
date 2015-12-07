@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.2.0.0
+version:             0.2.0.1
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -29,6 +29,7 @@ source-repository head
 library
   build-depends:    base                               >= 4.8.1 && < 5
                ,    array                              >= 0.5.1
+               ,    binary                             >= 0.7.5
                ,    bytestring                         >= 0.10.6
                ,    containers                         >= 0.5.6.2
                ,    data-default                       >= 0.5.3
@@ -36,15 +37,16 @@ library
                ,    distributed-process-simplelocalnet >= 0.2.3.1
                ,    GLUT                               >= 2.7.0.1
                ,    handa-data                         >= 0.2.12.8
-               ,    handa-opengl                       >= 0.1.7.6
-               ,    handa-relational                   >= 0.2.1.2
+               ,    handa-opengl                       >= 0.1.7.7
+               ,    handa-relational                   >= 0.2.1.4
                ,    network                            >= 2.6.2.1
                ,    network-transport                  >= 0.4.2
                ,    opengl-dlp-stereo                  >= 0.1.5.1
-               ,    opengl-spacenavigator              >= 0.1.4.3
+               ,    opengl-spacenavigator              >= 0.1.4.6
                ,    OpenGL                             >= 2.12.0.1
                ,    random                             >= 1.1
   exposed-modules:  Control.Distributed.Process.Backend.SimpleWidenet
+                    Data.Binary.Instances
                     InfoVis.Parallel.Planes.Configuration
                     InfoVis.Parallel.Planes.Control
                     InfoVis.Parallel.Planes.Grid
@@ -58,6 +60,7 @@ executable infovis-parallel
   main-is:          Main.hs
   build-depends:    base
                ,    array
+               ,    binary
                ,    bytestring
                ,    cmdargs
                ,    containers

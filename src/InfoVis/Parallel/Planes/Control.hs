@@ -4,11 +4,15 @@
 
 module InfoVis.Parallel.Planes.Control (
   main
+, setupContent
+, setupLocationTracking
+, display
 ) where
 
 
 import Control.Arrow ((&&&))
-import Control.Monad (replicateM)
+import Control.Concurrent (MVar, newMVar, tryPutMVar)
+import Control.Monad (replicateM, void)
 import Data.Default (def)
 import Data.List (transpose)
 import Data.IORef (IORef, newIORef)
@@ -17,7 +21,7 @@ import Data.Relational.Lists (Tabulation)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(displayAspectRatio), dlpViewerDisplay)
 import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=!), get, preservingMatrix, translate)
-import Graphics.UI.GLUT (DisplayCallback, keyboardMouseCallback, mainLoop)
+import Graphics.UI.GLUT (DisplayCallback, KeyboardMouseCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
 import Graphics.UI.Handa.Setup (Setup, setup)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
@@ -31,7 +35,7 @@ main program title arguments setUp content =
   do
     (dlp, viewerParameters, _) <- setup program title arguments setUp
     (configuration, grids) <- setupContent viewerParameters content
-    (location, tracking) <- setupLocationTracking
+    (location, tracking, _) <- setupLocationTracking
     dlpDisplayCallback $=!
       dlpViewerDisplay
         dlp
@@ -71,20 +75,29 @@ setupContent viewerParameters content =
     return (configuration, grids)
 
 
-setupLocationTracking :: IO (IORef (Vector3 GLfloat), IORef Track)
+setupLocationTracking :: IO (IORef (Vector3 GLfloat), IORef Track, MVar ())
 setupLocationTracking =
   do
+    updated <- newMVar ()
     location <- newIORef (Vector3 0 0 (-1.5) :: Vector3 GLfloat)
     tracking <- newIORef $ def {trackPosition = Vector3 0 0 1.1}
-    spaceNavigatorCallback $=! Just (spaceNavigator tracking)
-    keyboardMouseCallback $=! Just (keyboardPosition (Vector3 (-0.05) (-0.05) (-0.05)) location)
-    return (location, tracking)
+    spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
+    keyboardMouseCallback $=! Just (keyboard updated location)
+    return (location, tracking, updated)
 
 
-spaceNavigator :: IORef Track -> SpaceNavigatorCallback
-spaceNavigator tracking =
-  quantize defaultQuantization
-    $ track defaultTracking tracking
+spaceNavigator :: MVar () -> IORef Track -> SpaceNavigatorCallback
+spaceNavigator updated tracking input =
+  do
+    quantize defaultQuantization (track defaultTracking tracking) input
+    void $ tryPutMVar updated ()
+
+
+keyboard :: MVar () -> IORef (Vector3 GLfloat) -> KeyboardMouseCallback
+keyboard updated location key keyState modifiers position =
+  do
+    keyboardPosition (Vector3 (-0.05) (-0.05) (-0.05)) location key keyState modifiers position
+    void $ tryPutMVar updated ()
 
 
 updateIORef :: (a -> IO a) -> IORef a -> IO ()
