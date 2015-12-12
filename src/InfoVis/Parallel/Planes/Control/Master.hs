@@ -17,7 +17,7 @@ module InfoVis.Parallel.Planes.Control.Master (
 
 
 import Control.Concurrent (forkIO, takeMVar)
-import Control.Monad (forM_, void, zipWithM)
+import Control.Monad (forM_, void, zipWithM, guard)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
@@ -80,6 +80,7 @@ data DisplayConfiguration a =
     host              :: String
   , port              :: String
   , displayIdentifier :: String
+  , geometry          :: Maybe String
   , screen            :: Screen a
   }
   deriving (Eq, Generic, Read, Show)
@@ -91,6 +92,7 @@ instance Functor DisplayConfiguration where
       host              =        host
     , port              =        port
     , displayIdentifier =        displayIdentifier
+    , geometry          =        geometry
     , screen            = fmap f screen
     }
 
@@ -105,9 +107,10 @@ peersList MultiDisplayConfiguration{..} =
 trackerProcess :: [ProcessId] -> Process ()
 trackerProcess listeners =
   do
+    pid <- getSelfPid
     (location, tracking, updated) <- liftIO $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
-      void $ createWindow "Tracker"
+      void $ createWindow $ "<" ++ show pid ++ ">"
       displayCallback $=! do
         clear [ColorBuffer]
         swapBuffers
@@ -124,8 +127,8 @@ trackerProcess listeners =
     loop
 
 
-displayerProcess :: (String, Setup Resolution, Tabulation Double) -> Process ()
-displayerProcess (screen, setUp, content) =
+displayerProcess :: (String, Maybe String, Setup Resolution, Tabulation Double) -> Process ()
+displayerProcess (screen, geometry, setUp, content) =
   do
     pid <- getSelfPid
     location <- liftIO $ newIORef (Vector3 0 0 (-1.5) :: Vector3 Resolution)
@@ -133,7 +136,15 @@ displayerProcess (screen, setUp, content) =
     let
       setUp' = realToFrac <$> setUp :: Setup Resolution
     void $ liftIO $ forkIO $ do
-      (dlp, viewerParameters, _) <- setup ("Display " ++ screen ++ " @ " ++ show pid) "displayerProcess" ["-display", screen] setUp'
+      (dlp, viewerParameters, _) <-
+        setup
+          ("<" ++ show pid ++ ">")
+          "displayerProcess"
+          (
+            maybe id (\g -> (++ ["-geometry", g])) geometry
+              ["-display", screen]
+          )
+          setUp'
       (configuration, grids) <- setupContent content
       dlpDisplayCallback $=!
         dlpViewerDisplay
@@ -184,9 +195,18 @@ master MultiDisplayConfiguration{..} content peers =
         (\peer DisplayConfiguration{..} ->
           let
             setUp' :: Setup Resolution
-            setUp' = setUp {S.viewer = Left $ viewer' {V.screen = screen}}
+            setUp' =
+              setUp
+                {
+                  S.fullscreen = geometry == Just "fullscreen"
+                , S.viewer       = Left $ viewer' {V.screen = screen}
+                }
+            geometry' =
+              do
+                guard (geometry `notElem` [Just "", Just "fullscreen"])
+                geometry
           in
-            spawn peer ($(mkClosure 'displayerProcess) (displayIdentifier, setUp', content))
+            spawn peer ($(mkClosure 'displayerProcess) (displayIdentifier, geometry', setUp', content))
         )
         peers
         displays
