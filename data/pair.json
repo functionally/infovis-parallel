@@ -1,0 +1,35 @@
+{
+  "stereo"        : "Mono"
+, "nearPlane"     : 0.1
+, "farPlane"      : 100
+, "eyePosition"   : [0  , 0, 1.5]
+, "eyeSeparation" : [0.2, 0, 0  ]
+, "eyeUpward"     : [0  , 1, 0  ]
+, "sceneCenter"   : [0  , 0, 0  ]
+, "sceneScale"    : 1
+, "displays"      :
+  [
+    {
+      "host"              : "localhost"
+    , "port"              : "44445"
+    , "displayIdentifier" : ":0.0"
+    , "screen" :
+      {
+        "lowerLeft"  : [-0.5, -0.5, 0]
+      , "lowerRight" : [ 0  , -0.5, 0]
+      , "upperLeft"  : [-0.5,  0.5, 0]
+      }
+    }
+  , {
+      "host"              : "localhost"
+    , "port"              : "44446"
+    , "displayIdentifier" : ":0.0"
+    , "screen" :
+      {
+        "lowerLeft"  : [ 0  , -0.5, 0]
+      , "lowerRight" : [ 0.5, -0.5, 0]
+      , "upperLeft"  : [ 0  ,  0.5, 0]
+      }
+    }
+  ]
+}

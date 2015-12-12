@@ -59,7 +59,7 @@ setupContent viewerParameters content =
         (def :: Configuration a)
         {
           planes = n `div` 2
-        , aspect = displayAspectRatio viewerParameters
+        , aspect = 1 -- FIXME: was displayAspectRatio viewerParameters
         , axisLabels = take n columns
         }
     normalized <-
