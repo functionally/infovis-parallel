@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.2.0.4
+version:             0.2.0.5
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -17,9 +17,10 @@ package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/inf
 
 extra-source-files:  ReadMe.md
 data-dir: data
-data-files: test.tsv
-            ENB2012.md
+data-files: ENB2012.md
             ENB2012.tsv
+            projector.json
+            pair.json
 
 
 source-repository head
@@ -28,7 +29,7 @@ source-repository head
  
 library
   build-depends:    base                               >= 4.8.1 && < 5
-               ,    aeson                              >- 0.10
+               ,    aeson                              >= 0.10
                ,    array                              >= 0.5.1
                ,    binary                             >= 0.7.5
                ,    bytestring                         >= 0.10.6
