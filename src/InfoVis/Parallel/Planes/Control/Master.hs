@@ -51,7 +51,7 @@ data MultiDisplayConfiguration a =
   , eyeSeparation :: Vector3 a
   , eyeUpward     :: Vector3 a
   , sceneCenter   :: Vertex3 a
-  , sceneScale    :: a
+  , sceneScale    :: Vector3 a
   , displays      :: [DisplayConfiguration a]
   }
   deriving (Eq, Generic, Read, Show)
@@ -67,7 +67,7 @@ instance Functor MultiDisplayConfiguration where
     , eyeSeparation =      fmap f  eyeSeparation
     , eyeUpward     =      fmap f  eyeUpward
     , sceneCenter   =      fmap f  sceneCenter
-    , sceneScale    =           f  sceneScale
+    , sceneScale    =      fmap f  sceneScale
     , displays      = map (fmap f) displays
     }
 
@@ -134,7 +134,7 @@ displayerProcess (screen, setUp, content) =
       setUp' = realToFrac <$> setUp :: Setup Resolution
     void $ liftIO $ forkIO $ do
       (dlp, viewerParameters, _) <- setup (screen ++ " @ " ++ show pid) "displayerProcess" ["-display", screen] setUp'
-      (configuration, grids) <- setupContent viewerParameters content
+      (configuration, grids) <- setupContent content
       dlpDisplayCallback $=!
         dlpViewerDisplay
           dlp

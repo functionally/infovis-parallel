@@ -1,6 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
-
-
 module InfoVis.Parallel.Planes.Configuration (
   Configuration(..)
 ) where
@@ -10,11 +7,10 @@ import Data.Default (Default(..))
 import Graphics.Rendering.OpenGL (Color4(..), GLfloat)
 
 
-data Configuration a =
+data Configuration =
   Configuration
   {
-    aspect              :: a
-  , planes              :: Int
+    planes              :: Int
   , divisions           :: Int
   , gridColor           :: Color4 GLfloat
   , planeFaceColor      :: Color4 GLfloat
@@ -31,33 +27,11 @@ data Configuration a =
   }
     deriving (Eq, Read, Show)
 
-instance Functor Configuration where
-  fmap f Configuration{..} =
-    Configuration
-    {
-    aspect              = f aspect
-  , planes              =   planes
-  , divisions           =   divisions
-  , gridColor           =   gridColor
-  , planeFaceColor      =   planeFaceColor
-  , planeSelectColor    =   planeSelectColor
-  , planeHighlightColor =   planeHighlightColor
-  , lineNormalColor     =   lineNormalColor
-  , lineSelectedColor   =   lineSelectedColor
-  , lineHighlightColor  =   lineHighlightColor
-  , selectorColor       =   selectorColor
-  , labelColor          =   labelColor
-  , selectorRadius      =   selectorRadius
-  , selectorHeight      =   selectorHeight
-  , axisLabels          =   axisLabels
-  }
-
-instance Num a => Default (Configuration a) where
+instance Default Configuration where
   def =
     Configuration
     {
-      aspect              = 1
-    , planes              = 5
+      planes              = 5
     , divisions           = 10
     , gridColor           = Color4 0.4 0.4 0.4 0.8
     , planeFaceColor      = Color4 0.2 0.2 0.2 0.6

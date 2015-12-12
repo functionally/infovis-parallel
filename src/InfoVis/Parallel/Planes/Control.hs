@@ -15,7 +15,6 @@ module InfoVis.Parallel.Planes.Control (
 import Control.Arrow ((&&&))
 import Control.Concurrent (MVar, newMVar, tryPutMVar)
 import Control.Monad (replicateM, void)
-import Data.AdditiveGroup (AdditiveGroup)
 import Data.Default (def)
 import Data.List (transpose)
 import Data.IORef (IORef, newIORef)
@@ -23,7 +22,7 @@ import Data.Relational (Relation(names, toLists))
 import Data.Relational.Lists (Tabulation)
 import Foreign.Storable (Storable)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
-import Graphics.Rendering.Handa.Viewer (ViewerParameters, displayAspectRatio, dlpViewerDisplay)
+import Graphics.Rendering.Handa.Viewer (dlpViewerDisplay)
 import Graphics.Rendering.OpenGL (MatrixComponent, Vector3(..), ($=!), get, preservingMatrix, translate)
 import Graphics.UI.GLUT (DisplayCallback, KeyboardMouseCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
@@ -38,8 +37,8 @@ main :: String -> String -> [String] -> Setup Resolution -> Tabulation Double ->
 main program title arguments setUp content =
   do
     (dlp, viewerParameters, _) <- setup program title arguments setUp
-    (configuration, grids) <- setupContent viewerParameters content
-    (location, tracking, _) <- setupLocationTracking
+    (configuration, grids) <- setupContent content
+    (location, tracking, _) <- setupLocationTracking :: IO (IORef (Vector3 Resolution), IORef (Track Resolution), MVar ())
     dlpDisplayCallback $=!
       dlpViewerDisplay
         dlp
@@ -48,18 +47,17 @@ main program title arguments setUp content =
     mainLoop
 
 
-setupContent :: forall a . (AdditiveGroup a, RealFloat a, Storable a) => ViewerParameters a -> Tabulation Double -> IO (Configuration a, IORef (Grids a))
-setupContent viewerParameters content =
+setupContent :: Tabulation Double -> IO (Configuration, IORef Grids)
+setupContent content =
   do
     let
       columns = names content
       measurements = toLists content
       n = 2 * (length columns `div` 2)
       configuration =
-        (def :: Configuration a)
+        def
         {
           planes = n `div` 2
-        , aspect = 1 -- FIXME: was displayAspectRatio viewerParameters
         , axisLabels = take n columns
         }
     normalized <-
@@ -90,7 +88,7 @@ setupLocationTracking =
     return (location, tracking, updated)
 
 
-spaceNavigator :: RealFloat a=> MVar () -> IORef (Track a) -> SpaceNavigatorCallback a
+spaceNavigator :: RealFloat a => MVar () -> IORef (Track a) -> SpaceNavigatorCallback a
 spaceNavigator updated tracking input =
   do
     quantize defaultQuantization (track defaultTracking tracking) input
@@ -112,7 +110,7 @@ updateIORef f x =
     x $=! x''
 
 
-display :: (MatrixComponent a, RealFloat a, Storable a) => Configuration a -> IORef (Grids a) -> IORef (Vector3 a) -> IORef (Track a) -> DisplayCallback
+display :: (MatrixComponent a, RealFloat a, Storable a) => Configuration -> IORef Grids -> IORef (Vector3 a) -> IORef (Track a) -> DisplayCallback
 display Configuration{..} grids location tracking =
   do
     location' <- get location

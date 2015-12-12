@@ -6,7 +6,7 @@
 , "eyeSeparation" : [0.2, 0,  0]
 , "eyeUpward"     : [0  , 1,  0]
 , "sceneCenter"   : [0  , 1, -1]
-, "sceneScale"    : 1
+, "sceneScale"    : [1  , 1,  1]
 , "displays"      :
   [
     {
