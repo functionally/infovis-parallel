@@ -118,6 +118,7 @@ display Configuration{..} grids location tracking =
     let
       gridsAction
         | trackLeftPress && trackRightPress = ClearGrids
+        | trackLeftPress                    = SelectGrids
         | trackRightPress                   = DeselectGrids
         | otherwise                         = HighlightGrids
     updateIORef (updateGrids gridsAction trackPosition) grids
