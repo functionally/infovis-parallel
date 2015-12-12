@@ -107,7 +107,7 @@ trackerProcess listeners =
   do
     (location, tracking, updated) <- liftIO $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
-      void $ createWindow "Tracker Process"
+      void $ createWindow "Tracker"
       displayCallback $=! do
         clear [ColorBuffer]
         swapBuffers
@@ -133,7 +133,7 @@ displayerProcess (screen, setUp, content) =
     let
       setUp' = realToFrac <$> setUp :: Setup Resolution
     void $ liftIO $ forkIO $ do
-      (dlp, viewerParameters, _) <- setup (screen ++ " @ " ++ show pid) "displayerProcess" ["-display", screen] setUp'
+      (dlp, viewerParameters, _) <- setup ("Display " ++ screen ++ " @ " ++ show pid) "displayerProcess" ["-display", screen] setUp'
       (configuration, grids) <- setupContent content
       dlpDisplayCallback $=!
         dlpViewerDisplay
