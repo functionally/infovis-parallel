@@ -1,5 +1,7 @@
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE RecordWildCards   #-}
+{-# LANGUAGE ExplicitForAll      #-}
+{-# LANGUAGE FlexibleInstances   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 
 module InfoVis.Parallel.Planes.Control (
@@ -13,24 +15,26 @@ module InfoVis.Parallel.Planes.Control (
 import Control.Arrow ((&&&))
 import Control.Concurrent (MVar, newMVar, tryPutMVar)
 import Control.Monad (replicateM, void)
+import Data.AdditiveGroup (AdditiveGroup)
 import Data.Default (def)
 import Data.List (transpose)
 import Data.IORef (IORef, newIORef)
 import Data.Relational (Relation(names, toLists))
 import Data.Relational.Lists (Tabulation)
+import Foreign.Storable (Storable)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters, displayAspectRatio, dlpViewerDisplay)
-import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=!), get, preservingMatrix, translate)
+import Graphics.Rendering.OpenGL (MatrixComponent, Vector3(..), ($=!), get, preservingMatrix, translate)
 import Graphics.UI.GLUT (DisplayCallback, KeyboardMouseCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
 import Graphics.UI.Handa.Setup (Setup, setup)
 import Graphics.UI.SpaceNavigator (SpaceNavigatorCallback, Track(..), defaultQuantization, defaultTracking, doTracking', quantize, spaceNavigatorCallback, track)
 import InfoVis.Parallel.Planes.Configuration (Configuration(..))
-import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
+import InfoVis.Parallel.Planes.Grid (Grids, GridsAction(..), Resolution, addPoints, drawGrids, drawSelector, makeGrids, updateGrids)
 import System.Random (randomIO)
 
 
-main :: String -> String -> [String] -> Setup -> Tabulation Double -> IO ()
+main :: String -> String -> [String] -> Setup Resolution -> Tabulation Double -> IO ()
 main program title arguments setUp content =
   do
     (dlp, viewerParameters, _) <- setup program title arguments setUp
@@ -44,7 +48,7 @@ main program title arguments setUp content =
     mainLoop
 
 
-setupContent :: ViewerParameters -> Tabulation Double -> IO (Configuration, IORef Grids)
+setupContent :: forall a . (AdditiveGroup a, RealFloat a, Storable a) => ViewerParameters a -> Tabulation Double -> IO (Configuration a, IORef (Grids a))
 setupContent viewerParameters content =
   do
     let
@@ -52,7 +56,7 @@ setupContent viewerParameters content =
       measurements = toLists content
       n = 2 * (length columns `div` 2)
       configuration =
-        def
+        (def :: Configuration a)
         {
           planes = n `div` 2
         , aspect = displayAspectRatio viewerParameters
@@ -75,25 +79,25 @@ setupContent viewerParameters content =
     return (configuration, grids)
 
 
-setupLocationTracking :: IO (IORef (Vector3 GLfloat), IORef Track, MVar ())
+setupLocationTracking :: RealFloat a => IO (IORef (Vector3 a), IORef (Track a), MVar ())
 setupLocationTracking =
   do
     updated <- newMVar ()
-    location <- newIORef (Vector3 0 0 (-1.5) :: Vector3 GLfloat)
+    location <- newIORef $ Vector3 0 0 (-1.5)
     tracking <- newIORef $ def {trackPosition = Vector3 0 0 1.1}
     spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
     keyboardMouseCallback $=! Just (keyboard updated location)
     return (location, tracking, updated)
 
 
-spaceNavigator :: MVar () -> IORef Track -> SpaceNavigatorCallback
+spaceNavigator :: RealFloat a=> MVar () -> IORef (Track a) -> SpaceNavigatorCallback a
 spaceNavigator updated tracking input =
   do
     quantize defaultQuantization (track defaultTracking tracking) input
     void $ tryPutMVar updated ()
 
 
-keyboard :: MVar () -> IORef (Vector3 GLfloat) -> KeyboardMouseCallback
+keyboard :: RealFloat a => MVar () -> IORef (Vector3 a) -> KeyboardMouseCallback
 keyboard updated location key keyState modifiers position =
   do
     keyboardPosition (Vector3 (-0.05) (-0.05) (-0.05)) location key keyState modifiers position
@@ -108,7 +112,7 @@ updateIORef f x =
     x $=! x''
 
 
-display :: Configuration -> IORef Grids -> IORef (Vector3 GLfloat) -> IORef Track -> DisplayCallback
+display :: (MatrixComponent a, RealFloat a, Storable a) => Configuration a -> IORef (Grids a) -> IORef (Vector3 a) -> IORef (Track a) -> DisplayCallback
 display Configuration{..} grids location tracking =
   do
     location' <- get location
@@ -116,7 +120,6 @@ display Configuration{..} grids location tracking =
     let
       gridsAction
         | trackLeftPress && trackRightPress = ClearGrids
-        | trackLeftPress                    = SelectGrids
         | trackRightPress                   = DeselectGrids
         | otherwise                         = HighlightGrids
     updateIORef (updateGrids gridsAction trackPosition) grids

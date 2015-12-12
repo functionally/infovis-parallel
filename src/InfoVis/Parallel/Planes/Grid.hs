@@ -1,9 +1,11 @@
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE TupleSections       #-}
 
 
 module InfoVis.Parallel.Planes.Grid (
-  Grids
+  Resolution
+, resolution
+, Grids
 , makeGrids
 , drawSelector
 , drawGrids
@@ -14,6 +16,7 @@ module InfoVis.Parallel.Planes.Grid (
 
 
 import Control.Applicative ((<|>))
+import Control.Arrow ((***))
 import Control.Exception (IOException, catch)
 import Control.Monad (guard, zipWithM)
 import Data.List.Util (domain)
@@ -29,16 +32,32 @@ import InfoVis.Parallel.Planes.Configuration (Configuration(..))
 import qualified Data.Set as Set (delete, empty, fromList, insert, intersection, map, member, notMember, null, partition, singleton, toList, union, unions)
 
 
-data Grids =
+-- FIXME: Replace with type family instances.
+type Resolution = GLfloat
+resolution :: DataType
+resolution = Float
+
+
+data Grids a =
   Grids
   {
-    configuration :: Configuration
+    configuration :: Configuration a
   , selector      :: Shape
   , grid          :: Shape
   , layers        :: [Layer]
   , projections   :: [Projection]
   }
 
+instance Functor Grids where
+  fmap f Grids{..} =
+    Grids
+    {
+      configuration = fmap f configuration
+    , selector      = selector
+    , grid          = grid
+    , layers        = layers
+    , projections   = projections
+    }
 
 data PlanesType = BackgroundPlanes | SelectedPlanes | HighlightedPlanes
   deriving (Bounded, Enum, Eq, Ord, Read, Show)
@@ -59,7 +78,7 @@ type Projection = (PlanesType, Points, Shape)
 type Points = Set [Double]
 
 
-allCells :: Configuration -> Cells
+allCells :: Configuration a -> Cells
 allCells Configuration{..} =
   Set.fromList
   [
@@ -71,7 +90,7 @@ allCells Configuration{..} =
   ]
 
 
-addPoints :: Grids -> [[Double]] -> IO Grids
+addPoints :: RealFloat a => Grids a -> [[Double]] -> IO (Grids a)
 addPoints grids@Grids{..} rawPoints =
   do
     projections' <- zipWithM (remakeProjection configuration) [Set.fromList rawPoints, Set.empty, Set.empty] projections
@@ -79,13 +98,13 @@ addPoints grids@Grids{..} rawPoints =
       $ grids {projections = projections'}
 
 
-remakeProjection :: Configuration -> Points -> Projection -> IO Projection
+remakeProjection :: RealFloat a => Configuration a -> Points -> Projection -> IO Projection
 remakeProjection configuration points' (planesType, _, shape) =
   (planesType, points', )
      <$> remakeLines configuration shape points'
 
 
-makeGrids :: Configuration -> IO Grids
+makeGrids :: RealFloat a => Configuration a -> IO (Grids a)
 makeGrids configuration =
   do
     selector <- makeSelector configuration
@@ -100,7 +119,7 @@ makeGrids configuration =
     return Grids{..}
 
 
-remakeGrids :: [Cells] -> Grids -> IO Grids
+remakeGrids :: RealFloat a => [Cells] -> Grids a -> IO (Grids a)
 remakeGrids cellses grids@Grids{..} =
   do
     layers' <- zipWithM (remakeLayer configuration) cellses layers
@@ -110,7 +129,7 @@ remakeGrids cellses grids@Grids{..} =
     return $ grids {layers = layers', projections = projections'}
 
 
-categorizePoints :: Configuration -> [Cells] -> Points -> [Points]
+categorizePoints :: Configuration a -> [Cells] -> Points -> [Points]
 categorizePoints Configuration{..} [selected, highlighted] points =
   let
     quantize :: Double -> Int
@@ -132,7 +151,7 @@ categorizePoints Configuration{..} [selected, highlighted] points =
 categorizePoints _ _ _ = undefined
 
 
-remakeLayer :: Configuration -> Cells -> Layer -> IO Layer
+remakeLayer :: RealFloat a => Configuration a -> Cells -> Layer -> IO Layer
 remakeLayer configuration cells' layer@(planesType, cells, shape) =
   if cells' == cells
     then return layer
@@ -143,7 +162,7 @@ data GridsAction = SelectGrids | DeselectGrids | HighlightGrids | ClearGrids
   deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
   
-updateGrids :: GridsAction -> Vector3 GLfloat -> Grids -> IO Grids
+updateGrids :: RealFloat a => GridsAction -> Vector3 a -> Grids a -> IO (Grids a)
 updateGrids gridsAction location grids@Grids{..} =
   let
     cellses  = map snd3 layers
@@ -186,7 +205,7 @@ updateCells cellses ClearGrids _ =
 updateCells _ _ _ = undefined
 
 
-findSelection :: Configuration -> Vector3 GLfloat -> Maybe Cell
+findSelection :: RealFloat a => Configuration a -> Vector3 a -> Maybe Cell
 findSelection configuration@Configuration{..} (Vector3 x y z) =
   do
     let
@@ -200,25 +219,25 @@ findSelection configuration@Configuration{..} (Vector3 x y z) =
     return (round i, round j, round k)
 
 
-drawSelector :: Grids -> IO ()
+drawSelector :: Grids a -> IO ()
 drawSelector Grids{..} =
   drawShape selector
 
 
-drawGrids :: Grids -> IO ()
+drawGrids :: RealFloat a => Grids a -> IO ()
 drawGrids Grids{..} =
   preservingMatrix $ do
-    scale 1 (1 / aspect configuration) 1
+    scale 1 (realToFrac $ 1 / aspect configuration :: Resolution) 1
     mapM_ (drawShape . trd3) $ reverse projections
     drawShape grid
     mapM_ (drawShape . trd3) layers
     drawAxisLabels configuration $ axisLabels configuration
 
 
-drawAxisLabels :: Configuration -> [String] -> IO ()
+drawAxisLabels :: RealFloat a => Configuration a -> [String] -> IO ()
 drawAxisLabels configuration@Configuration{..} labels =
   do
-    h <-
+    h <- realToFrac <$>
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
     let
@@ -227,38 +246,42 @@ drawAxisLabels configuration@Configuration{..} labels =
       r = s / h
     color labelColor
     preservingMatrix $ do
-      translate (Vector3 (-1) (-1) 1 :: Vector3 GLfloat)
-      rotate 90 (Vector3 0 1 0 :: Vector3 GLfloat)
+      translate (Vector3 (-1) (-1) 1 :: Vector3 Resolution)
+      rotate 90 (Vector3 0 1 0 :: Vector3 Resolution)
       drawNextLabels s r spacing labels
 
 
-drawNextLabels :: GLfloat -> GLfloat -> GLfloat -> [String] -> IO ()
+drawNextLabels :: RealFloat a => a -> a -> a -> [String] -> IO ()
 drawNextLabels s r spacing (s1 : s2 : ss) =
   do
+    let
+      s'       = realToFrac s       :: Resolution
+      r'       = realToFrac r       :: Resolution
+      spacing' = realToFrac spacing :: Resolution
     preservingMatrix $ do
-      translate $ Vector3 0 (-1.2 * s) 0
-      scale r r r 
+      translate $ Vector3 0 (-1.2 * s') 0
+      scale r' r' r' 
       renderString Roman s1
     preservingMatrix $ do
-      rotate 90 (Vector3 0 0 1 :: Vector3 GLfloat)
-      translate $ Vector3 0 (0.5 * s) 0
-      scale r r r
+      rotate 90 (Vector3 0 0 1 :: Vector3 Resolution)
+      translate $ Vector3 0 (0.5 * s') 0
+      scale r' r' r'
       renderString Roman s2
-    translate $ Vector3 0 0 spacing
+    translate $ Vector3 0 0 spacing'
     drawNextLabels s r spacing ss
 drawNextLabels _ _ _ _ = return ()
 
   
-makeSelector :: Configuration -> IO Shape
+makeSelector :: Configuration a -> IO Shape
 makeSelector Configuration{..} =
   let
     faces = concat $ coneFaces 20 selectorHeight selectorRadius
   in
-    makeShape 3 Float Triangles (map (\(x,y,z) -> Vertex3 x y z) faces)
+    makeShape 3 resolution Triangles (map (\(x,y,z) -> Vertex3 x y z) faces)
       $ color selectorColor
 
 
-spacingAndSize :: Configuration -> (GLfloat, GLfloat)
+spacingAndSize :: RealFloat a => Configuration a -> (a, a)
 spacingAndSize Configuration{..} =
   (
     2 / fromIntegral (planes - 1)
@@ -266,10 +289,10 @@ spacingAndSize Configuration{..} =
   )
 
 
-makeGrid :: Configuration -> IO Shape
+makeGrid :: RealFloat a => Configuration a -> IO Shape
 makeGrid configuration@Configuration{..} =
   let
-    (spacing, size) = spacingAndSize configuration
+    (spacing, size) = realToFrac *** realToFrac $ spacingAndSize configuration :: (Resolution, Resolution)
     grid =
       concat [
         concat $
@@ -291,22 +314,22 @@ makeGrid configuration@Configuration{..} =
       , let x = (fromIntegral i - 1) * spacing - 1
       ]
    in
-     makeShape 3 Float Lines grid
+     makeShape 3 resolution Lines grid
        $ color gridColor
 
 
-makePlanes :: Configuration -> PlanesType -> Cells -> IO Shape
+makePlanes :: RealFloat a => Configuration a -> PlanesType -> Cells -> IO Shape
 makePlanes configuration planesType visibles =
-  makeShape 3 Float Quads (planesGeometry configuration visibles)
+  makeShape 3 resolution Quads (planesGeometry configuration visibles)
     $ colorPlanes configuration planesType
 
 
-remakePlanes :: Configuration -> Shape -> Cells -> IO Shape
+remakePlanes :: RealFloat a => Configuration a -> Shape -> Cells -> IO Shape
 remakePlanes configuration shape visibles =
   remakeShape shape (planesGeometry configuration visibles)
    
 
-colorPlanes :: Configuration -> PlanesType -> IO ()
+colorPlanes :: Configuration a -> PlanesType -> IO ()
 colorPlanes Configuration{..} planesType =
   color
     $ case planesType of
@@ -315,10 +338,10 @@ colorPlanes Configuration{..} planesType =
         HighlightedPlanes -> planeHighlightColor
 
 
-planesGeometry :: Configuration -> Cells -> [Vertex3 GLfloat]
+planesGeometry :: RealFloat a => Configuration a -> Cells -> [Vertex3 Resolution]
 planesGeometry configuration@Configuration{..} visibles =
   let
-    (spacing, size) = spacingAndSize configuration
+    (spacing, size) = realToFrac *** realToFrac $ spacingAndSize configuration
   in
     concat [
       [
@@ -340,20 +363,20 @@ planesGeometry configuration@Configuration{..} visibles =
     ]
 
 
-makeLines :: Configuration -> PlanesType -> Points -> IO Shape
+makeLines :: RealFloat a => Configuration a -> PlanesType -> Points -> IO Shape
 makeLines configuration planesType points =
-  makeShape 3 Float Lines (concatMap (linesGeometry configuration) $ Set.toList points)
+  makeShape 3 resolution Lines (concatMap (linesGeometry configuration) $ Set.toList points)
     $ colorLines configuration planesType
 
 
-remakeLines :: Configuration -> Shape -> Points -> IO Shape
+remakeLines :: RealFloat a => Configuration a -> Shape -> Points -> IO Shape
 remakeLines configuration shape points =
   remakeShape shape
     $ concatMap (linesGeometry configuration)
     $ Set.toList points
    
 
-colorLines :: Configuration -> PlanesType -> IO ()
+colorLines :: Configuration a -> PlanesType -> IO ()
 colorLines Configuration{..} planesType =
   color
     $ case planesType of
@@ -362,10 +385,10 @@ colorLines Configuration{..} planesType =
         HighlightedPlanes -> lineHighlightColor
 
 
-linesGeometry :: Configuration -> [Double] -> [Vertex3 GLfloat]
+linesGeometry :: RealFloat a => Configuration a -> [Double] -> [Vertex3 Resolution]
 linesGeometry configuration@Configuration{..} points =
   let
-    (spacing, _) = spacingAndSize configuration
+    spacing = realToFrac $ fst $ spacingAndSize configuration
     pointGeometry (u : v : ws) n =
       p : p : pointGeometry ws (n + spacing)
         where 

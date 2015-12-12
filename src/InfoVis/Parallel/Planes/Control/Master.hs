@@ -7,7 +7,10 @@
 
 
 module InfoVis.Parallel.Planes.Control.Master (
-  master
+  MultiDisplayConfiguration(..)
+, DisplayConfiguration(..)
+, peersList
+, master
 , __remoteTable
 , displayerProcess__tdict
 ) where
@@ -15,19 +18,88 @@ module InfoVis.Parallel.Planes.Control.Master (
 
 import Control.Concurrent (forkIO, takeMVar)
 import Control.Monad (forM_, void, zipWithM)
-import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
-import Data.Binary.Instances ()
+import Data.Aeson (FromJSON)
 import Data.Default (def)
 import Data.IORef (newIORef)
 import Data.Relational.Lists (Tabulation)
+import Foreign.C.Types.Instances ()
+import GHC.Generics (Generic)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
-import Graphics.Rendering.Handa.Viewer (dlpViewerDisplay)
-import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), GLfloat, Vector3(..), ($=!), clear, get)
+import Graphics.Rendering.Handa.Projection (Screen)
+import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay)
+import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3, ($=!), clear, get)
+import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (createWindow, displayCallback, initialize, mainLoop, swapBuffers)
-import Graphics.UI.Handa.Setup (Setup(..), Stereo, setup)
+import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
 import Graphics.UI.SpaceNavigator (Track(..))
 import InfoVis.Parallel.Planes.Control (display, setupContent, setupLocationTracking)
+import InfoVis.Parallel.Planes.Grid (Resolution)
+
+import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
+import qualified Graphics.UI.Handa.Setup as S (Setup(..))
+
+
+data MultiDisplayConfiguration a =
+  MultiDisplayConfiguration
+  {
+    stereo        :: Stereo
+  , nearPlane     :: a
+  , farPlane      :: a
+  , eyePosition   :: Vertex3 a
+  , eyeSeparation :: Vector3 a
+  , eyeUpward     :: Vector3 a
+  , sceneCenter   :: Vertex3 a
+  , sceneScale    :: a
+  , displays      :: [DisplayConfiguration a]
+  }
+  deriving (Eq, Generic, Read, Show)
+
+instance Functor MultiDisplayConfiguration where
+  fmap f MultiDisplayConfiguration{..} =
+    MultiDisplayConfiguration
+    {
+      stereo        =              stereo
+    , nearPlane     =           f  nearPlane
+    , farPlane      =           f  farPlane
+    , eyePosition   =      fmap f  eyePosition
+    , eyeSeparation =      fmap f  eyeSeparation
+    , eyeUpward     =      fmap f  eyeUpward
+    , sceneCenter   =      fmap f  sceneCenter
+    , sceneScale    =           f  sceneScale
+    , displays      = map (fmap f) displays
+    }
+
+instance (FromJSON a, Generic a) => FromJSON (MultiDisplayConfiguration a)
+
+
+data DisplayConfiguration a =
+  DisplayConfiguration
+  {
+    host              :: String
+  , port              :: String
+  , displayIdentifier :: String
+  , screen            :: Screen a
+  }
+  deriving (Eq, Generic, Read, Show)
+
+instance Functor DisplayConfiguration where
+  fmap f DisplayConfiguration{..} =
+    DisplayConfiguration
+    {
+      host              =        host
+    , port              =        port
+    , displayIdentifier =        displayIdentifier
+    , screen            = fmap f screen
+    }
+
+instance (FromJSON a, Generic a) => FromJSON (DisplayConfiguration a)
+
+
+peersList :: MultiDisplayConfiguration a -> [(String, String)]
+peersList MultiDisplayConfiguration{..} =
+  map (\DisplayConfiguration{..} -> (host, port)) displays
 
 
 trackerProcess :: [ProcessId] -> Process ()
@@ -44,23 +116,24 @@ trackerProcess listeners =
     let
       loop =
         do
-          say "Tracker waiting."
           liftIO $ takeMVar updated
-          location' <- liftIO $ get location
-          tracking' <- liftIO $ get tracking
+          location' <- liftIO $ get location :: Process (Vector3 Resolution)
+          tracking' <- liftIO $ get tracking :: Process (Track Resolution)
           forM_ listeners $ flip send (location', tracking')
           loop
     loop
 
 
-displayerProcess :: (String, Setup, Tabulation Double) -> Process ()
+displayerProcess :: (String, Setup Resolution, Tabulation Double) -> Process ()
 displayerProcess (screen, setUp, content) =
   do
     pid <- getSelfPid
-    location <- liftIO $ newIORef (Vector3 0 0 (-1.5) :: Vector3 GLfloat)
+    location <- liftIO $ newIORef (Vector3 0 0 (-1.5) :: Vector3 Resolution)
     tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
+    let
+      setUp' = realToFrac <$> setUp :: Setup Resolution
     void $ liftIO $ forkIO $ do
-      (dlp, viewerParameters, _) <- setup "displayerProcess" ("Display " ++ show pid) ["-display", screen] setUp
+      (dlp, viewerParameters, _) <- setup (screen ++ " @ " ++ show pid) "displayerProcess" ["-display", screen] setUp'
       (configuration, grids) <- setupContent viewerParameters content
       dlpDisplayCallback $=!
         dlpViewerDisplay
@@ -71,7 +144,7 @@ displayerProcess (screen, setUp, content) =
     let
       loop =
         do
-          (location', tracking') <- expect :: Process (Vector3 GLfloat, Track)
+          (location', tracking') <- expect :: Process (Vector3 Resolution, Track Resolution)
           liftIO $ do
             location $=! location'
             tracking $=! tracking'
@@ -82,18 +155,40 @@ displayerProcess (screen, setUp, content) =
 remotable ['displayerProcess]
 
 
-master :: Stereo -> Tabulation Double -> [NodeId] -> Process ()
-master stereoMode content peers =
+master :: MultiDisplayConfiguration Resolution -> Tabulation Double -> [NodeId] -> Process ()
+master MultiDisplayConfiguration{..} content peers =
   do
     let
       setUp =
         Setup
         {
-          stereo     = stereoMode
+          stereo     = stereo
         , switchEyes = False
-        , viewer     = def
-        , fullscreen = True
+        , viewer     = undefined
+        , fullscreen = False
         }
-    peerPids <- zipWithM (\peer screen -> spawn peer ($(mkClosure 'displayerProcess) (":0." ++ show screen, setUp, content))) peers [(0::Int)..]
+      viewer' =
+        ViewerParameters
+        {
+          screen        = undefined
+        , nearPlane     = nearPlane
+        , farPlane      = farPlane
+        , eyePosition   = eyePosition
+        , eyeSeparation = eyeSeparation
+        , eyeUpward     = eyeUpward
+        , sceneCenter   = sceneCenter
+        , sceneScale    = sceneScale
+        }
+    peerPids <-
+      zipWithM 
+        (\peer DisplayConfiguration{..} ->
+          let
+            setUp' :: Setup Resolution
+            setUp' = setUp {S.viewer = Left $ viewer' {V.screen = screen}}
+          in
+            spawn peer ($(mkClosure 'displayerProcess) (displayIdentifier, setUp', content))
+        )
+        peers
+        displays
     _tracker <- spawnLocal (trackerProcess peerPids)
     expect :: Process ()
