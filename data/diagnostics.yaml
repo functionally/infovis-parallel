@@ -1,25 +1,57 @@
 stereo              : Mono
 nearPlane           : 0.1
 farPlane            : 100
-eyePosition         : [ 0.00,  0.00,  1.5 ]
-eyeSeparation       : [ 0.02,  0   ,  0   ]
-eyeUpward           : [ 0   ,  1   ,  0   ]
-sceneCenter         : [-1.25,  1.75,  0   ]
-sceneScale          : [ 1   ,  1   ,  1   ]
+eyePosition         : [ 0.00  , 2.00  ,  0.00  ]
+eyeSeparation       : [ 0.05  , 0.00  ,  0.00  ]
+eyeUpward           : [ 0.00  , 1.00  ,  0.00  ]
+sceneCenter         : [ 0.00  , 1.25  , -0.75  ]
+sceneScale          : [ 2.50  , 1.00  ,  1.00  ]
 displays            :
 - host              : localhost
   port              : '44445'
   displayIdentifier : :0.0
-  geometry          : 750x450+200+100
+  geometry          : 250x155+250+155
   screen            :
-    lowerLeft       : [-2.5 ,  1.0 ,   0 ]
-    lowerRight      : [ 0.0 ,  1.0 ,   0 ]
-    upperLeft       : [-2.5 ,  2.5 ,   0 ]
+    lowerLeft       : [-2.50  , 1.25  , -1.50  ]
+    lowerRight      : [ 0.00  , 1.25  , -1.50  ]
+    upperLeft       : [-2.50  , 2.50  , -1.50  ]
 - host              : localhost
   port              : '44446'
   displayIdentifier : :0.0
-  geometry          : 750x450+900+100
+  geometry          : 250x155+500+155
   screen            :
-    lowerLeft       : [-1.5 ,  1.0 ,   0 ]
-    lowerRight      : [ 1.0 ,  1.0 ,   0 ]
-    upperLeft       : [-1.5 ,  2.5 ,   0 ]
+    lowerLeft       : [-0.00  , 1.25  , -1.50  ]
+    lowerRight      : [ 2.50  , 1.25  , -1.50  ]
+    upperLeft       : [-0.00  , 2.50  , -1.50  ]
+- host              : localhost
+  port              : '44447'
+  displayIdentifier : :0.0
+  geometry          : 250x155+250+310
+  screen            :
+    lowerLeft       : [-2.50  , 0.00  , -1.50  ]
+    lowerRight      : [ 0.00  , 0.00  , -1.50  ]
+    upperLeft       : [-2.50  , 1.25  , -1.50  ]
+- host              : localhost
+  port              : '44448'
+  displayIdentifier : :0.0
+  geometry          : 250x155+500+310
+  screen            :
+    lowerLeft       : [-0.00  , 0.00  , -1.50  ]
+    lowerRight      : [ 2.50  , 0.00  , -1.50  ]
+    upperLeft       : [-0.00  , 1.25  , -1.50  ]
+- host              : localhost
+  port              : '44449'
+  displayIdentifier : :0.0
+  geometry          : 250x155+250+465
+  screen            :
+    lowerLeft       : [-2.50  , 0.00  ,  0.00  ]
+    lowerRight      : [ 0.00  , 0.00  ,  0.00  ]
+    upperLeft       : [-2.50  , 0.00  , -1.50  ]
+- host              : localhost
+  port              : '44450'
+  displayIdentifier : :0.0
+  geometry          : 250x155+500+465
+  screen            :
+    lowerLeft       : [-0.00  , 0.00  ,  0.00  ]
+    lowerRight      : [ 2.50  , 0.00  ,  0.00  ]
+    upperLeft       : [-0.00  , 0.00  , -1.50  ]

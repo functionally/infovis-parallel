@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.2.2.0
+version:             0.2.2.1
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -13,14 +13,15 @@ build-type:          Simple
 cabal-version:       >= 1.10
 homepage:            https://bitbucket.org/bwbush/infovis-parallel
 bug-reports:         https://bwbush.atlassian.net/projects/HIVPP/issues/
-package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.1.5.1.tar.gz
+package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.2.1.tar.gz
 
 extra-source-files:  ReadMe.md
 data-dir: data
 data-files: ENB2012.md
             ENB2012.tsv
-            projector.json
-            pair.json
+            projector.yaml
+            diagnostics.yaml
+            ESIF.yaml
 
 
 source-repository head
@@ -39,12 +40,12 @@ library
                ,    distributed-process-simplelocalnet >= 0.2.3.1
                ,    GLUT                               >= 2.7.0.1
                ,    handa-data                         >= 0.2.12.8
-               ,    handa-opengl                       >= 0.1.9.4
+               ,    handa-opengl                       >= 0.1.11.2
                ,    handa-relational                   >= 0.2.1.4
                ,    network                            >= 2.6.2.1
                ,    network-transport                  >= 0.4.2
-               ,    opengl-dlp-stereo                  >= 0.1.5.1
-               ,    opengl-spacenavigator              >= 0.1.4.6
+               ,    opengl-dlp-stereo                  >= 0.1.5.2
+               ,    opengl-spacenavigator              >= 0.1.5.2
                ,    OpenGL                             >= 2.12.0.1
                ,    random                             >= 1.1
                ,    vector-space                       >= 0.10.2
