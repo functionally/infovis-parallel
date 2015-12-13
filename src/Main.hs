@@ -111,7 +111,7 @@ parallelPlanesCave =
   }
     &= name "planes-cave"
     &= help "Cave-based information visualization using parallel planes."
-    &= details ["Specify the addresses of peer nodes in the file on the command line in \"host:port\" notation."]
+    &= details ["See the example <data/diagnostics.yaml> for an example display configuration file."]
 
 
 main :: IO ()

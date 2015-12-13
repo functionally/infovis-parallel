@@ -1,21 +1,21 @@
-stereo              : Mono
-nearPlane           : 0.1
-farPlane            : 100
-eyePosition         : [ 0.00  , 2.00  ,  0.00  ]
-eyeSeparation       : [ 0.05  , 0.00  ,  0.00  ]
-eyeUpward           : [ 0.00  , 1.00  ,  0.00  ]
-sceneCenter         : [ 0.00  , 1.25  , -0.75  ]
-sceneScale          : [ 2.50  , 1.00  ,  1.00  ]
-displays            :
-- host              : localhost
-  port              : '44445'
-  displayIdentifier : :0.0
-  geometry          : 250x155+250+155
-  screen            :
-    lowerLeft       : [-2.50  , 1.25  , -1.50  ]
-    lowerRight      : [ 0.00  , 1.25  , -1.50  ]
-    upperLeft       : [-2.50  , 2.50  , -1.50  ]
-- host              : localhost
+stereo              : Mono                       # The stereo mode: "Mono", "DLP", "Cardboard", or "QuadBuffer".
+nearPlane           : 0.1                        # The distance from the eye to the near clipping plane.
+farPlane            : 100                        # The distance from the eye to the far clipping plane.
+eyePosition         : [ 0.00  , 2.00  ,  0.00  ] # The position of the eye.
+eyeSeparation       : [ 0.05  , 0.00  ,  0.00  ] # The separation between the eyes.
+eyeUpward           : [ 0.00  , 1.00  ,  0.00  ] # The updward direction for the eyes.
+sceneCenter         : [ 0.00  , 1.25  , -0.75  ] # The center of the scene.
+sceneScale          : [ 2.50  , 1.00  ,  1.00  ] # By how much to scale the scene.
+displays            :                            # Descriptions of the CAVE displays.
+- host              : localhost                  # The host for the slave process for this display.
+  port              : '44445'                    # The port for the slave process for this display.
+  displayIdentifier : :0.0                       # The X11 screen for this display.
+  geometry          : 250x155+250+155            # The X11 geometry for this display, or the literal "fullscreen".
+  screen            :                            # The geometry of the physical screen in world coordinates.
+    lowerLeft       : [-2.50  , 1.25  , -1.50  ] # The lower left corner of the screen.
+    lowerRight      : [ 0.00  , 1.25  , -1.50  ] # The lower right corner of the screen.
+    upperLeft       : [-2.50  , 2.50  , -1.50  ] # The upper left corner of the screen.
+- host              : localhost                  # The same for the second display . . .
   port              : '44446'
   displayIdentifier : :0.0
   geometry          : 250x155+500+155
@@ -23,7 +23,7 @@ displays            :
     lowerLeft       : [-0.00  , 1.25  , -1.50  ]
     lowerRight      : [ 2.50  , 1.25  , -1.50  ]
     upperLeft       : [-0.00  , 2.50  , -1.50  ]
-- host              : localhost
+- host              : localhost                  # The same for the third display . . .
   port              : '44447'
   displayIdentifier : :0.0
   geometry          : 250x155+250+310
@@ -31,7 +31,7 @@ displays            :
     lowerLeft       : [-2.50  , 0.00  , -1.50  ]
     lowerRight      : [ 0.00  , 0.00  , -1.50  ]
     upperLeft       : [-2.50  , 1.25  , -1.50  ]
-- host              : localhost
+- host              : localhost                  # The same for the fourth display . . .
   port              : '44448'
   displayIdentifier : :0.0
   geometry          : 250x155+500+310
@@ -39,7 +39,7 @@ displays            :
     lowerLeft       : [-0.00  , 0.00  , -1.50  ]
     lowerRight      : [ 2.50  , 0.00  , -1.50  ]
     upperLeft       : [-0.00  , 1.25  , -1.50  ]
-- host              : localhost
+- host              : localhost                  # The same for the fifth display . . .
   port              : '44449'
   displayIdentifier : :0.0
   geometry          : 250x155+250+465
@@ -47,7 +47,7 @@ displays            :
     lowerLeft       : [-2.50  , 0.00  ,  0.00  ]
     lowerRight      : [ 0.00  , 0.00  ,  0.00  ]
     upperLeft       : [-2.50  , 0.00  , -1.50  ]
-- host              : localhost
+- host              : localhost                  # The same for the sixth display . . .
   port              : '44450'
   displayIdentifier : :0.0
   geometry          : 250x155+500+465
