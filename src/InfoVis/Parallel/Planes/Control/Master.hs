@@ -16,9 +16,9 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (forkIO, takeMVar)
+import Control.Concurrent (forkIO, forkOS, takeMVar)
 import Control.Monad (forM_, void, zipWithM, guard)
-import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, send, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
 import Data.Default (def)
@@ -108,6 +108,7 @@ trackerProcess :: [ProcessId] -> Process ()
 trackerProcess listeners =
   do
     pid <- getSelfPid
+    say $ "Starting tracker <" ++ show pid ++ ">."
     (location, tracking, updated) <- liftIO $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
       void $ createWindow $ "<" ++ show pid ++ ">"
@@ -115,7 +116,7 @@ trackerProcess listeners =
         clear [ColorBuffer]
         swapBuffers
       setupLocationTracking
-    _forkPid <- liftIO $ forkIO mainLoop
+    _forkPid <- liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
     let
       loop =
         do
@@ -131,11 +132,12 @@ displayerProcess :: (String, Maybe String, Setup Resolution, Tabulation Double) 
 displayerProcess (screen, geometry, setUp, content) =
   do
     pid <- getSelfPid
+    say $ "Starting display <" ++ show pid ++ ">."
     location <- liftIO $ newIORef (Vector3 0 0 (-1.5) :: Vector3 Resolution)
     tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     let
       setUp' = realToFrac <$> setUp :: Setup Resolution
-    void $ liftIO $ forkIO $ do
+    void $ liftIO $ forkOS $ do
       (dlp, viewerParameters, _) <-
         setup
           ("<" ++ show pid ++ ">")
@@ -169,6 +171,7 @@ remotable ['displayerProcess]
 master :: MultiDisplayConfiguration Resolution -> Tabulation Double -> [NodeId] -> Process ()
 master MultiDisplayConfiguration{..} content peers =
   do
+    pid <- getSelfPid
     let
       setUp =
         Setup
@@ -193,22 +196,25 @@ master MultiDisplayConfiguration{..} content peers =
     peerPids <-
       zipWithM 
         (\peer DisplayConfiguration{..} ->
-          let
-            setUp' :: Setup Resolution
-            setUp' =
-              setUp
-                {
-                  S.fullscreen = geometry == Just "fullscreen"
-                , S.viewer       = Left $ viewer' {V.screen = screen}
-                }
-            geometry' =
-              do
-                guard (geometry `notElem` [Just "", Just "fullscreen"])
-                geometry
-          in
+          do
+            let
+              setUp' :: Setup Resolution
+              setUp' =
+                setUp
+                  {
+                    S.fullscreen = geometry == Just "fullscreen"
+                  , S.viewer       = Left $ viewer' {V.screen = screen}
+                  }
+              geometry' =
+                do
+                  guard (geometry `notElem` [Just "", Just "fullscreen"])
+                  geometry
+            say $ "Spawning display <" ++ show peer ++ ">."
             spawn peer ($(mkClosure 'displayerProcess) (displayIdentifier, geometry', setUp', content))
         )
         peers
         displays
+    say $ "Spawning tracker <" ++ show pid ++ ">."
     _tracker <- spawnLocal (trackerProcess peerPids)
+    say "Waiting forever."
     expect :: Process ()
