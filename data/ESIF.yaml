@@ -6,6 +6,7 @@ eyeSeparation       : [-0.05  , 0     ,  0     ]
 eyeUpward           : [ 0     , 1     ,  0     ]
 sceneCenter         : [ 0     , 1.2625, -0.765 ]
 sceneScale          : [ 2.5   , 1     ,  1     ]
+headTracker         : Head0@10.60.6.100
 displays            :
 - host              : localhost
   port              : '44445'

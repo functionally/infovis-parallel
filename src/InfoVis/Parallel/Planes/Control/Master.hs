@@ -16,26 +16,27 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (forkIO, forkOS, takeMVar)
+import Control.Concurrent (MVar, forkIO, forkOS, takeMVar, tryPutMVar)
 import Control.Monad (forM_, void, zipWithM, guard)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
 import Data.Default (def)
-import Data.IORef (newIORef)
+import Data.IORef (IORef, newIORef)
 import Data.Relational.Lists (Tabulation)
 import Foreign.C.Types.Instances ()
 import GHC.Generics (Generic)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
 import Graphics.Rendering.Handa.Projection (Screen)
-import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay)
-import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3, ($=!), clear, get)
+import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay')
+import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3(..), ($=!), ($~!), clear, get)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (createWindow, displayCallback, initialize, mainLoop, swapBuffers)
 import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
 import Graphics.UI.SpaceNavigator (Track(..))
 import InfoVis.Parallel.Planes.Control (display, setupContent, setupLocationTracking)
 import InfoVis.Parallel.Planes.Grid (Resolution)
+import Network.VRPN (PositionCallback, positionLoop)
 
 import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
 import qualified Graphics.UI.Handa.Setup as S (Setup(..))
@@ -53,6 +54,7 @@ data MultiDisplayConfiguration a =
   , sceneCenter   :: Vertex3 a
   , sceneScale    :: Vector3 a
   , displays      :: [DisplayConfiguration a]
+  , headTracker   :: Maybe String
   }
   deriving (Eq, Generic, Read, Show)
 
@@ -69,6 +71,7 @@ instance Functor MultiDisplayConfiguration where
     , sceneCenter   =      fmap f  sceneCenter
     , sceneScale    =      fmap f  sceneScale
     , displays      = map (fmap f) displays
+    , headTracker   =              headTracker
     }
 
 instance (FromJSON a, Generic a) => FromJSON (MultiDisplayConfiguration a)
@@ -104,11 +107,19 @@ peersList MultiDisplayConfiguration{..} =
   map (\DisplayConfiguration{..} -> (host, port)) displays
 
 
-trackerProcess :: [ProcessId] -> Process ()
-trackerProcess listeners =
+headCallback :: IORef (Vertex3 Resolution) -> MVar () -> PositionCallback
+headCallback eyes updated x z y =
+  do
+    eyes $=! realToFrac <$> Vertex3 x y z
+    void $ tryPutMVar updated ()
+
+
+trackerProcess :: Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
+trackerProcess headTracker listeners =
   do
     pid <- getSelfPid
     say $ "Starting tracker <" ++ show pid ++ ">."
+    eyes <- liftIO $ newIORef $ either (const $ Vertex3 0 0 0) id headTracker
     (location, tracking, updated) <- liftIO $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
       void $ createWindow $ "<" ++ show pid ++ ">"
@@ -116,14 +127,19 @@ trackerProcess listeners =
         clear [ColorBuffer]
         swapBuffers
       setupLocationTracking
-    _forkPid <- liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
+    either
+      (void . liftIO . forkOS . flip positionLoop (headCallback eyes updated))
+      (const $ return ())
+      headTracker
+    void $ liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
     let
       loop =
         do
           liftIO $ takeMVar updated
           location' <- liftIO $ get location :: Process (Vector3 Resolution)
           tracking' <- liftIO $ get tracking :: Process (Track Resolution)
-          forM_ listeners $ flip send (location', tracking')
+          eyes'     <- liftIO $ get eyes     :: Process (Vertex3 Resolution)
+          forM_ listeners $ flip send (location', tracking', eyes')
           loop
     loop
 
@@ -137,8 +153,8 @@ displayerProcess (screen, geometry, setUp, content) =
     tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     let
       setUp' = realToFrac <$> setUp :: Setup Resolution
-    void $ liftIO $ forkOS $ do
-      (dlp, viewerParameters, _) <-
+    viewerParameters <- liftIO $ do
+      (dlp, viewerParameters', _) <-
         setup
           ("<" ++ show pid ++ ">")
           "displayerProcess"
@@ -148,19 +164,22 @@ displayerProcess (screen, geometry, setUp, content) =
           )
           setUp'
       (configuration, grids) <- setupContent content
+      viewerParameters'' <- newIORef viewerParameters'
       dlpDisplayCallback $=!
-        dlpViewerDisplay
+        dlpViewerDisplay'
           dlp
-          viewerParameters
+          viewerParameters''
           (display configuration grids location tracking)
-      mainLoop
+      return viewerParameters''
+    void $ liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
     let
       loop =
         do
-          (location', tracking') <- expect :: Process (Vector3 Resolution, Track Resolution)
+          (location', tracking', eyes') <- expect :: Process (Vector3 Resolution, Track Resolution, Vertex3 Resolution)
           liftIO $ do
-            location $=! location'
-            tracking $=! tracking'
+            location         $=! location'
+            tracking         $=! tracking'
+            viewerParameters $~! \vp -> vp {V.eyePosition = eyes'}
           loop
     loop
 
@@ -215,6 +234,6 @@ master MultiDisplayConfiguration{..} content peers =
         peers
         displays
     say $ "Spawning tracker <" ++ show pid ++ ">."
-    _tracker <- spawnLocal (trackerProcess peerPids)
+    _tracker <- spawnLocal (trackerProcess (maybe (Right eyePosition) Left headTracker) peerPids)
     say "Waiting forever."
     expect :: Process ()
