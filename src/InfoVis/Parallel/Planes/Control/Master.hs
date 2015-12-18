@@ -177,6 +177,11 @@ displayerProcess (screen, geometry, setUp, content) =
       loop =
         do
           (location', tracking', eyes') <- expect :: Process (Vector3 Resolution, Track Resolution, Vertex3 Resolution)
+          let
+            Vector3 lx ly lz = realToFrac <$> location'               :: Vector3 Double
+            Vector3 tx ty tz = realToFrac <$> trackPosition tracking' :: Vector3 Double
+            Vertex3 ex ey ez = realToFrac <$> eyes'                   :: Vertex3 Double
+          say $ "LOCATION " ++ show (lx, ly, lz) ++ "; SELECT " ++ show (tx, ty, tz) ++ "; EYES " ++ show (ex, ey, ez)
           liftIO $ do
             location         $=! location'
             tracking         $=! tracking'
