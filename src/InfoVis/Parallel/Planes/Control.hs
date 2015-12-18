@@ -22,8 +22,8 @@ import Data.Relational (Relation(names, toLists))
 import Data.Relational.Lists (Tabulation)
 import Foreign.Storable (Storable)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
-import Graphics.Rendering.Handa.Viewer (dlpViewerDisplay)
-import Graphics.Rendering.OpenGL (MatrixComponent, Vector3(..), ($=!), get, preservingMatrix, translate)
+import Graphics.Rendering.Handa.Viewer (ViewerParameters(sceneCenter), dlpViewerDisplay)
+import Graphics.Rendering.OpenGL (MatrixComponent, Vector3(..), Vertex3(..), ($=!), get, preservingMatrix, translate)
 import Graphics.UI.GLUT (DisplayCallback, KeyboardMouseCallback, keyboardMouseCallback, mainLoop)
 import Graphics.UI.Handa.Keyboard (keyboardPosition)
 import Graphics.UI.Handa.Setup (Setup, setup)
@@ -38,9 +38,10 @@ main program title arguments setUp content =
   do
     (dlp, viewerParameters, _) <- setup program title arguments setUp
     (configuration, grids) <- setupContent content
-    (location, tracking, _) <- setupLocationTracking :: IO (IORef (Vector3 Resolution), IORef (Track Resolution), MVar ())
+    (location, tracking, _) <- setupLocationTracking $ sceneCenter viewerParameters
     dlpDisplayCallback $=!
       dlpViewerDisplay
+        True
         dlp
         viewerParameters
         (display configuration grids location tracking)
@@ -77,11 +78,11 @@ setupContent content =
     return (configuration, grids)
 
 
-setupLocationTracking :: RealFloat a => IO (IORef (Vector3 a), IORef (Track a), MVar ())
-setupLocationTracking =
+setupLocationTracking :: RealFloat a => Vertex3 a -> IO (IORef (Vector3 a), IORef (Track a), MVar ())
+setupLocationTracking center =
   do
     updated <- newMVar ()
-    location <- newIORef $ Vector3 0 0 (-1.5)
+    location <- newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) center
     tracking <- newIORef $ def {trackPosition = Vector3 0 0 1.1}
     spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
     keyboardMouseCallback $=! Just (keyboard updated location)

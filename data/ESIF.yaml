@@ -1,7 +1,7 @@
 stereo              : QuadBuffer
 nearPlane           : 0.1
 farPlane            : 100
-eyePosition         : [ 0     , 1.0000,  1.000 ]
+eyePosition         : [ 0     , 1.0000,  2.000 ]
 eyeSeparation       : [-0.05  , 0     ,  0     ]
 eyeUpward           : [ 0     , 1     ,  0     ]
 sceneCenter         : [ 0     , 1.2625, -0.765 ]

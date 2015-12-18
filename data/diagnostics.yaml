@@ -1,8 +1,8 @@
 stereo              : Mono                       # The stereo mode: "Mono", "DLP", "Cardboard", or "QuadBuffer".
 nearPlane           : 0.1                        # The distance from the eye to the near clipping plane.
 farPlane            : 100                        # The distance from the eye to the far clipping plane.
-eyePosition         : [ 0.00  , 1.50  ,  1.00  ] # The position of the eye.
-eyeSeparation       : [-0.05  , 0.00  ,  0.00  ] # The separation between the eyes.
+eyePosition         : [ 0.00  , 1.25  ,  1.00  ] # The position of the eye.
+eyeSeparation       : [ 0.05  , 0.00  ,  0.00  ] # The separation between the eyes.
 eyeUpward           : [ 0.00  , 1.00  ,  0.00  ] # The updward direction for the eyes.
 sceneCenter         : [ 0.00  , 1.25  , -0.75  ] # The center of the scene.
 sceneScale          : [ 2.50  , 1.00  ,  1.00  ] # By how much to scale the scene.

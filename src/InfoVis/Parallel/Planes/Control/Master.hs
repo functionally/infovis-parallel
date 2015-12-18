@@ -108,14 +108,14 @@ peersList MultiDisplayConfiguration{..} =
 
 
 headCallback :: IORef (Vertex3 Resolution) -> MVar () -> PositionCallback
-headCallback eyes updated x z y =
+headCallback eyes updated x y z =
   do
-    eyes $=! realToFrac <$> Vertex3 x y z
+    eyes $=! realToFrac <$> Vertex3 (-x) z y
     void $ tryPutMVar updated ()
 
 
-trackerProcess :: Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
-trackerProcess headTracker listeners =
+trackerProcess :: Vertex3 Resolution -> Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
+trackerProcess center headTracker listeners =
   do
     pid <- getSelfPid
     say $ "Starting tracker <" ++ show pid ++ ">."
@@ -126,7 +126,7 @@ trackerProcess headTracker listeners =
       displayCallback $=! do
         clear [ColorBuffer]
         swapBuffers
-      setupLocationTracking
+      setupLocationTracking center
     either
       (void . liftIO . forkOS . flip positionLoop (headCallback eyes updated))
       (const $ return ())
@@ -149,7 +149,7 @@ displayerProcess (screen, geometry, setUp, content) =
   do
     pid <- getSelfPid
     say $ "Starting display <" ++ show pid ++ ">."
-    location <- liftIO $ newIORef (Vector3 0 0 (-1.5) :: Vector3 Resolution)
+    location <- liftIO $ newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) $ V.sceneCenter $ either id undefined $ S.viewer setUp
     tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     let
       setUp' = realToFrac <$> setUp :: Setup Resolution
@@ -167,6 +167,7 @@ displayerProcess (screen, geometry, setUp, content) =
       viewerParameters'' <- newIORef viewerParameters'
       dlpDisplayCallback $=!
         dlpViewerDisplay'
+          False
           dlp
           viewerParameters''
           (display configuration grids location tracking)
@@ -234,6 +235,6 @@ master MultiDisplayConfiguration{..} content peers =
         peers
         displays
     say $ "Spawning tracker <" ++ show pid ++ ">."
-    _tracker <- spawnLocal (trackerProcess (maybe (Right eyePosition) Left headTracker) peerPids)
+    void $ spawnLocal (trackerProcess sceneCenter (maybe (Right eyePosition) Left headTracker) peerPids)
     say "Waiting forever."
     expect :: Process ()
