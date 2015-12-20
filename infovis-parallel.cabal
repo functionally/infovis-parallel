@@ -40,7 +40,7 @@ library
                ,    distributed-process-simplelocalnet >= 0.2.3.1
                ,    GLUT                               >= 2.7.0.1
                ,    handa-data                         >= 0.2.12.8
-               ,    handa-opengl                       >= 0.1.11.4
+               ,    handa-opengl                       >= 0.1.11.5
                ,    handa-relational                   >= 0.2.1.4
                ,    network                            >= 2.6.2.1
                ,    network-transport                  >= 0.4.2
