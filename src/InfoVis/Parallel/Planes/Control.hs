@@ -7,7 +7,8 @@
 module InfoVis.Parallel.Planes.Control (
   main
 , setupContent
-, setupLocationTracking
+, spaceNavigator
+, keyboard
 , display
 ) where
 

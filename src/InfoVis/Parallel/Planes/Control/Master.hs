@@ -16,13 +16,12 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (MVar, forkIO, takeMVar, tryPutMVar)
-import Control.Monad (forM_, guard, void, when, zipWithM)
+import Control.Concurrent (MVar, forkIO, forkOS, newMVar, takeMVar, tryPutMVar)
+import Control.Monad (forM_, guard, void, zipWithM)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
 import Data.Default (def)
-import Data.Either (isLeft)
 import Data.IORef (IORef, newIORef)
 import Data.Relational.Lists (Tabulation)
 import Foreign.C.Types.Instances ()
@@ -32,10 +31,10 @@ import Graphics.Rendering.Handa.Projection (Screen)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay')
 import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3(..), ($=!), ($~!), clear, get)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (createWindow, displayCallback, idleCallback, initialize, mainLoop, swapBuffers)
+import Graphics.UI.GLUT (createWindow, displayCallback, idleCallback, initialize, keyboardMouseCallback, mainLoop, swapBuffers)
 import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
-import Graphics.UI.SpaceNavigator (Track(..))
-import InfoVis.Parallel.Planes.Control (display, setupContent, setupLocationTracking)
+import Graphics.UI.SpaceNavigator (Track(..), spaceNavigatorCallback)
+import InfoVis.Parallel.Planes.Control (display, keyboard, setupContent, spaceNavigator)
 import InfoVis.Parallel.Planes.Grid (Resolution)
 
 import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
@@ -120,23 +119,30 @@ trackerProcess center headTracker listeners =
   do
     pid <- getSelfPid
     say $ "Starting tracker <" ++ show pid ++ ">."
+    updated <- liftIO $ newMVar ()
+    location <- liftIO $ newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) center
+    tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     eyes <- liftIO $ newIORef $ either (const $ Vertex3 0 0 0) id headTracker
-    (location, tracking, updated) <- liftIO $ do
+    void $ liftIO $ forkOS $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
       void $ createWindow $ "<" ++ show pid ++ ">"
       displayCallback $=! do
         clear [ColorBuffer]
         swapBuffers
-      setupLocationTracking center
-    when (isLeft headTracker) $
-        liftIO $ do
-          let
-            name = either id undefined headTracker
-            device :: VRPN.Device Int Int Int Resolution
-            device = VRPN.Tracker name (Just $ headCallback eyes updated) Nothing Nothing
-          remote <- VRPN.openDevice device
-          idleCallback $=! Just (VRPN.mainLoop remote)
-    void $ liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
+      spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
+      keyboardMouseCallback $=! Just (keyboard updated location)
+      either
+        (
+          \name -> do
+            let
+              device :: VRPN.Device Int Int Int Resolution
+              device = VRPN.Tracker name (Just $ headCallback eyes updated) Nothing Nothing
+            remote <- VRPN.openDevice device
+            idleCallback $=! Just (VRPN.mainLoop remote)
+        )
+        (const $ return ())
+        headTracker
+      mainLoop
     let
       loop =
         do
