@@ -16,12 +16,13 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (MVar, forkIO, forkOS, takeMVar, tryPutMVar)
-import Control.Monad (forM_, void, zipWithM, guard)
+import Control.Concurrent (MVar, forkIO, takeMVar, tryPutMVar)
+import Control.Monad (forM_, guard, void, when, zipWithM)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
 import Data.Default (def)
+import Data.Either (isLeft)
 import Data.IORef (IORef, newIORef)
 import Data.Relational.Lists (Tabulation)
 import Foreign.C.Types.Instances ()
@@ -31,15 +32,15 @@ import Graphics.Rendering.Handa.Projection (Screen)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay')
 import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3(..), ($=!), ($~!), clear, get)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (createWindow, displayCallback, initialize, mainLoop, swapBuffers)
+import Graphics.UI.GLUT (createWindow, displayCallback, idleCallback, initialize, mainLoop, swapBuffers)
 import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
 import Graphics.UI.SpaceNavigator (Track(..))
 import InfoVis.Parallel.Planes.Control (display, setupContent, setupLocationTracking)
 import InfoVis.Parallel.Planes.Grid (Resolution)
-import Network.VRPN (PositionCallback, positionLoop)
 
 import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
 import qualified Graphics.UI.Handa.Setup as S (Setup(..))
+import qualified Network.VRPN as VRPN (PositionCallback, Device(..), mainLoop, openDevice)
 
 
 data MultiDisplayConfiguration a =
@@ -107,8 +108,8 @@ peersList MultiDisplayConfiguration{..} =
   map (\DisplayConfiguration{..} -> (host, port)) displays
 
 
-headCallback :: IORef (Vertex3 Resolution) -> MVar () -> PositionCallback
-headCallback eyes updated x y z =
+headCallback :: IORef (Vertex3 Resolution) -> MVar () -> VRPN.PositionCallback Int Resolution
+headCallback eyes updated _ _ (x, y, z) _ =
   do
     eyes $=! realToFrac <$> Vertex3 (-x) z y
     void $ tryPutMVar updated ()
@@ -127,10 +128,14 @@ trackerProcess center headTracker listeners =
         clear [ColorBuffer]
         swapBuffers
       setupLocationTracking center
-    either
-      (void . liftIO . forkOS . flip positionLoop (headCallback eyes updated))
-      (const $ return ())
-      headTracker
+    when (isLeft headTracker) $
+        liftIO $ do
+          let
+            name = either id undefined headTracker
+            device :: VRPN.Device Int Int Int Resolution
+            device = VRPN.Tracker name (Just $ headCallback eyes updated) Nothing Nothing
+          remote <- VRPN.openDevice device
+          idleCallback $=! Just (VRPN.mainLoop remote)
     void $ liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
     let
       loop =
