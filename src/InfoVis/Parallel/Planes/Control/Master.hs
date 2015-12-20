@@ -16,7 +16,7 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (MVar, forkIO, forkOS, newMVar, takeMVar, tryPutMVar)
+import Control.Concurrent (MVar, forkOS, newMVar, takeMVar, tryPutMVar)
 import Control.Monad (forM_, guard, void, zipWithM)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
@@ -160,12 +160,13 @@ displayerProcess (screen, geometry, setUp, content) =
   do
     pid <- getSelfPid
     say $ "Starting display <" ++ show pid ++ ">."
-    location <- liftIO $ newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) $ V.sceneCenter $ either id undefined $ S.viewer setUp
-    tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     let
-      setUp' = realToFrac <$> setUp :: Setup Resolution
-    viewerParameters <- liftIO $ do
-      (dlp, viewerParameters', _) <-
+      viewerParameters' = either id undefined $ S.viewer setUp
+    viewerParameters <- liftIO $ newIORef viewerParameters'
+    location <- liftIO $ newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) $ V.sceneCenter viewerParameters'
+    tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
+    void $ liftIO $ forkOS $ do
+      (dlp, _, _) <-
         setup
           ("<" ++ show pid ++ ">")
           "displayerProcess"
@@ -173,17 +174,15 @@ displayerProcess (screen, geometry, setUp, content) =
             maybe id (\g -> (++ ["-geometry", g])) geometry
               ["-display", screen]
           )
-          setUp'
+          (realToFrac <$> setUp :: Setup Resolution)
       (configuration, grids) <- setupContent content
-      viewerParameters'' <- newIORef viewerParameters'
       dlpDisplayCallback $=!
         dlpViewerDisplay'
           False
           dlp
-          viewerParameters''
+          viewerParameters
           (display configuration grids location tracking)
-      return viewerParameters''
-    void $ liftIO $ forkIO mainLoop -- FIXME: It seems like this should use forkOS instead of forkIO, but we'd have to create the OpenGL context in that thread, too.
+      mainLoop
     let
       loop =
         do
