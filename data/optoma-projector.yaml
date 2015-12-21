@@ -1,15 +1,16 @@
 stereo              : DLP
 nearPlane           : 0.1
 farPlane            : 100
-eyePosition         : [0  , 0, 1.5]
-eyeSeparation       : [0.2, 0, 0  ]
-eyeUpward           : [0  , 1, 0  ]
-sceneCenter         : [0  , 0, 0  ]
-sceneScale          : [1  , 1, 1  ]
+eyePosition         : [0    , 0    , 1    ]
+eyeSeparation       : [0.005, 0    , 0    ]
+eyeUpward           : [0    , 1    , 0    ]
+sceneCenter         : [0    , 0    , 6.80 ]
+sceneScale          : [0.10 , 0.06 , 0.10 ]
 displays            :
 - host              : localhost
   port              : '44445'
-  displayIdentifier : :0.0
+  displayIdentifier : :0.1
+  geometry          : fullscreen
   screen            :
     lowerLeft       : [-0.5, -0.3125, 0]
     lowerRight      : [ 0.5, -0.3125, 0]
