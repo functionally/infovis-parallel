@@ -22,26 +22,30 @@ headCallback eyes updated _ _ (x, y, z) _ =
 
 
 joystickTrackingCallback :: IORef (Track Resolution) -> IORef (Vector3 Resolution) -> Vector3 Resolution -> MVar () -> PositionCallback Int Resolution
-joystickTrackingCallback track sceneCenter (Vector3 sx sy sz) updated _ _ (px, py, pz) (ox, oy, oz, ow) =
+joystickTrackingCallback track sceneCenter (Vector3 sx sy sz) updated _ _ (px, py, pz) (_ox, _oy, _oz, _ow) =
   do
     Vector3 cx cy cz <- get sceneCenter
     let
-      px' = - px * sx + cx
-      py' =   pz * sy + cy
-      pz' =   py * sz + cz
-      ox' = - ox * sx
-      oy' =   oz * sy
-      oz' =   oy * sz
-      ow' =   ow
+      px' = - px         / sx - cx
+      py' =   pz         / sy - cy
+      pz' =  (py - 0.25) / sz - cz
+{-
+      ox' = - _ox / sx
+      oy' =   _oz / sy
+      oz' =   _oy / sz
+      ow' =   _ow
+-}
     track' <- get track
     track $=!
       track'
       {
         trackPosition    = Vector3 px' py' pz'
+{-
       , trackOrientation = Vector3
                              (atan2 (2 * (ow' * oz' + ox' * oy')) (1 - 2 * (ox' * ox' + oy' * oy'))) -- yaw
                              (asin  (2 * (ow' * oy' - oz' * ox'))                                  ) -- pitch
                              (atan2 (2 * (ow' * ox' + oy' * oz')) (1 - 2 * (ox' * ox' + oy' * oy'))) -- roll
+-}
       }
     void $ tryPutMVar updated ()
 
@@ -52,7 +56,7 @@ joystickButtonCallback track updated _ button pressed =
     track' <- get track
     case button of
       0 -> track $=! track' {trackLeftPress  = pressed}
-      1 -> track $=! track' {trackRightPress = pressed}
+      2 -> track $=! track' {trackRightPress = pressed}
       _ -> return ()
     void $ tryPutMVar updated ()
 
