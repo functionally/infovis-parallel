@@ -1,7 +1,7 @@
 stereo              : Mono
 nearPlane           : 0.1
 farPlane            : 100
-eyePosition         : [0    , 0    , 1    ]
+eyePosition         : [0.14 , 0.51 , 1.23 ]
 eyeSeparation       : [0.005, 0    , 0    ]
 eyeUpward           : [0    , 1    , 0    ]
 sceneCenter         : [0    , 0    , 6.80 ]
