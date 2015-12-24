@@ -13,7 +13,7 @@ build-type:          Simple
 cabal-version:       >= 1.10
 homepage:            https://bitbucket.org/bwbush/infovis-parallel
 bug-reports:         https://bwbush.atlassian.net/projects/HIVPP/issues/
-package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.2.6.tar.gz
+package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.3.8.tar.gz
 
 extra-source-files:  ReadMe.md
 data-dir: data
