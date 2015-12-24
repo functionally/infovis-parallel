@@ -2,10 +2,10 @@ stereo              : QuadBuffer
 nearPlane           : 0.1
 farPlane            : 100
 eyePosition         : [ 0     , 1.0000,  1.000 ]
-eyeSeparation       : [-0.03  , 0     ,  0     ]
+eyeSeparation       : [-0.06  , 0     ,  0     ]
 eyeUpward           : [ 0     , 1     ,  0     ]
-sceneCenter         : [ 0     , 1.2625, -0.765 ]
-sceneScale          : [ 2.5   , 1     ,  1     ]
+sceneCenter         : [ 0     , 3.00  , -1.75  ]
+sceneScale          : [ 1.00  , 0.50  ,  0.50  ]
 headTracker         : Head0@10.60.6.100
 displays            :
 - host              : localhost
