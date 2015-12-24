@@ -16,13 +16,13 @@ module InfoVis.Parallel.Planes.Control.Master (
 ) where
 
 
-import Control.Concurrent (MVar, forkOS, newMVar, takeMVar, tryPutMVar)
+import Control.Concurrent (forkOS, newMVar, takeMVar)
 import Control.Monad (forM_, guard, void, zipWithM)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Data.Aeson (FromJSON)
 import Data.Default (def)
-import Data.IORef (IORef, newIORef)
+import Data.IORef (newIORef)
 import Data.Relational.Lists (Tabulation)
 import Foreign.C.Types.Instances ()
 import GHC.Generics (Generic)
@@ -31,15 +31,15 @@ import Graphics.Rendering.Handa.Projection (Screen)
 import Graphics.Rendering.Handa.Viewer (ViewerParameters(ViewerParameters), dlpViewerDisplay')
 import Graphics.Rendering.OpenGL (ClearBuffer(ColorBuffer), Vector3(..), Vertex3(..), ($=!), ($~!), clear, get)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (createWindow, displayCallback, idleCallback, initialize, keyboardMouseCallback, mainLoop, swapBuffers)
+import Graphics.UI.GLUT (createWindow, displayCallback, initialize, keyboardMouseCallback, mainLoop, swapBuffers)
 import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
 import Graphics.UI.SpaceNavigator (Track(..), spaceNavigatorCallback)
 import InfoVis.Parallel.Planes.Control (display, keyboard, setupContent, spaceNavigator)
+import InfoVis.Parallel.Planes.Control.VRPN (trackHead)
 import InfoVis.Parallel.Planes.Grid (Resolution)
 
 import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
 import qualified Graphics.UI.Handa.Setup as S (Setup(..))
-import qualified Network.VRPN as VRPN (PositionCallback, Device(..), mainLoop, openDevice)
 
 
 data MultiDisplayConfiguration a =
@@ -107,13 +107,6 @@ peersList MultiDisplayConfiguration{..} =
   map (\DisplayConfiguration{..} -> (host, port)) displays
 
 
-headCallback :: IORef (Vertex3 Resolution) -> MVar () -> VRPN.PositionCallback Int Resolution
-headCallback eyes updated _ _ (x, y, z) _ =
-  do
-    eyes $=! realToFrac <$> Vertex3 (-x) z y
-    void $ tryPutMVar updated ()
-
-
 trackerProcess :: Vertex3 Resolution -> Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
 trackerProcess center headTracker listeners =
   do
@@ -132,14 +125,7 @@ trackerProcess center headTracker listeners =
       spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
       keyboardMouseCallback $=! Just (keyboard updated location)
       either
-        (
-          \name -> do
-            let
-              device :: VRPN.Device Int Int Int Resolution
-              device = VRPN.Tracker name (Just $ headCallback eyes updated) Nothing Nothing
-            remote <- VRPN.openDevice device
-            idleCallback $=! Just (VRPN.mainLoop remote)
-        )
+        (trackHead eyes updated)
         (const $ return ())
         headTracker
       mainLoop
