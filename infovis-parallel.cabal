@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.2.3.11
+version:             0.2.4.0
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -13,7 +13,7 @@ build-type:          Simple
 cabal-version:       >= 1.10
 homepage:            https://bitbucket.org/bwbush/infovis-parallel
 bug-reports:         https://bwbush.atlassian.net/projects/HIVPP/issues/
-package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.3.11.tar.gz
+package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.4.0.tar.gz
 
 extra-source-files:  ReadMe.md
 data-dir: data

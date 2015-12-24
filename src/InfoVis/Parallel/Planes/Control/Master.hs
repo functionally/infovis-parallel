@@ -35,7 +35,7 @@ import Graphics.UI.GLUT (createWindow, displayCallback, initialize, keyboardMous
 import Graphics.UI.Handa.Setup (Setup(Setup), Stereo, setup)
 import Graphics.UI.SpaceNavigator (Track(..), spaceNavigatorCallback)
 import InfoVis.Parallel.Planes.Control (display, keyboard, setupContent, spaceNavigator)
-import InfoVis.Parallel.Planes.Control.VRPN (trackHead)
+import InfoVis.Parallel.Planes.Control.VRPN (trackHeadAndJoystick)
 import InfoVis.Parallel.Planes.Grid (Resolution)
 
 import qualified Graphics.Rendering.Handa.Viewer as V (ViewerParameters(..))
@@ -107,8 +107,8 @@ peersList MultiDisplayConfiguration{..} =
   map (\DisplayConfiguration{..} -> (host, port)) displays
 
 
-trackerProcess :: Vertex3 Resolution -> Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
-trackerProcess center headTracker listeners =
+trackerProcess :: Vertex3 Resolution -> Vector3 Resolution -> Either String (Vertex3 Resolution)-> [ProcessId] -> Process ()
+trackerProcess center scale headTracker listeners =
   do
     pid <- getSelfPid
     say $ "Starting tracker <" ++ show pid ++ ">."
@@ -125,7 +125,7 @@ trackerProcess center headTracker listeners =
       spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
       keyboardMouseCallback $=! Just (keyboard updated location)
       either
-        (trackHead eyes updated)
+        (trackHeadAndJoystick eyes tracking location scale updated)
         (const $ return ())
         headTracker
       mainLoop
@@ -238,6 +238,6 @@ master MultiDisplayConfiguration{..} content peers =
         peers
         displays
     say $ "Spawning tracker <" ++ show pid ++ ">."
-    void $ spawnLocal (trackerProcess sceneCenter (maybe (Right eyePosition) Left headTracker) peerPids)
+    void $ spawnLocal (trackerProcess sceneCenter sceneScale (maybe (Right eyePosition) Left headTracker) peerPids)
     say "Waiting forever."
     expect :: Process ()
