@@ -116,6 +116,7 @@ trackerProcess center scale headTracker listeners =
     location <- liftIO $ newIORef $ (\(Vertex3 x y z) -> Vector3 x y z) center
     tracking <- liftIO $ newIORef $ def {trackPosition = Vector3 0 0 1.1}
     eyes <- liftIO $ newIORef $ either (const $ Vertex3 0 0 0) id headTracker
+    look <- liftIO $ newIORef $ Vector3 0 0 0
     void $ liftIO $ forkOS $ do
       void $ initialize "trackerProcess" ["-geometry", "250x50"]
       void $ createWindow $ "<" ++ show pid ++ ">"
@@ -125,7 +126,7 @@ trackerProcess center scale headTracker listeners =
       spaceNavigatorCallback $=! Just (spaceNavigator updated tracking)
       keyboardMouseCallback $=! Just (keyboard updated location)
       either
-        (trackHeadAndJoystick eyes tracking location scale updated)
+        (trackHeadAndJoystick eyes look tracking location scale updated)
         (const $ return ())
         headTracker
       mainLoop
@@ -136,7 +137,8 @@ trackerProcess center scale headTracker listeners =
           location' <- liftIO $ get location :: Process (Vector3 Resolution)
           tracking' <- liftIO $ get tracking :: Process (Track Resolution)
           eyes'     <- liftIO $ get eyes     :: Process (Vertex3 Resolution)
-          forM_ listeners $ flip send (location', tracking', eyes')
+          look'     <- liftIO $ get look     :: Process (Vector3 Resolution)
+          forM_ listeners $ flip send (location', tracking', eyes', look')
           loop
     loop
 
@@ -172,7 +174,7 @@ displayerProcess (screen, geometry, setUp, content) =
     let
       loop =
         do
-          (location', tracking', eyes') <- expect :: Process (Vector3 Resolution, Track Resolution, Vertex3 Resolution)
+          (location', tracking', eyes', look') <- expect :: Process (Vector3 Resolution, Track Resolution, Vertex3 Resolution, Vector3 Resolution)
 {-
           let
             Vector3 lx ly lz = realToFrac <$> location'               :: Vector3 Double
@@ -183,7 +185,7 @@ displayerProcess (screen, geometry, setUp, content) =
           liftIO $ do
             location         $=! location'
             tracking         $=! tracking'
-            viewerParameters $~! \vp -> vp {V.eyePosition = eyes'}
+            viewerParameters $~! \vp -> vp {V.eyePosition = eyes', V.eyeSeparation = look'}
           loop
     loop
 

@@ -1,14 +1,14 @@
-stereo              : Mono
+stereo              : Cardboard
 nearPlane           : 0.1
 farPlane            : 100
 eyePosition         : [0  , 0  , 1.5]
-eyeSeparation       : [0.2, 0  , 0  ]
+eyeSeparation       : [0.02, 0  , 0  ]
 eyeUpward           : [0  , 1  , 0  ]
 sceneCenter         : [0  , 0  , 0  ]
 sceneScale          : [1  , 0.5, 1  ]
 displays            :
 - host              : 192.168.1.107
-  port              : '44445'
+  port              : '44444'
   displayIdentifier : :0.0
   geometry          : fullscreen
   screen            :
