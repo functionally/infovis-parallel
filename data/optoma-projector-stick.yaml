@@ -8,7 +8,7 @@ sceneCenter         : [0    , 0    , 6.80 ]
 sceneScale          : [0.10 , 0.06 , 0.10 ]
 displays            :
 - host              : 192.168.1.107
-  port              : '44445'
+  port              : '44444'
   displayIdentifier : :0.0
   geometry          : fullscreen
   screen            :
