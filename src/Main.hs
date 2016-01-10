@@ -11,7 +11,8 @@ import Control.Distributed.Process.Backend.SimpleWidenet (initializeBackend, sta
 import Control.Distributed.Process.Node (initRemoteTable)
 import Data.Data (Data)
 import Data.Default (def)
-import Data.Relational (cast, fromString)
+import Data.Functor.Util (cast)
+import Data.Relational.Lists (readTable)
 import Data.Relational.Value (asRealFloat)
 import Data.Typeable (Typeable)
 import Data.Version (showVersion)
@@ -135,7 +136,7 @@ dispatch ParallelPlanes{..} =
         (if display  == "" then id else ("-display"  :) . (display  :)) $
         (if geometry == "" then id else ("-geometry" :) . (geometry :))
         []
-    x <- cast asRealFloat . fromString <$> readFile dataset
+    x <- cast asRealFloat <$> readTable dataset
     PP.main "infovis-parallel" "Parallel Planes" arguments config x
 
 dispatch ParallelPlanesCave{..}
@@ -144,7 +145,7 @@ dispatch ParallelPlanesCave{..}
                        startSlave backend
   | otherwise      = do
                        Just configuration <- decodeFile displays
-                       content <- cast asRealFloat . fromString <$> readFile (if dataset == "" then "/dev/stdin" else dataset)
+                       content <- cast asRealFloat <$> readTable (if dataset == "" then "/dev/stdin" else dataset)
                        backend <- initializeBackend (M.peersList configuration) host' port' rtable
                        (`startMaster` M.master configuration content) backend
     where

@@ -19,7 +19,7 @@ import Control.Monad (replicateM, void)
 import Data.Default (def)
 import Data.List (transpose)
 import Data.IORef (IORef, newIORef)
-import Data.Relational (Relation(names, toLists))
+import Data.Relational (Relation(..), attributes)
 import Data.Relational.Lists (Tabulation)
 import Foreign.Storable (Storable)
 import Graphics.Rendering.DLP.Callbacks (dlpDisplayCallback)
@@ -54,7 +54,7 @@ setupContent content =
   do
     let
       columns = names content
-      measurements = toLists content
+      measurements = attributes <$> tuples content
       n = 2 * (length columns `div` 2)
       configuration =
         def
