@@ -1,0 +1,355 @@
+dataset                 :
+  datasetIdentifier     : data/ENB2012.tsv
+  variables             :
+  - variableAlias       : rc
+    variableName        : Relative Compactness
+    lowerBound          : 0.60
+    upperBound          : 1.00
+  - variableAlias       : sa
+    variableName        : Surface Area
+    units               : m²
+    lowerBound          : 500
+    upperBound          : 825
+  - variableAlias       : wa
+    variableName        : Wall Area
+    units               : m²
+    lowerBound          : 225
+    upperBound          : 425
+  - variableAlias       : ra
+    variableName        : Roof Area
+    units               : m²
+    lowerBound          : 100
+    upperBound          : 225
+  - variableAlias       : oh
+    variableName        : Overall Height
+    units               : m
+    lowerBound          : 3.25
+    upperBound          : 7.25
+  - variableAlias       : or
+    variableName        : Orientation
+    units               : 2=N,3=E,4=S,5=W
+    lowerBound          : 1.9
+    upperBound          : 5.1
+  - variableAlias       : ga
+    variableName        : Glazing Area
+    lowerBound          : -0.01
+    upperBound          :  0.41
+  - variableAlias       : gd
+    variableName        : Glazing Area Distribution
+    units               : 0=unknown,1=uniform,2=N,3=E,4=W,5=W
+    lowerBound          : -0.01
+    upperBound          :  5.01
+  - variableAlias       : hl
+    variableName        : Heating Load
+    units               : kWh/m²
+    lowerBound          : 10
+    upperBound          : 50
+  - variableAlias       : cl
+    variableName        : Cooling Load
+    units               : kWh/m²
+    lowerBound          : 10
+    upperBound          : 50
+
+presentation            :
+  containers            :
+  - tag                 : Collection
+    extents             :
+    - tag               : Extent3D
+      origin            : [0.05, 0.55, 0.05]
+      cornerX           : [0.45, 0.55, 0.05]
+      cornerY           : [0.05, 0.95, 0.05]
+      cornerZ           : [0.05, 0.55, 0.95]
+    - tag               : Extent3D
+      origin            : [0.55, 0.55, 0.05]
+      cornerX           : [0.95, 0.55, 0.05]
+      cornerY           : [0.55, 0.95, 0.05]
+      cornerZ           : [0.55, 0.55, 0.95]
+    containeds          :
+    - tag               : Singleton
+      extent            :
+        tag             : Extent3D
+        origin          : [0, 0, 0]
+        cornerX         : [1, 0, 0]
+        cornerY         : [0, 1, 0]
+        cornerZ         : [0, 0, 1]
+      grid              :
+        tag             : BoxGrid
+        gridAlias       : heatingBox
+        axes3D          :
+        - axisVariable  : wa
+        - axisVariable  : ra
+        - axisVariable  : hl
+        divisions       : 10
+    - tag               : Singleton
+      extent            :
+        tag             : Extent3D
+        origin          : [0, 0, 0]
+        cornerX         : [1, 0, 0]
+        cornerY         : [0, 1, 0]
+        cornerZ         : [0, 0, 1]
+      grid              :
+        tag             : BoxGrid
+        gridAlias       : coolingBox
+        axes3D          :
+        - axisVariable  : wa
+        - axisVariable  : ra
+        - axisVariable  : cl
+        divisions       : 10
+  - tag                 : Array
+    extents             :
+    - tag               : Extent2D
+      origin            : [0.1, 0.1, 0.1]
+      cornerX           : [0.1, 0.1, 0.9]
+      cornerY           : [0.1, 0.4, 0.1]
+    - tag               : Extent2D
+      origin            : [0.2, 0.1, 0.1]
+      cornerX           : [0.2, 0.1, 0.9]
+      cornerY           : [0.2, 0.4, 0.1]
+    - tag               : Extent2D
+      origin            : [0.3, 0.1, 0.1]
+      cornerX           : [0.3, 0.1, 0.9]
+      cornerY           : [0.3, 0.4, 0.1]
+    - tag               : Extent2D
+      origin            : [0.4, 0.1, 0.1]
+      cornerX           : [0.4, 0.1, 0.9]
+      cornerY           : [0.4, 0.4, 0.1]
+    - tag               : Extent2D
+      origin            : [0.5, 0.1, 0.1]
+      cornerX           : [0.5, 0.1, 0.9]
+      cornerY           : [0.5, 0.4, 0.1]
+    grids               :
+    - tag               : RectangleGrid
+      gridAlias         : plane1
+      axes2D            :
+      - axisVariable    : rc
+      - axisVariable    : sa
+      divisions         : 5
+    - tag               : RectangleGrid
+      gridAlias         : plane2
+      axes2D            :
+      - axisVariable    : wa
+      - axisVariable    : ra
+      divisions         : 5
+    - tag               : RectangleGrid
+      gridAlias         : plane3
+      axes2D            :
+      - axisVariable    : oh
+      - axisVariable    : or
+      divisions         : 5
+    - tag               : RectangleGrid
+      gridAlias         : plane4
+      axes2D            :
+      - axisVariable    : ga
+      - axisVariable    : gd
+      divisions         : 5
+    - tag               : RectangleGrid
+      gridAlias         : plane5
+      axes2D            :
+      - axisVariable    : hl
+      - axisVariable    : cl
+      divisions         : 5
+  - tag                 : Array
+    extents             :
+    - tag               : Extent1D
+      origin            : [0.7, 0.1, 0.2]
+      cornerX           : [0.7, 0.4, 0.2]
+    - tag               : Extent1D
+      origin            : [0.7, 0.1, 0.4]
+      cornerX           : [0.7, 0.4, 0.4]
+    - tag               : Extent1D
+      origin            : [0.7, 0.1, 0.6]
+      cornerX           : [0.7, 0.4, 0.6]
+    - tag               : Extent1D
+      origin            : [0.7, 0.1, 0.8]
+      cornerX           : [0.7, 0.4, 0.8]
+    - tag               : Extent1D
+      origin            : [0.9, 0.1, 0.2]
+      cornerX           : [0.9, 0.4, 0.2]
+    - tag               : Extent1D
+      origin            : [0.9, 0.1, 0.4]
+      cornerX           : [0.9, 0.4, 0.4]
+    - tag               : Extent1D
+      origin            : [0.9, 0.1, 0.6]
+      cornerX           : [0.9, 0.4, 0.6]
+    - tag               : Extent1D
+      origin            : [0.9, 0.1, 0.8]
+      cornerX           : [0.9, 0.4, 0.8]
+    - tag               : Extent1D
+      origin            : [0.8, 0.1, 0.4]
+      cornerX           : [0.8, 0.4, 0.4]
+    - tag               : Extent1D
+      origin            : [0.8, 0.1, 0.6]
+      cornerX           : [0.8, 0.4, 0.6]
+    grids               :
+    - tag               : LineGrid
+      gridAlias         : line1
+      axes1D            :
+        axisVariable    : rc
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line2
+      axes1D            :
+        axisVariable    : sa
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line3
+      axes1D            :
+        axisVariable    : wa
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line4
+      axes1D            :
+        axisVariable    : ra
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line5
+      axes1D            :
+        axisVariable    : oh
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line6
+      axes1D            :
+        axisVariable    : or
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line7
+      axes1D            :
+        axisVariable    : ga
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line8
+      axes1D            :
+        axisVariable    : gd
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line9
+      axes1D            :
+        axisVariable    : hl
+      divisions         : 10
+    - tag               : LineGrid
+      gridAlias         : line10
+      axes1D            :
+        axisVariable    : cl
+      divisions         : 10
+  links                 :
+    - tag               : Point
+      linkAlias         : heatingScatterplot
+      linkedGrid        : heatingBox
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Point
+      linkAlias         : coolingScatterplot
+      linkedGrid        : coolingBox
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelPlanes
+      linkedGrids       : [plane1,plane2,plane3,plane4,plane5]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest1
+      linkedGrids       : [line1,line9]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest2
+      linkedGrids       : [line2,line9]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest3
+      linkedGrids       : [line3,line9]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest4
+      linkedGrids       : [line4,line9]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest5
+      linkedGrids       : [line5,line10]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest6
+      linkedGrids       : [line6,line10]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest7
+      linkedGrids       : [line7,line10]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest8
+      linkedGrids       : [line8,line10]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+    - tag               : Polyline
+      linkAlias         : parallelForest9
+      linkedGrids       : [line9,line10]
+      characteristics   :
+      - tag             : Color
+        normalColor     : [128, 128, 128, 128]
+        selectColor     : [128, 128, 128, 128]
+        backgroundColor : [128, 128, 128, 128]
+        highlightColor  : [128, 128, 128, 128]
+
+world                   :
+  displayExtent         :
+    worldOrigin         : [-0.1, -0.1, -0.1]
+    worldCornerX        : [ 1.1, -0.1, -0.1]
+    worldCornerY        : [-0.1,  1.1, -0.1]
+    worldCornerZ        : [-0.1, -0.1,  1.1]
+  worldExtent           :
+    worldOrigin         : [-0.5, -0.3,  0.0]
+    worldCornerX        : [ 0.5, -0.3,  0.0]
+    worldCornerY        : [-0.5,  0.3,  0.0]
+    worldCornerZ        : [-0.5, -0.3,  0.4]
+  eyeSeparation         : 0.01
