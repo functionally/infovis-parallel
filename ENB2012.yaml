@@ -42,12 +42,12 @@ dataset                    :
   - variableAlias          : hl
     variableName           : Heating Load
     units                  : kWh/m²
-    lowerBound             : 10
+    lowerBound             :  5
     upperBound             : 50
   - variableAlias          : cl
     variableName           : Cooling Load
     units                  : kWh/m²
-    lowerBound             : 10
+    lowerBound             :  5
     upperBound             : 50
 
 presentation               :
