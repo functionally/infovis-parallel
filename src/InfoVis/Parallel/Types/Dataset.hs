@@ -35,7 +35,7 @@ data Variable =
   , units         :: Maybe String
   , lowerBound    :: Maybe Double
   , upperBound    :: Maybe Double
-  , jitter        :: Maybe Double
+  , jitter        :: Maybe Double -- FIXME: Needs implementation.
   }
     deriving (Eq, Generic, Read, Show)
 

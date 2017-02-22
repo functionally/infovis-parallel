@@ -60,8 +60,8 @@ data Grid =
     , axes1D              :: Axes1D
     , divisions           :: Int
     , lineCharacteristics :: [Characteristic]
-    , labelColor          :: Color
-    , labelSize           :: Double
+    , labelColor          :: Color            -- FIXME: Needs implementation.
+    , labelSize           :: Double           -- FIXME: Needs implementation.
     }
   | RectangleGrid
     {
@@ -184,9 +184,9 @@ data Presentation =
   {
     containers    :: [Container]
   , links         :: [Link]
-  , animation     :: Maybe VariableAlias
-  , selectorColor :: Color
-  , selectorSize  :: Double
+  , animation     :: Maybe VariableAlias -- FIXME: Needs implementation.
+  , selectorColor :: Color               -- FIXME: Needs implementation.
+  , selectorSize  :: Double              -- FIXME: Needs implementation.
   }
     deriving (Eq, Generic, Read, Show)
 
@@ -215,8 +215,8 @@ data World =
   {
     displayExtent :: WorldExtent
   , worldExtent   :: WorldExtent
-  , eyeSeparation :: Double
-  , baseSize      :: Double
+  , eyeSeparation :: Double      -- FIXME: Needs implementation.
+  , baseSize      :: Double      -- FIXME: Needs implementation.
   }
     deriving (Eq, Generic, Read, Show)
 
