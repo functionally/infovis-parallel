@@ -82,12 +82,12 @@ presentation               :
         divisions          : 10
         lineCharacteristics:
         - tag              : ColorSet
-          normalColor      : [0.4, 0.4, 0.4, 0.8]
+          normalColor      : [0.2, 0.2, 0.2, 0.2]
           selectColor      : [0.4, 0.4, 0.0, 0.8]
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         faceCharacteristics:
         - tag              : ColorSet
-          normalColor      : [0.2, 0.2, 0.2, 0.6]
+          normalColor      : [0.2, 0.2, 0.2, 0.0]
           selectColor      : [0.4, 0.4, 0.0, 0.8]
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         labelColor         : [0.1, 0.6, 0.2, 1.0]
@@ -106,7 +106,7 @@ presentation               :
         - axisVariable     : wa
         - axisVariable     : ra
         - axisVariable     : cl
-        divisions          : 10
+        divisions          : 0
         lineCharacteristics:
         - tag              : ColorSet
           normalColor      : [0.4, 0.4, 0.4, 0.8]
@@ -114,7 +114,7 @@ presentation               :
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         faceCharacteristics:
         - tag              : ColorSet
-          normalColor      : [0.2, 0.2, 0.2, 0.6]
+          normalColor      : [0.2, 0.2, 0.2, 0.0]
           selectColor      : [0.4, 0.4, 0.0, 0.8]
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         labelColor         : [0.1, 0.6, 0.2, 1.0]
@@ -391,7 +391,7 @@ presentation               :
       linkedGrid           : heatingBox
       characteristics      :
       - tag                : ColorSet
-        normalColor        : [0.0, 0.0, 1.0, 0.2]
+        normalColor        : [0.0, 0.0, 1.0, 0.8]
         selectColor        : [0.8, 0.8, 0.8, 1.0]
         highlightColor     : [1.0, 0.0, 0.0, 1.0]
     - tag                  : Point
@@ -399,7 +399,7 @@ presentation               :
       linkedGrid           : coolingBox
       characteristics      :
       - tag                : ColorSet
-        normalColor        : [0.0, 0.0, 1.0, 0.2]
+        normalColor        : [0.0, 0.0, 1.0, 0.8]
         selectColor        : [0.8, 0.8, 0.8, 1.0]
         highlightColor     : [1.0, 0.0, 0.0, 1.0]
     - tag                  : Polyline

@@ -4,14 +4,19 @@
 module InfoVis.Parallel.Primitive (
   fromLocation
 , fromLocations
-, stripIdentifiers
-, partitionPrimitives
+, prepareGrids
+, prepareLinks
 ) where
 
 
-import Graphics.Rendering.OpenGL (GLfloat, PrimitiveMode(..), Vertex3(..))
+import Data.Function.MapReduce (groupReduceByKey)
+import Graphics.Rendering.OpenGL (GLfloat, Vertex3(..))
+import InfoVis.Parallel.Presenting (linkPresentation, presentWorld)
+import InfoVis.Parallel.Scaling (scaleToWorld)
 import InfoVis.Parallel.Types (Location)
-import InfoVis.Parallel.Types.Display (DisplayItem(..))
+import InfoVis.Parallel.Types.Dataset (Dataset, Record, RecordIdentifier)
+import InfoVis.Parallel.Types.Display (DisplayItem(..), DisplayList(..), DisplayType(..))
+import InfoVis.Parallel.Types.Scaffold (Characteristic, GridAlias, LinkAlias, Presentation, World)
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
@@ -27,15 +32,35 @@ fromLocations :: [DisplayItem a Location] -> [DisplayItem a Primitive3D]
 fromLocations = fmap (fmap fromLocation)
 
 
-stripIdentifiers :: [DisplayItem a Location] -> [DisplayItem () Primitive3D]
-stripIdentifiers = fmap $ \DisplayItem{..} -> DisplayItem {itemIdentifier = (), itemPrimitive = itemPrimitive, itemVertices = fromLocation <$> itemVertices}
+prepareGrids :: World -> Presentation -> [DisplayList (DisplayType, GridAlias) Int]
+prepareGrids world presentation =
+  prepare GridType
+    $ presentWorld world presentation
 
 
-partitionPrimitives :: [DisplayItem a b] -> ([b], [b], [b])
-partitionPrimitives = partitionPrimitives' ([], [], [])
+prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (DisplayType, LinkAlias) RecordIdentifier]
+prepareLinks world presentation dataset rs =
+  prepare LinkType
+    . concat 
+    . zipWith (linkPresentation presentation) [1..]
+    $ scaleToWorld world presentation dataset
+    <$> rs
 
-partitionPrimitives' :: ([b], [b], [b]) -> [DisplayItem a b] -> ([b], [b], [b])
-partitionPrimitives' (ps, ls, qs) [] = (ps, ls, qs)
-partitionPrimitives' (ps, ls, qs) (DisplayItem _ Points vs : dis) = partitionPrimitives' (vs ++ ps,       ls,       qs) dis
-partitionPrimitives' (ps, ls, qs) (DisplayItem _ Lines  vs : dis) = partitionPrimitives' (      ps, vs ++ ls,       qs) dis
-partitionPrimitives' (ps, ls, qs) (DisplayItem _ Quads  vs : dis) = partitionPrimitives' (      ps,       ls, vs ++ qs) dis
+
+prepare :: Ord a => DisplayType -> [DisplayItem (a, (b, [Characteristic])) Location] -> [DisplayList (DisplayType, a) b]
+prepare dt =
+  groupReduceByKey
+    (
+      \DisplayItem{..} -> (fst itemIdentifier, itemPrimitive)
+    )
+    (
+      \(n, listPrimitive) dis ->
+        let
+          listIdentifier = (dt, n)
+          listCharacteristics = snd . snd . itemIdentifier $ head dis
+          listVertexIdentifiers = concatMap (\DisplayItem{..} -> length itemVertices `replicate` fst (snd itemIdentifier)) dis
+          listVertices = concatMap itemVertices dis
+        in
+          DisplayList{..}
+    )
+    . fromLocations

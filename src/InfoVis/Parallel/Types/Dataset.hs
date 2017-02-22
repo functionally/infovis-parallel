@@ -11,7 +11,6 @@ module InfoVis.Parallel.Types.Dataset (
 
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 
 
@@ -47,7 +46,7 @@ instance ToJSON Variable
 type VariableAlias = String
 
 
-type RecordIdentifier = Word64
+type RecordIdentifier = Int
 
 
 type Record = [Double]

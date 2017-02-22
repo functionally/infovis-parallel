@@ -6,7 +6,6 @@ module InfoVis.Parallel.Presenting (
 , presentGrid
 , presentContainer
 , presentWorld
-, Corners
 ) where
 
 
@@ -14,18 +13,19 @@ import Data.Maybe (fromMaybe)
 import Graphics.Rendering.OpenGL (PrimitiveMode(..))
 import InfoVis.Parallel.Scaling (scaleToExtent, scaleToWorldExtent)
 import InfoVis.Parallel.Types (Location)
+import InfoVis.Parallel.Types.Dataset (RecordIdentifier)
 import InfoVis.Parallel.Types.Display (DisplayItem(..))
-import InfoVis.Parallel.Types.Scaffold (Container(..), Grid(..), GriddedLocation, GridAlias, Link(..), LinkAlias, Presentation(..), World)
+import InfoVis.Parallel.Types.Scaffold (Characteristic, Container(..), Grid(..), GriddedLocation, GridAlias, Link(..), LinkAlias, Presentation(..), World)
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
 
-pointsToLines :: LinkAlias -> [Location] -> [DisplayItem LinkAlias Location]
-pointsToLines a ls =
+pointsToLines :: RecordIdentifier -> Link -> [Location] -> [DisplayItem (LinkAlias, (RecordIdentifier, [Characteristic])) Location]
+pointsToLines n l ls =
   [
     DisplayItem
     {
-      itemIdentifier = a
+      itemIdentifier = (linkAlias l, (n, characteristics l))
     , itemPrimitive  = Lines
     , itemVertices   = ps
     }
@@ -34,16 +34,16 @@ pointsToLines a ls =
   ]
    
  
-linkPresentation :: Presentation -> [GriddedLocation] -> [DisplayItem LinkAlias Location]
-linkPresentation Presentation{..} = concat . (<$> links) . flip linkPresentation'
+linkPresentation :: Presentation -> RecordIdentifier -> [GriddedLocation] -> [DisplayItem (LinkAlias, (RecordIdentifier, [Characteristic]))  Location]
+linkPresentation Presentation{..} n = concat . (<$> links) . flip (linkPresentation' n)
 
 
-linkPresentation' :: Link -> [GriddedLocation] -> [DisplayItem LinkAlias Location]
-linkPresentation' Point{..} gls = -- FIXME: Optimize this.
+linkPresentation' :: RecordIdentifier -> Link -> [GriddedLocation] -> [DisplayItem (LinkAlias, (RecordIdentifier, [Characteristic]))  Location]
+linkPresentation' n Point{..} gls = -- FIXME: Optimize this.
   [
     DisplayItem
     {
-      itemIdentifier = linkAlias
+      itemIdentifier = (linkAlias, (n, characteristics))
     , itemPrimitive  = Points
     , itemVertices   = [
                          fromMaybe (error $ "linkPresentation: Grid \"" ++ linkedGrid ++ "\" not found.")
@@ -51,8 +51,8 @@ linkPresentation' Point{..} gls = -- FIXME: Optimize this.
                        ]
     }
   ]
-linkPresentation' Polyline{..} gls = -- FIXME: Optimize this.
-  pointsToLines linkAlias
+linkPresentation' n l@Polyline{..} gls = -- FIXME: Optimize this.
+  pointsToLines n l
     [
       fromMaybe (error $ "linkPresentation: Grid \"" ++ g ++ "\" not found.") $ g `lookup` gls
     |
@@ -60,21 +60,18 @@ linkPresentation' Polyline{..} gls = -- FIXME: Optimize this.
     ]
 
 
-type Corners = [Location]
-
-
-quadToLines :: GridAlias -> [Location] -> [DisplayItem GridAlias Location]
-quadToLines a ls =
+quadToLines :: Int -> Grid -> [Location] -> [DisplayItem (GridAlias, (Int, [Characteristic])) Location]
+quadToLines n g ls =
   DisplayItem
   {
-    itemIdentifier = a
+    itemIdentifier = (gridAlias g, (n, faceCharacteristics g))
   , itemPrimitive  = Quads
   , itemVertices   = ls
   } :
   [
     DisplayItem
     {
-      itemIdentifier = a
+      itemIdentifier = (gridAlias g, (n, lineCharacteristics g))
     , itemPrimitive  = Lines
     , itemVertices   = ps
     }
@@ -83,12 +80,12 @@ quadToLines a ls =
   ]
 
 
-presentGrid :: Grid -> [DisplayItem GridAlias Location]
+presentGrid :: Grid -> [DisplayItem (GridAlias, (Int, [Characteristic])) Location]
 presentGrid LineGrid{..} =
   [
     DisplayItem
     {
-      itemIdentifier = gridAlias
+      itemIdentifier = (gridAlias, (n, lineCharacteristics))
     , itemPrimitive  = Lines
     , itemVertices   = [
                          P $ (* d) <$> V3  i      0 0
@@ -97,12 +94,14 @@ presentGrid LineGrid{..} =
     }
   |
     let d = 1 / (1 + fromIntegral divisions)
-  , i <- fromIntegral <$> [0..divisions]
+  , i' <- [0..divisions]
+  , let n = i' + 1
+  , let i = fromIntegral i'
   ]
-presentGrid RectangleGrid{..} =
+presentGrid g@RectangleGrid{..} =
   concat
     [
-      quadToLines gridAlias
+      quadToLines n g
         [
           P $ (* d) <$> V3  i       j      0
         , P $ (* d) <$> V3  i      (j + 1) 0
@@ -111,13 +110,16 @@ presentGrid RectangleGrid{..} =
         ]
     |
       let d = 1 / (1 + fromIntegral divisions)
-    , i <- fromIntegral <$> [0..divisions]
-    , j <- fromIntegral <$> [0..divisions]
+    , i' <- [0..divisions]
+    , j' <- [0..divisions]
+    , let n = (divisions + 1) * i' + j'
+    , let i = fromIntegral i'
+    , let j = fromIntegral j'
     ]
-presentGrid BoxGrid{..} =
+presentGrid g@BoxGrid{..} =
   concat
     [
-      concatMap (quadToLines gridAlias)
+      concatMap (quadToLines n g)
         [
           [
             P $ (* d) <$> V3  i       j       k     
@@ -158,9 +160,13 @@ presentGrid BoxGrid{..} =
         ]
     |
       let d = 1 / (1 + fromIntegral divisions)
-    , i <- fromIntegral <$> [0..divisions]
-    , j <- fromIntegral <$> [0..divisions]
-    , k <- fromIntegral <$> [0..divisions]
+    , i' <- [0..divisions]
+    , j' <- [0..divisions]
+    , k' <- [0..divisions]
+    , let n = (divisions + 1) * ((divisions + 1) * i' + j') + k'
+    , let i = fromIntegral i'
+    , let j = fromIntegral j'
+    , let k = fromIntegral k'
     ]
 
 
@@ -168,7 +174,7 @@ scaleItems :: (Location -> Location) -> [DisplayItem a Location] -> [DisplayItem
 scaleItems = fmap . fmap
 
 
-presentContainer  :: Container -> [DisplayItem GridAlias Location]
+presentContainer  :: Container -> [DisplayItem (GridAlias, (Int, [Characteristic])) Location]
 presentContainer Singleton{..} =
   scaleItems (scaleToExtent extent) $ presentGrid grid
 presentContainer Array{..} =
@@ -177,6 +183,6 @@ presentContainer Collection{..} =
   concat $ zipWith (\e -> scaleItems (scaleToExtent e) . presentContainer) extents containeds
 
 
-presentWorld :: World -> Presentation -> [DisplayItem GridAlias Location]
+presentWorld :: World -> Presentation -> [DisplayItem (GridAlias, (Int, [Characteristic])) Location]
 presentWorld world Presentation{..} =
   concatMap (scaleItems (scaleToWorldExtent world) . presentContainer) containers

@@ -6,11 +6,13 @@ module InfoVis.Parallel.Types.Display (
   Primitive3D
 , DisplayItem(..)
 , DisplayList(..)
+, DisplayType(..)
 ) where
 
 
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat, PrimitiveMode, Vertex3)
+import InfoVis.Parallel.Types.Scaffold (Characteristic)
 
 
 type Primitive3D = Vertex3 GLfloat
@@ -32,8 +34,16 @@ instance Functor (DisplayItem a) where
 data DisplayList a b =
   DisplayList
   {
-    displayIdentifier :: a
-  , vertexIdentifiers :: [b]
-  , vertices          :: [Primitive3D]
+    listIdentifier        :: a
+  , listCharacteristics   :: [Characteristic]
+  , listVertexIdentifiers :: [b]
+  , listPrimitive         :: PrimitiveMode
+  , listVertices          :: [Primitive3D]
   }
+    deriving (Eq, Generic, Show)
+
+
+data DisplayType =
+    GridType
+  | LinkType
     deriving (Eq, Generic, Show)

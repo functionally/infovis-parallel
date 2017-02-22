@@ -1,13 +1,13 @@
 name:                infovis-parallel
-version:             0.3.0.1
+version:             0.3.0.2
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
 license:             MIT
 license-file:        LICENSE
-author:              Brian W Bush <consult@brianwbush.info>
-maintainer:          Brian W Bush <consult@brianwbush.info>
-copyright:           (c) 2015 Brian W Bush
+author:              Brian W Bush <brian.bush@nrel.gov>
+maintainer:          Brian W Bush <brian.bush@nrel.gov>
+copyright:           (c) 2015-17 National Renewable Energy Laboratory
 category:            Graphics
 build-type:          Simple
 cabal-version:       >= 1.10
