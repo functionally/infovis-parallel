@@ -56,21 +56,32 @@ type Axes3D = V3 Axis
 data Grid =
     LineGrid
     {
-      gridAlias :: GridAlias
-    , axes1D    :: Axes1D
-    , divisions :: Int
+      gridAlias           :: GridAlias
+    , axes1D              :: Axes1D
+    , divisions           :: Int
+    , lineCharacteristics :: [Characteristic]
+    , labelColor          :: Color
+    , labelSize           :: Double
     }
   | RectangleGrid
     {
-      gridAlias :: GridAlias
-    , axes2D    :: Axes2D
-    , divisions :: Int
+      gridAlias           :: GridAlias
+    , axes2D              :: Axes2D
+    , divisions           :: Int
+    , lineCharacteristics :: [Characteristic]
+    , faceCharacteristics :: [Characteristic]
+    , labelColor          :: Color
+    , labelSize           :: Double
     }
   | BoxGrid
     {
-      gridAlias :: GridAlias
-    , axes3D    :: Axes3D
-    , divisions :: Int
+      gridAlias           :: GridAlias
+    , axes3D              :: Axes3D
+    , divisions           :: Int
+    , lineCharacteristics :: [Characteristic]
+    , faceCharacteristics :: [Characteristic]
+    , labelColor          :: Color
+    , labelSize           :: Double
     }
     deriving (Eq, Generic, Read, Show)
 
@@ -155,11 +166,10 @@ instance ToJSON Link
 
 
 data Characteristic =
-    Color
+    ColorSet
     {
       normalColor     :: Color
     , selectColor     :: Color
-    , backgroundColor :: Color
     , highlightColor  :: Color
     }
     deriving (Eq, Generic, Read, Show)
@@ -174,6 +184,9 @@ data Presentation =
   {
     containers    :: [Container]
   , links         :: [Link]
+  , animation     :: Maybe VariableAlias
+  , selectorColor :: Color
+  , selectorSize  :: Double
   }
     deriving (Eq, Generic, Read, Show)
 
@@ -203,6 +216,7 @@ data World =
     displayExtent :: WorldExtent
   , worldExtent   :: WorldExtent
   , eyeSeparation :: Double
+  , baseSize      :: Double
   }
     deriving (Eq, Generic, Read, Show)
 
