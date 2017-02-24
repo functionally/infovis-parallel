@@ -3,39 +3,44 @@
 
 
 module InfoVis.Parallel.Rendering (
-  makeBuffer
+  DisplayBuffer(bufferIdentifier)
+, makeBuffer
+, freeBuffer
+, updateBuffer
 , drawBuffer
 ) where
 
 
-import Data.Array.Storable (newListArray, withStorableArray)
-import Data.Word (Word8)
-import Foreign.C.Types (CPtrdiff)
-import Foreign.Ptr (nullPtr, plusPtr)
-import Foreign.Storable (Storable, sizeOf)
-import Graphics.Rendering.OpenGL (DataType, BufferObject, BufferTarget(ArrayBuffer), BufferUsage(StaticDraw), Capability(..), ClientArrayType(VertexArray), Color4, GLfloat, NumArrayIndices, NumComponents, PrimitiveMode, Stride, Vertex3, VertexArrayDescriptor(..), ($=), arrayPointer, bindBuffer, bufferData, drawArrays, clientState, genObjectNames)
 
---import Graphics.Rendering.Handa.Shape (Shape, drawShape, makeShape)
-import Graphics.Rendering.OpenGL (DataType(Float), color)
-import InfoVis.Parallel.Types (Color)
+import Control.Arrow ((&&&))
+import Data.Array.Storable (newListArray, withStorableArray)
+import Data.Map.Strict as M (Map, (!), fromList, lookup)
+import Data.Maybe (catMaybes)
+import Data.Word (Word8)
+import Foreign.Ptr (nullPtr, plusPtr)
+import Foreign.Storable (Storable, poke, sizeOf)
+import Graphics.Rendering.OpenGL.GL (($=), deleteObjectName, genObjectName)
+import Graphics.Rendering.OpenGL.GL.BufferObjects (BufferAccess(..), BufferObject, BufferTarget(..), BufferUsage(StaticDraw), TransferDirection(WriteToBuffer), bindBuffer, bufferData, bufferSubData, withMappedBuffer)
+import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode)
+import Graphics.Rendering.OpenGL.GL.Tensor (Vertex3)
+import Graphics.Rendering.OpenGL.GL.VertexArrays (Capability(..), ClientArrayType(..), DataType(Float), NumArrayIndices, VertexArrayDescriptor(..), arrayPointer, clientState, drawArrays)
+import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4)
+import InfoVis.Parallel.Types (Color, Coloring(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
 import InfoVis.Parallel.Types.Scaffold (Characteristic(..))
-import Graphics.Rendering.OpenGL.GL.BufferObjects
-import Graphics.Rendering.OpenGL.GL.VertexArrays
-
-
-type OffsetStride = (Int, Stride)
 
 
 data Shape =
   Shape
   {
-    bo       :: BufferObject    -- ^ The handle to the vertex buffer object.
-  , osv      :: OffsetStride
-  , osc      :: OffsetStride
-  , size     :: NumArrayIndices
-  , dataType :: DataType        -- ^ The data type of the shape's vertices.
-  , mode     :: PrimitiveMode   -- ^ The type of primitive.
+    bufferObject :: BufferObject    -- ^ The handle to the vertex buffer object.
+  , vertexOffset :: Int
+  , vertexStride :: Int
+  , colorOffset  :: Int
+  , colorStride  :: Int
+  , size         :: NumArrayIndices
+  , dataType     :: DataType        -- ^ The data type of the shape's vertices.
+  , mode         :: PrimitiveMode   -- ^ The type of primitive.
   }
 
 
@@ -46,47 +51,73 @@ makeShape :: (Storable a, Storable b)
           -> IO Shape      -- ^  An action for the shape.
 makeShape dataType mode verticesColors =
   do
-    [bo] <- genObjectNames 1
+    bufferObject <- genObjectName
     let
-      (vs, cs) = unzip verticesColors
+      analyze xs = id &&& toEnum $ if null xs then 0 else sizeOf (head xs)
+      (vertices, colors) = unzip verticesColors
+      (mVertices, vertexStride) = analyze vertices
+      (mColors, colorStride) = analyze colors
       n = length verticesColors
-      mv =
-        if null vs
-          then 0
-          else sizeOf $ head vs
-      mc =
-        if null cs
-          then 0
-          else sizeOf $ head cs
-      nequiv = n * mv `div` mc + 1
       size = toEnum n
-      osv = (0, toEnum mv)
-      osc = (toEnum $ nequiv * mc, toEnum mc)
-    print (n, mv, mc, nequiv)
-    vs' <- newListArray (0, n - 1) vs
-    cs' <- newListArray (0, n - 1) cs
-    bindBuffer ArrayBuffer $= Just bo
-    zeros <- newListArray (0, (nequiv + n) * mc `div` 4) $ (repeat 0.8 :: [GLfloat])
-    withStorableArray zeros $ \ptr -> bufferData ArrayBuffer $= (toEnum $ (nequiv + n) * mc, ptr, StaticDraw)
-    withStorableArray vs' $ bufferSubData ArrayBuffer WriteToBuffer 0 (toEnum $ n * mv)
-    withStorableArray cs' $ bufferSubData ArrayBuffer WriteToBuffer (toEnum $ nequiv * mc)  (toEnum $ n * mc)
+      nEquiv = n * mVertices `div` mColors + 1
+      vertexOffset = 0
+      colorOffset = toEnum $ nEquiv * mColors
+    bindBuffer ArrayBuffer $= Just bufferObject
+    zeros <- newListArray (0, (nEquiv + n) * mColors) $ (repeat 0 :: [Word8])
+    withStorableArray zeros $ \ptr -> bufferData ArrayBuffer $= (toEnum $ (nEquiv + n) * mColors, ptr, StaticDraw)
+    writeSubbuffer vertexOffset vertexStride n vertices
+    writeSubbuffer colorOffset colorStride n colors
     bindBuffer ArrayBuffer $= Nothing
     return Shape {..}
+
+
+freeShape :: Shape -> IO ()
+freeShape Shape{..} = deleteObjectName bufferObject
+
+
+updateColors :: Storable a
+             => Shape
+             -> [(Int, Color4 a)]       -- ^ The color changes.
+             -> IO ()
+updateColors Shape{..} changes =
+  do
+    bindBuffer ArrayBuffer $= Just bufferObject
+    withMappedBuffer ArrayBuffer WriteOnly
+      (
+        \ptr ->
+          sequence_
+            [
+              (ptr `plusPtr` i') `poke` c
+            |
+              (i, c) <- changes
+            , let i' = colorOffset + i * colorStride
+            ]
+      )
+      print
+    bindBuffer ArrayBuffer $= Nothing
+
+
+writeSubbuffer :: Storable a => Int -> Int -> Int -> [a] -> IO ()
+writeSubbuffer o s n xs =
+  do
+    xs' <- newListArray (0, n - 1) xs
+    withStorableArray xs'
+      $ bufferSubData ArrayBuffer WriteToBuffer (fromIntegral o) (fromIntegral $ n * s)
 
 
 drawShape :: Shape -- ^ The shape.
           -> IO () -- ^ An action to render the shape, also executing its prior actions before rendering it.
 drawShape Shape{..} =
   do
-    clientState VertexArray $= Enabled
-    clientState ColorArray $= Enabled
-    bindBuffer ArrayBuffer $= Just bo
-    arrayPointer VertexArray $= VertexArrayDescriptor 3 dataType (snd osv) nullPtr
-    arrayPointer ColorArray  $= VertexArrayDescriptor 4 dataType (snd osc) (nullPtr `plusPtr` fst osc)
+    clientState VertexArray  $= Enabled
+    clientState ColorArray   $= Enabled
+    bindBuffer ArrayBuffer   $= Just bufferObject
+    arrayPointer VertexArray $= VertexArrayDescriptor 3 dataType (fromIntegral vertexStride) (nullPtr `plusPtr` vertexOffset)
+    arrayPointer ColorArray  $= VertexArrayDescriptor 4 dataType (fromIntegral colorStride ) (nullPtr `plusPtr` colorOffset )
     drawArrays mode 0 size
-    bindBuffer ArrayBuffer $= Nothing
-    clientState ColorArray $= Disabled
-    clientState VertexArray $= Disabled
+    bindBuffer ArrayBuffer   $= Nothing
+    clientState ColorArray   $= Disabled
+    clientState VertexArray  $= Disabled
 
 
 data DisplayBuffer a b =
@@ -95,6 +126,7 @@ data DisplayBuffer a b =
     bufferIdentifier        :: a
   , bufferVertexIdentifiers :: [b]
   , bufferShape             :: Shape
+  , bufferColorings         :: Map Coloring Color
   }
 
 
@@ -104,13 +136,33 @@ makeBuffer DisplayList{..} =
     let
       bufferIdentifier = listIdentifier
       bufferVertexIdentifiers = listVertexIdentifiers
+      ColorSet{..} = head listCharacteristics
+      bufferColorings =
+        M.fromList
+          [
+            (NormalColoring   , normalColor)
+          , (SelectColoring   , selectColor)
+          , (HighlightColoring, highlightColor)
+          ]
     bufferShape <-
       makeShape Float listPrimitive
         $ zip listVertices
-        $ repeat
-        $ normalColor
-        $ head listCharacteristics
+        $ repeat normalColor
     return DisplayBuffer{..}
+
+
+freeBuffer :: DisplayBuffer a b -> IO ()
+freeBuffer DisplayBuffer{..} = freeShape bufferShape
+
+
+updateBuffer :: Ord b => DisplayBuffer a b -> [(b, Coloring)] -> IO ()
+updateBuffer DisplayBuffer{..} updates =
+  let
+    updates' = (bufferColorings !) <$> M.fromList updates
+  in
+    updateColors bufferShape
+      . catMaybes
+      $ zipWith (\i v -> (i, ) <$> v `M.lookup` updates') [0..] bufferVertexIdentifiers
 
 
 drawBuffer :: DisplayBuffer a b -> IO ()

@@ -10,6 +10,7 @@
 module InfoVis.Parallel.Types (
   Location
 , Color
+, Coloring(..)
 ) where
 
 
@@ -52,3 +53,14 @@ deriving instance Generic (Color4 a)
 instance FromJSON Color
 
 instance ToJSON Color
+
+
+data Coloring =
+    NormalColoring
+  | SelectColoring
+  | HighlightColoring
+  deriving (Bounded, Enum, Eq, Generic, Ord, Read, Show)
+
+instance FromJSON Coloring
+
+instance ToJSON Coloring
