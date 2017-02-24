@@ -63,7 +63,7 @@ makeShape dataType mode verticesColors =
       vertexOffset = 0
       colorOffset = toEnum $ nEquiv * mColors
     bindBuffer ArrayBuffer $= Just bufferObject
-    zeros <- newListArray (0, (nEquiv + n) * mColors) $ (repeat 0 :: [Word8])
+    zeros <- newListArray (0, (nEquiv + n) * mColors) (repeat 0 :: [Word8])
     withStorableArray zeros $ \ptr -> bufferData ArrayBuffer $= (toEnum $ (nEquiv + n) * mColors, ptr, StaticDraw)
     writeSubbuffer vertexOffset vertexStride n vertices
     writeSubbuffer colorOffset colorStride n colors
