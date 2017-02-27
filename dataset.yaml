@@ -1,0 +1,51 @@
+dataset            :
+  datasetIdentifier: data/ENB2012.tsv
+  variables        :
+  - variableAlias  : rc
+    variableName   : Relative Compactness
+    lowerBound     : 0.60
+    upperBound     : 1.00
+  - variableAlias  : sa
+    variableName   : Surface Area
+    units          : m²
+    lowerBound     : 500
+    upperBound     : 825
+  - variableAlias  : wa
+    variableName   : Wall Area
+    units          : m²
+    lowerBound     : 225
+    upperBound     : 425
+  - variableAlias  : ra
+    variableName   : Roof Area
+    units          : m²
+    lowerBound     : 100
+    upperBound     : 225
+  - variableAlias  : oh
+    variableName   : Overall Height
+    units          : m
+    lowerBound     : 3.25
+    upperBound     : 7.25
+  - variableAlias  : or
+    variableName   : Orientation
+    units          : 2=N,3=E,4=S,5=W
+    lowerBound     : 1.9
+    upperBound     : 5.1
+  - variableAlias  : ga
+    variableName   : Glazing Area
+    lowerBound     : -0.01
+    upperBound     :  0.41
+  - variableAlias  : gd
+    variableName   : Glazing Area Distribution
+    units          : 0=unknown,1=uniform,2=N,3=E,4=W,5=W
+    lowerBound     : -0.01
+    upperBound     :  5.01
+  - variableAlias  : hl
+    variableName   : Heating Load
+    units          : kWh/m²
+    lowerBound     :  5
+    upperBound     : 50
+  - variableAlias  : cl
+    variableName   : Cooling Load
+    units          : kWh/m²
+    lowerBound     :  5
+    upperBound     : 50

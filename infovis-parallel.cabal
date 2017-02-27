@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.3.0.7
+version:             0.3.0.9
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -43,6 +43,7 @@ library
                ,    distributed-process-simplelocalnet >= 0.2.3.1
                ,    GLUT                               >= 2.7.0.1
                ,    handa-opengl                       >= 0.1.13.0
+               ,    kafka-device
                ,    linear
                ,    network                            >= 2.6.2.1
                ,    network-transport                  >= 0.4.2
@@ -65,7 +66,7 @@ library
   hs-source-dirs:   src
   exposed:          True
   buildable:        True
-  ghc-options:      -O2 -Wall
+  ghc-options:      -Wall
   default-language: Haskell2010
 
 executable infovis-parallel
@@ -82,15 +83,15 @@ executable infovis-parallel
                ,    distributed-process-simplelocalnet
                ,    GLUT
                ,    handa-opengl
+               ,    kafka-device
                ,    linear
                ,    network
                ,    network-transport
                ,    opengl-dlp-stereo
-               ,    opengl-spacenavigator
                ,    OpenGL
                ,    raft
                ,    split
                ,    yaml
   hs-source-dirs:   src
-  ghc-options:      -O2 -threaded -Wall
+  ghc-options:      -threaded -Wall
   default-language: Haskell2010

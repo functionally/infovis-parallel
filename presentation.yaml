@@ -1,69 +1,17 @@
-dataset                    :
-  datasetIdentifier        : data/ENB2012.tsv
-  variables                :
-  - variableAlias          : rc
-    variableName           : Relative Compactness
-    lowerBound             : 0.60
-    upperBound             : 1.00
-  - variableAlias          : sa
-    variableName           : Surface Area
-    units                  : m²
-    lowerBound             : 500
-    upperBound             : 825
-  - variableAlias          : wa
-    variableName           : Wall Area
-    units                  : m²
-    lowerBound             : 225
-    upperBound             : 425
-  - variableAlias          : ra
-    variableName           : Roof Area
-    units                  : m²
-    lowerBound             : 100
-    upperBound             : 225
-  - variableAlias          : oh
-    variableName           : Overall Height
-    units                  : m
-    lowerBound             : 3.25
-    upperBound             : 7.25
-  - variableAlias          : or
-    variableName           : Orientation
-    units                  : 2=N,3=E,4=S,5=W
-    lowerBound             : 1.9
-    upperBound             : 5.1
-  - variableAlias          : ga
-    variableName           : Glazing Area
-    lowerBound             : -0.01
-    upperBound             :  0.41
-  - variableAlias          : gd
-    variableName           : Glazing Area Distribution
-    units                  : 0=unknown,1=uniform,2=N,3=E,4=W,5=W
-    lowerBound             : -0.01
-    upperBound             :  5.01
-  - variableAlias          : hl
-    variableName           : Heating Load
-    units                  : kWh/m²
-    lowerBound             :  5
-    upperBound             : 50
-  - variableAlias          : cl
-    variableName           : Cooling Load
-    units                  : kWh/m²
-    lowerBound             :  5
-    upperBound             : 50
-
 presentation               :
   containers               :
   - tag                    : Collection
     extents                :
     - tag                  : Extent3D
-      origin               : [0.05, 0.55, 0.05]
-      cornerX              : [0.45, 0.55, 0.05]
-      cornerY              : [0.05, 0.95, 0.05]
-      cornerZ              : [0.05, 0.55, 0.95]
+      origin               : [0.05, 0.05, 0.55]
+      cornerX              : [0.45, 0.05, 0.55]
+      cornerY              : [0.05, 0.05, 0.95]
+      cornerZ              : [0.05, 0.95, 0.55]
     - tag                  : Extent3D
-      origin               : [0.55, 0.55, 0.05]
-      cornerX              : [0.95, 0.55, 0.05]
-      cornerY              : [0.55, 0.95, 0.05]
-      cornerZ              : [0.55, 0.55, 0.95]
+      origin               : [0.55, 0.05, 0.55]
+      cornerX              : [0.95, 0.05, 0.55]
+      cornerY              : [0.55, 0.05, 0.95]
+      cornerZ              : [0.55, 0.95, 0.55]
     containeds             :
     - tag                  : Singleton
       extent               :
@@ -123,24 +71,24 @@ presentation               :
     extents                :
     - tag                  : Extent2D
       origin               : [0.1, 0.1, 0.1]
-      cornerX              : [0.1, 0.1, 0.9]
-      cornerY              : [0.1, 0.4, 0.1]
+      cornerX              : [0.1, 0.9, 0.1]
+      cornerY              : [0.1, 0.1, 0.4]
     - tag                  : Extent2D
       origin               : [0.2, 0.1, 0.1]
-      cornerX              : [0.2, 0.1, 0.9]
-      cornerY              : [0.2, 0.4, 0.1]
+      cornerX              : [0.2, 0.9, 0.1]
+      cornerY              : [0.2, 0.1, 0.4]
     - tag                  : Extent2D
       origin               : [0.3, 0.1, 0.1]
-      cornerX              : [0.3, 0.1, 0.9]
-      cornerY              : [0.3, 0.4, 0.1]
+      cornerX              : [0.3, 0.9, 0.1]
+      cornerY              : [0.3, 0.1, 0.4]
     - tag                  : Extent2D
       origin               : [0.4, 0.1, 0.1]
-      cornerX              : [0.4, 0.1, 0.9]
-      cornerY              : [0.4, 0.4, 0.1]
+      cornerX              : [0.4, 0.9, 0.1]
+      cornerY              : [0.4, 0.1, 0.4]
     - tag                  : Extent2D
       origin               : [0.5, 0.1, 0.1]
-      cornerX              : [0.5, 0.1, 0.9]
-      cornerY              : [0.5, 0.4, 0.1]
+      cornerX              : [0.5, 0.9, 0.1]
+      cornerY              : [0.5, 0.1, 0.4]
     grids                  :
     - tag                  : RectangleGrid
       gridAlias            : plane1
@@ -235,35 +183,35 @@ presentation               :
   - tag                    : Array
     extents                :
     - tag                  : Extent1D
-      origin               : [0.7, 0.1, 0.2]
-      cornerX              : [0.7, 0.4, 0.2]
+      origin               : [0.7, 0.2, 0.1]
+      cornerX              : [0.7, 0.2, 0.4]
     - tag                  : Extent1D
-      origin               : [0.7, 0.1, 0.4]
+      origin               : [0.7, 0.4, 0.1]
       cornerX              : [0.7, 0.4, 0.4]
     - tag                  : Extent1D
-      origin               : [0.7, 0.1, 0.6]
-      cornerX              : [0.7, 0.4, 0.6]
+      origin               : [0.7, 0.6, 0.1]
+      cornerX              : [0.7, 0.6, 0.4]
     - tag                  : Extent1D
-      origin               : [0.7, 0.1, 0.8]
-      cornerX              : [0.7, 0.4, 0.8]
+      origin               : [0.7, 0.8, 0.1]
+      cornerX              : [0.7, 0.8, 0.4]
     - tag                  : Extent1D
-      origin               : [0.9, 0.1, 0.2]
-      cornerX              : [0.9, 0.4, 0.2]
+      origin               : [0.9, 0.2, 0.1]
+      cornerX              : [0.9, 0.2, 0.4]
     - tag                  : Extent1D
-      origin               : [0.9, 0.1, 0.4]
+      origin               : [0.9, 0.4, 0.1]
       cornerX              : [0.9, 0.4, 0.4]
     - tag                  : Extent1D
-      origin               : [0.9, 0.1, 0.6]
-      cornerX              : [0.9, 0.4, 0.6]
+      origin               : [0.9, 0.6, 0.1]
+      cornerX              : [0.9, 0.6, 0.4]
     - tag                  : Extent1D
-      origin               : [0.9, 0.1, 0.8]
-      cornerX              : [0.9, 0.4, 0.8]
+      origin               : [0.9, 0.8, 0.1]
+      cornerX              : [0.9, 0.8, 0.4]
     - tag                  : Extent1D
-      origin               : [0.8, 0.1, 0.4]
+      origin               : [0.8, 0.4, 0.1]
       cornerX              : [0.8, 0.4, 0.4]
     - tag                  : Extent1D
-      origin               : [0.8, 0.1, 0.6]
-      cornerX              : [0.8, 0.4, 0.6]
+      origin               : [0.8, 0.6, 0.1]
+      cornerX              : [0.8, 0.6, 0.4]
     grids                  :
     - tag                  : LineGrid
       gridAlias            : line1
@@ -483,26 +431,4 @@ presentation               :
         selectColor        : [0.8, 0.8, 0.8, 1.0]
         highlightColor     : [1.0, 0.0, 0.0, 1.0]
   selectorColor            : [0.5, 0.3, 0.2, 1.0]
-  selectorSize             : 1
-
-world                      :
-  displayExtent            :
-    worldOrigin            : [-0.1, -0.1, -0.1]
-    worldCornerX           : [ 1.1, -0.1, -0.1]
-    worldCornerY           : [-0.1,  1.1, -0.1]
-    worldCornerZ           : [-0.1, -0.1,  1.1]
-  worldExtent              :
-    worldOrigin            : [-0.5, -0.3,  0.0]
-    worldCornerX           : [ 0.5, -0.3,  0.0]
-    worldCornerY           : [-0.5,  0.3,  0.0]
-    worldCornerZ           : [-0.5, -0.3,  0.4]
-  eyeSeparation            : 0.01
-  baseSize                 : 0.1
-
-input                      :
-  kafka                    :
-    client                 : infovis-parallel-input
-    address                : [localhost, 9092]
-    topic                  : events
-  viewerInput              : spacenav
-  selectorInput            : none
+  selectorSize             : 5

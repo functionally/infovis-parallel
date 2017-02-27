@@ -215,7 +215,6 @@ data World =
   {
     displayExtent :: WorldExtent
   , worldExtent   :: WorldExtent
-  , eyeSeparation :: Double      -- FIXME: Needs implementation.
   , baseSize      :: Double      -- FIXME: Needs implementation.
   }
     deriving (Eq, Generic, Read, Show)
