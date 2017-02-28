@@ -5,10 +5,10 @@ world            :
     worldCornerY : [0, 1, 0]
     worldCornerZ : [0, 0, 1]
   worldExtent    :
-    worldOrigin  : [-2.495  , 0.00  ,  0.035 ]
-    worldCornerX : [ 2.495  , 0.00  ,  0.035 ]
-    worldCornerY : [-2.495  , 0.00  , -1.565 ]
-    worldCornerZ : [-2.495  , 2.52  ,  0.000 ]
+    worldOrigin  : [ 2.495  ,  0.035 , 0.00  ]
+    worldCornerX : [-2.495  ,  0.035 , 0.00  ]
+    worldCornerY : [ 2.495  , -1.565 , 0.00  ]
+    worldCornerZ : [ 2.495  ,  0.035 , 2.52  ]
   baseSize       : 0.01
 viewers          :
   stereo         : QuadBuffer
@@ -21,46 +21,46 @@ viewers          :
     displayIdentifier : :0.0
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-2.495 , 0.93  , -1.565 ]
-      lowerRight      : [ 0.2795, 0.93  , -1.565 ]
-      upperLeft       : [-2.495 , 2.52  , -1.565 ]
+      lowerLeft       : [ 2.495 , -1.565 , 0.93  ]
+      lowerRight      : [-0.2795, -1.565 , 0.93  ]
+      upperLeft       : [ 2.495 , -1.565 , 2.52  ]
   - host              : localhost
     port              : 44446
     displayIdentifier : :0.1
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-0.2795,  0.93  , -1.565 ]
-      lowerRight      : [ 2.495 ,  0.93  , -1.565 ]
-      upperLeft       : [-0.2795,  2.52  , -1.565 ]
+      lowerLeft       : [ 0.2795, -1.565 ,  0.93  ]
+      lowerRight      : [-2.495 , -1.565 ,  0.93  ]
+      upperLeft       : [ 0.2795, -1.565 ,  2.52  ]
   - host              : localhost
     port              : 44447
     displayIdentifier : :0.2
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-2.495 , 0     , -1.565 ]
-      lowerRight      : [ 0.2795, 0     , -1.565 ]
-      upperLeft       : [-2.495 , 1.595 , -1.565 ]
+      lowerLeft       : [ 2.495 , -1.565 , 0     ]
+      lowerRight      : [-0.2795, -1.565 , 0     ]
+      upperLeft       : [ 2.495 , -1.565 , 1.595 ]
   - host              : localhost
     port              : 44448
     displayIdentifier : :0.3
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-0.2795, 0     , -1.565 ]
-      lowerRight      : [ 2.495 , 0     , -1.565 ]
-      upperLeft       : [-0.2795, 1.595 , -1.565 ]
+      lowerLeft       : [ 0.2795, -1.565 , 0     ]
+      lowerRight      : [-2.495 , -1.565 , 0     ]
+      upperLeft       : [ 0.2795, -1.565 , 1.595 ]
   - host              : localhost
     port              : 44449
     displayIdentifier : :0.4
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-2.495 , 0     ,  0.035 ]
-      lowerRight      : [ 0.2795, 0     ,  0.035 ]
-      upperLeft       : [-2.495 , 0     , -1.565 ]
+      lowerLeft       : [ 2.495 ,  0.035 , 0     ]
+      lowerRight      : [-0.2795,  0.035 , 0     ]
+      upperLeft       : [ 2.495 , -1.565 , 0     ]
   - host              : localhost
     port              : 44450
     displayIdentifier : :0.5
     geometry          : fullscreen
     screen            :
-      lowerLeft       : [-0.2795, 0     ,  0.035 ]
-      lowerRight      : [ 2.495 , 0     ,  0.035 ]
-      upperLeft       : [-0.2795, 0     , -1.565 ]
+      lowerLeft       : [ 0.2795,  0.035 , 0     ]
+      lowerRight      : [-2.495 ,  0.035 , 0     ]
+      upperLeft       : [ 0.2795, -1.565 , 0     ]
