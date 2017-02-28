@@ -1,4 +1,9 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
 module InfoVis.Parallel.Types.Configuration (
@@ -6,17 +11,20 @@ module InfoVis.Parallel.Types.Configuration (
 , Viewers(..)
 , Display(..)
 , Input(..)
+, peersList
 ) where
 
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
+import Data.Binary (Binary)
+import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Graphics.Rendering.Handa.Projection (Screen)
 import Graphics.UI.Handa.Setup (Stereo)
 import InfoVis.Parallel.Types.Dataset (Dataset)
 import InfoVis.Parallel.Types.Scaffold (Presentation, World)
 import Linear.V3 (V3)
-import Network.UI.Kafka (Sensor, TopicConnection)
+import Network.UI.Kafka (Sensor, TopicConnection(..))
 
 
 data Configuration a =
@@ -28,7 +36,7 @@ data Configuration a =
   , viewers      :: Viewers a
   , input        :: Input
   }
-    deriving (Eq, Generic, Read, Show)
+    deriving (Binary, Eq, Generic, Read, Show)
 
 instance (FromJSON a, Generic a) => FromJSON (Configuration a)
 
@@ -44,25 +52,19 @@ data Viewers a =
   , eyeSeparation :: V3 a
   , displays      :: [Display a]
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance (FromJSON a, Generic a) => FromJSON (Viewers a)
-
-instance (ToJSON a, Generic a) => ToJSON (Viewers a)
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Display a =
   Display
   {
-    identifier :: Maybe String
+    host       :: Maybe String
+  , port       :: Maybe Int
+  , identifier :: Maybe String
   , geometry   :: Maybe String
   , screen     :: Screen a
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance (FromJSON a, Generic a) => FromJSON (Display a)
-
-instance (ToJSON a, Generic a) => ToJSON (Display a)
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Input =
@@ -76,8 +78,17 @@ data Input =
   , deselectButton  :: (Sensor, Int)
   , clearButton     :: (Sensor, Int)
   }
-    deriving (Eq, Generic, Read, Show)
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
-instance FromJSON Input
 
-instance ToJSON Input
+deriving instance Binary TopicConnection
+
+
+peersList :: Configuration a -> [(String, String)]
+peersList Configuration{..} =
+  [
+    (fromMaybe "localhost" host, show $ fromMaybe 44444 port)
+  |
+    let Viewers{..} = viewers
+  , Display{..} <- displays
+  ]

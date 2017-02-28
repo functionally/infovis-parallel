@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 
 module InfoVis.Parallel.Types.Dataset (
@@ -11,6 +12,7 @@ module InfoVis.Parallel.Types.Dataset (
 
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
+import Data.Binary (Binary)
 import GHC.Generics (Generic)
 
 
@@ -20,11 +22,7 @@ data Dataset =
     datasetIdentifier :: String
   , variables         :: [Variable]
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Dataset
-
-instance ToJSON Dataset
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Variable =
@@ -37,11 +35,7 @@ data Variable =
   , upperBound    :: Maybe Double
   , jitter        :: Maybe Double -- FIXME: Needs implementation.
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Variable
-
-instance ToJSON Variable
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 type VariableAlias = String

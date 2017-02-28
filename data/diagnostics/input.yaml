@@ -4,9 +4,9 @@ input            :
     address      : [localhost, 9092]
     topic        : events
   povInput       :
-    Left         : [[0, 150, 500], [0, 0, 0]]
-  relocationInput: spacenav
-  selectorInput  : leap
+    Left         : [[0.0, 1.5, 6.0], [0, 0, 0]]
+  relocationInput: none
+  selectorInput  : spacenav
   selectButton   : [spacenav, 0]
   deselectButton : [spacenav, 1]
   clearButton    : [spacenav, 9]

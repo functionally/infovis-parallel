@@ -9,7 +9,7 @@ world            :
     worldCornerX : [ 200,   0,  100]
     worldCornerY : [-200,   0, -100]
     worldCornerZ : [-200, 300,  100]
-  baseSize       : 0.20
+  baseSize       : 2.00
 viewers          :
   stereo         : Mono
   eyeSeparation  : [12.5,  0,  0]

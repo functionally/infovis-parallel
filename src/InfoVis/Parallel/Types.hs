@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE FlexibleContexts   #-}
 {-# LANGUAGE FlexibleInstances  #-}
@@ -15,6 +16,7 @@ module InfoVis.Parallel.Types (
 
 
 import Data.Aeson.Types (FromJSON, ToJSON)
+import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import Linear.Affine (Point(..))
 import Linear.V1 (V1)
@@ -46,9 +48,12 @@ instance ToJSON (V3 a) => ToJSON (Point V3 a)
 type Location = Point V3 Double
 
 
-type Color = Color4 GLfloat
+instance Binary a => Binary (Color4 a)
 
 deriving instance Generic (Color4 a)
+
+
+type Color = Color4 GLfloat
 
 instance FromJSON Color
 
@@ -59,8 +64,4 @@ data Coloring =
     NormalColoring
   | SelectColoring
   | HighlightColoring
-  deriving (Bounded, Enum, Eq, Generic, Ord, Read, Show)
-
-instance FromJSON Coloring
-
-instance ToJSON Coloring
+  deriving (Binary, Bounded, Enum, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

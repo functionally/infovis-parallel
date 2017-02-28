@@ -1,4 +1,5 @@
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric  #-}
 
 
 module InfoVis.Parallel.Types.Scaffold (
@@ -21,6 +22,7 @@ module InfoVis.Parallel.Types.Scaffold (
 
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
+import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Types (Color, Location)
 import InfoVis.Parallel.Types.Dataset (VariableAlias)
@@ -37,11 +39,7 @@ data Axis =
   {
     axisVariable :: VariableAlias
   }
-  deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Axis
-
-instance ToJSON Axis
+  deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 type Axes1D = V1 Axis
@@ -83,11 +81,7 @@ data Grid =
     , labelColor          :: Color
     , labelSize           :: Double
     }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Grid
-
-instance ToJSON Grid
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 type GriddedLocation = (GridAlias, Location)
@@ -112,11 +106,7 @@ data Extent =
     , cornerY :: Location
     , cornerZ :: Location
     }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Extent
-
-instance ToJSON Extent
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Container = -- FIXME: The dimensionality between extents and grids is not enforced to be consistent.  Can this be easily done at the type level?
@@ -135,11 +125,7 @@ data Container = -- FIXME: The dimensionality between extents and grids is not e
       extents    :: [Extent]
     , containeds :: [Container]
     }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Container
-
-instance ToJSON Container
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
     
 
 type LinkAlias = String
@@ -158,11 +144,7 @@ data Link =
     , linkedGrids     :: [GridAlias]
     , characteristics :: [Characteristic]
     }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Link
-
-instance ToJSON Link
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Characteristic =
@@ -172,11 +154,7 @@ data Characteristic =
     , selectColor     :: Color
     , highlightColor  :: Color
     }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Characteristic
-
-instance ToJSON Characteristic
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data Presentation =
@@ -188,11 +166,7 @@ data Presentation =
   , selectorColor :: Color               -- FIXME: Needs implementation.
   , selectorSize  :: Double              -- FIXME: Needs implementation.
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON Presentation
-
-instance ToJSON Presentation
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data WorldExtent =
@@ -203,11 +177,7 @@ data WorldExtent =
   , worldCornerY :: Location
   , worldCornerZ :: Location
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON WorldExtent
-
-instance ToJSON WorldExtent
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
 
 
 data World =
@@ -217,8 +187,4 @@ data World =
   , worldExtent   :: WorldExtent
   , baseSize      :: Double      -- FIXME: Needs implementation.
   }
-    deriving (Eq, Generic, Read, Show)
-
-instance FromJSON World
-
-instance ToJSON World
+    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
