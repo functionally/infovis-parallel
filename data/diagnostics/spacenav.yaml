@@ -6,13 +6,13 @@ sensor      : spacenav
 device      : /dev/input/spacenavigator
 xAxis       :
   axisNumber: 0
-  increment : 0.02
-yAxis       :
-  axisNumber: 2
   increment : -0.02
-zAxis       :
+yAxis       :
   axisNumber: 1
   increment : 0.02
+zAxis       :
+  axisNumber: 2
+  increment : -0.02
 phiAxis     :
   axisNumber: 3
   increment : 0.02
