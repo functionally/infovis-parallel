@@ -1,0 +1,12 @@
+input            :
+  kafka          :
+    client       : infovis-parallel-input-esif
+    address      : [insightz.hpc.nrel.gov, 9092]
+    topic        : events
+  povInput       :
+    Right        : esif-head
+  relocationInput: none
+  selectorInput  : esif-joystickA
+  selectButton   : [esif-joystick0, 0]
+  deselectButton : [esif-joystick0, 1]
+  clearButton    : [esif-joystick0, 2]

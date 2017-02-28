@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CFG=$*
+CFG="$* cave/world.yaml cave/input.yaml"
 EXE=../dist/build/infovis-parallel/infovis-parallel
 
 echo Configutation: $CFG
