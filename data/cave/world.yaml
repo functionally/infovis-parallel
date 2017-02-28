@@ -18,7 +18,7 @@ viewers          :
   displays            :
   - host              : localhost
     port              : 44445
-    displayIdentifier : :0.0
+    identifier        : :0.0
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 2.495 , -1.565 , 0.93  ]
@@ -26,7 +26,7 @@ viewers          :
       upperLeft       : [ 2.495 , -1.565 , 2.52  ]
   - host              : localhost
     port              : 44446
-    displayIdentifier : :0.1
+    identifier        : :0.1
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 0.2795, -1.565 ,  0.93  ]
@@ -34,7 +34,7 @@ viewers          :
       upperLeft       : [ 0.2795, -1.565 ,  2.52  ]
   - host              : localhost
     port              : 44447
-    displayIdentifier : :0.2
+    identifier        : :0.2
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 2.495 , -1.565 , 0     ]
@@ -42,7 +42,7 @@ viewers          :
       upperLeft       : [ 2.495 , -1.565 , 1.595 ]
   - host              : localhost
     port              : 44448
-    displayIdentifier : :0.3
+    identifier        : :0.3
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 0.2795, -1.565 , 0     ]
@@ -50,7 +50,7 @@ viewers          :
       upperLeft       : [ 0.2795, -1.565 , 1.595 ]
   - host              : localhost
     port              : 44449
-    displayIdentifier : :0.4
+    identifier        : :0.4
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 2.495 ,  0.035 , 0     ]
@@ -58,7 +58,7 @@ viewers          :
       upperLeft       : [ 2.495 , -1.565 , 0     ]
   - host              : localhost
     port              : 44450
-    displayIdentifier : :0.5
+    identifier        : :0.5
     geometry          : fullscreen
     screen            :
       lowerLeft       : [ 0.2795,  0.035 , 0     ]
