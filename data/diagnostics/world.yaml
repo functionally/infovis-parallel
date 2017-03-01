@@ -5,10 +5,10 @@ world            :
     worldCornerY : [0, 1, 0]
     worldCornerZ : [0, 0, 1]
   worldExtent    :
-    worldOrigin  : [ 2.50  ,  0.00  , 0.00  ]
-    worldCornerX : [-2.50  ,  0.00  , 0.00  ]
-    worldCornerY : [ 2.50  , -1.50  , 0.00  ]
-    worldCornerZ : [ 2.50  ,  0.00  , 2.50  ]
+    worldOrigin  : [ 1.50  , -0.75  , 1.25  ]
+    worldCornerX : [-1.50  , -0.75  , 1.25  ]
+    worldCornerY : [ 1.50  , -1.50  , 1.25  ]
+    worldCornerZ : [ 1.50  , -0.75  , 2.00  ]
   baseSize       : 0.01
 viewers          :
   stereo         : Mono

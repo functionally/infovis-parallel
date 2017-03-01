@@ -25,4 +25,4 @@ psiAxis     :
 location    : [0, 0, 0]
 orientation : [0, 0, 0]
 flying      : false
-resetButton : 99
+resetButton : 9
