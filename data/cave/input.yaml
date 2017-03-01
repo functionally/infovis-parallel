@@ -4,8 +4,8 @@ input            :
     address      : [insightz.hpc.nrel.gov, 50371]
     topic        : events
   povInput       :
-    Left         : [[0.00,  6.00, 2.25], [0, 0, 0]]
-##  Right        : esif-head
+##  Left         : [[0.00,  0.00, 2.00], [0, 0, 0]]
+    Right        : esif-head
   relocationInput: none
   selectorInput  : esif-joystick0
   selectButton   : [esif-joystickA, 0]
