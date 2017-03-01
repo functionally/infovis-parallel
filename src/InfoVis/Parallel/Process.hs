@@ -51,11 +51,11 @@ trackerProcess input listeners =
     let
       loop =
         do
-          liftIO $ takeMVar flag
           pov' <- liftIO $ readIORef pov
           relocation' <- liftIO $ readIORef relocation
           selection' <- liftIO $ readIORef selection
           mapM_ (`send` (pov', relocation', selection')) listeners
+          liftIO $ takeMVar flag
           loop
     loop
 

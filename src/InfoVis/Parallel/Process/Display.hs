@@ -94,13 +94,11 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
     reshapeCallback $= Just
       (\wh -> 
          do
-           (P eyePosition, eyeOrientation) <- readIORef pov
-           let
-             eyePosition' = eyeOrientation `Q.rotate` eyePosition -- FIXME: Check this.
+           (P eyePosition, _) <- readIORef pov
            viewport $=! (Position 0 0, wh)
            matrixMode $=! Projection
            loadIdentity
-           projection VTKOffAxis screen (toVertex3 $ P eyePosition') nearPlane farPlane
+           projection VTKOffAxis screen (toVertex3 $ P eyePosition) nearPlane farPlane
            matrixMode $=! Modelview 0
       )
     dlpDisplayCallback $=!
@@ -108,16 +106,16 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
       {
         dlpEncoding = dlp
       , doDisplay = \eye -> do
-                              (P eyePosition, eyeOrientation) <- readIORef pov
+                              (eyePosition, eyeOrientation) <- readIORef pov
                               let
                                 offset =
                                   case eye of
                                     LeftDlp  -> -0.5
                                     RightDlp ->  0.5
-                                eyePosition' = eyeOrientation `Q.rotate` (eyePosition .+^ offset *^ eyeSeparation) -- FIXME: Check this.
+                                eyePosition' = eyePosition .+^ eyeOrientation `Q.rotate` (offset *^ eyeSeparation)
                               matrixMode $=! Projection
                               loadIdentity
-                              projection VTKOffAxis screen (toVertex3 $ P eyePosition') nearPlane farPlane
+                              projection VTKOffAxis screen (toVertex3 $ eyePosition') nearPlane farPlane
                               matrixMode $=! Modelview 0
                               loadIdentity
                               displayAction
