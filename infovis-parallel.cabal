@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.3.0.11
+version:             0.3.0.12
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -60,6 +60,7 @@ library
                     InfoVis.Parallel.Process
                     InfoVis.Parallel.Process.DataProvider
                     InfoVis.Parallel.Process.Display
+                    InfoVis.Parallel.Process.Select
                     InfoVis.Parallel.Process.Track
                     InfoVis.Parallel.Rendering
                     InfoVis.Parallel.Scaling

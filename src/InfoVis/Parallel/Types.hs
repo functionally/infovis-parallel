@@ -9,7 +9,8 @@
 
 
 module InfoVis.Parallel.Types (
-  Location
+  SelectionAction(..)
+, Location
 , Color
 , Coloring(..)
 ) where
@@ -23,6 +24,10 @@ import Linear.V1 (V1)
 import Linear.V2 (V2)
 import Linear.V3 (V3)
 import Graphics.Rendering.OpenGL (Color4(..), GLfloat)
+
+
+data SelectionAction = Highlight | Select | Deselect | Clear
+ deriving (Binary, Eq, Generic)
 
 
 instance FromJSON a => FromJSON (V1 a)

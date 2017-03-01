@@ -1,22 +1,17 @@
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections   #-}
 
 
 module InfoVis.Parallel.Process.Display (
-  SelectionAction(..)
-, displayer
+  displayer
 ) where
 
 
 import Control.Arrow (second)
 import Control.Monad (void, when)
-import Data.Binary (Binary)
 import Data.Default (Default(def))
 import Data.Function.MapReduce (mapReduce)
 import Data.IORef (IORef, modifyIORef, newIORef, readIORef)
-import GHC.Generics (Generic)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -28,13 +23,13 @@ import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
+import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Types (Coloring(..))
+import InfoVis.Parallel.Types (Coloring(..), SelectionAction(..))
 import InfoVis.Parallel.Types.Configuration (Configuration(..), Display(..), Viewers(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
 import InfoVis.Parallel.Types.Scaffold (Presentation(..), World(..))
-import Linear.Affine (Point(..), (.+^), (.-.))
-import Linear.Conjugate (conjugate)
+import Linear.Affine (Point(..), (.+^))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Vector ((*^))
@@ -139,7 +134,7 @@ displayer :: Configuration Float
           -> GridsLinks
           -> (IORef (Point V3 Float, Quaternion Float), IORef (V3 Float, Quaternion Float), IORef (V3 Float, SelectionAction))
           -> IO ()
-displayer Configuration{..} displayIndex (grids, links) (pov, relocation, selection) =
+displayer configuration@Configuration{..} displayIndex gridsLinks@(grids, links) (pov, relocation, selection) =
   do
     dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
@@ -165,20 +160,7 @@ displayer Configuration{..} displayIndex (grids, links) (pov, relocation, select
             persistentColorings <- readIORef persistentColoringsRef :: IO [(Int, Coloring)]
             transientColorings <- readIORef transientColoringsRef :: IO [(Int, Coloring)]
             let
-              V3 x y z = (P $ conjugate orientation' `Q.rotate` location) .-. P location'
-              d = realToFrac $ selectorSize presentation * baseSize world / 2
-              h w w' = abs (w - w' + d) <= d
-              f (Vertex3 x' y' z') = h x x' && h y y' && h z z'
-              g DisplayList{..} = map (second f) $ zip listVertexIdentifiers listVertices
-              selections = mapReduce id (curry $ second or) $ concatMap g links :: [(Int, Bool)]
-              persistentColorings' =
-                case press of
-                  Highlight       -> persistentColorings
-                  Deselect        -> zipWith (\(i, o) (_, n) -> (i, if n then NormalColoring    else o)) persistentColorings selections
-                  Select          -> zipWith (\(i, o) (_, n) -> (i, if n then SelectColoring    else o)) persistentColorings selections
-                  Clear           -> map (\(i, _) -> (i, NormalColoring))                                persistentColorings
-              transientColorings'  = zipWith (\(i, o) (_, n) -> (i, if n then HighlightColoring else o)) persistentColorings selections
-              changes = fmap snd $ filter (uncurry (/=)) $ zip transientColorings transientColorings'
+              ((persistentColorings', transientColorings'), changes) = selecter configuration gridsLinks (persistentColorings, transientColorings) (location, press) (location', orientation')
             modifyIORef persistentColoringsRef $ const persistentColorings'
             modifyIORef transientColoringsRef $ const transientColorings'
             mapM_ (`updateBuffer` changes) linkBuffers
@@ -190,7 +172,3 @@ displayer Configuration{..} displayIndex (grids, links) (pov, relocation, select
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
     mainLoop
-
-
-data SelectionAction = Highlight | Select | Deselect | Clear
- deriving (Binary, Eq, Generic)

@@ -17,10 +17,11 @@ import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfP
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (void)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.DataProvider (provider)
-import InfoVis.Parallel.Process.Display (SelectionAction(Highlight), displayer)
+import InfoVis.Parallel.Process.DataProvider (GridsLinks, provider)
+import InfoVis.Parallel.Process.Display (displayer)
 import InfoVis.Parallel.Process.Track -- FIXME
-import InfoVis.Parallel.Types.Configuration (Configuration(..), Input(..), peersList)
+import InfoVis.Parallel.Types (SelectionAction(Highlight))
+import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -36,11 +37,12 @@ providerProcess configuration listeners =
     mapM_ (`send` gridsLinks) listeners
 
 
-trackerProcess :: Input -> [ProcessId] -> Process ()
-trackerProcess input listeners =
+trackerProcess :: Configuration Float -> [ProcessId] -> Process ()
+trackerProcess Configuration{..} listeners =
   do
     pid <- getSelfPid
     say $ "Starting tracker <" ++ show pid ++ ">."
+    _ <- expect :: Process GridsLinks
     flag <- liftIO newEmptyMVar
     pov <- liftIO $ newIORef (zero :: Point V3 Float , Quaternion 1 zero :: Quaternion Float)
     relocation <- liftIO $ newIORef (zero :: V3 Float, Quaternion 1 zero :: Quaternion Float)
@@ -97,18 +99,18 @@ masterMain configuration peers =
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
-    say $ "Spawning data provider <" ++ show pid ++ ">."
-    void $ spawnLocal (providerProcess configuration peerPids)
     say $ "Spawning tracker <" ++ show pid ++ ">."
-    void $ spawnLocal (trackerProcess (input configuration) peerPids)
+    trackerPid <- spawnLocal (trackerProcess configuration peerPids)
+    say $ "Spawning data provider <" ++ show pid ++ ">."
+    void $ spawnLocal (providerProcess configuration (trackerPid : peerPids))
     expect :: Process ()
 
 
 soloMain :: Configuration Float -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
-    peerPids <- (: []) <$> spawnLocal (displayerProcess (configuration, 0))
-    void $ spawnLocal (providerProcess configuration peerPids)
-    void $ spawnLocal (trackerProcess (input configuration) peerPids)
+    peerPid <- spawnLocal (displayerProcess (configuration, 0))
+    trackerPid <- spawnLocal (trackerProcess configuration [peerPid])
+    void $ spawnLocal (providerProcess configuration [trackerPid, peerPid])
     expect :: Process ()
 soloMain _ (_ : _) = error "Some peers specified."

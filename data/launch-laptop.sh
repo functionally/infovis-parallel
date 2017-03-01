@@ -5,4 +5,4 @@ EXE=../dist/build/infovis-parallel/infovis-parallel
 
 echo Configutation: $CFG
 
-$EXE solo $CFG
+$EXE solo +RTS -N4 -RTS $CFG
