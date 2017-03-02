@@ -26,6 +26,7 @@ import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Types (Color, Location)
 import InfoVis.Parallel.Types.Dataset (VariableAlias)
+import InfoVis.Parallel.Types.Instances ()
 import Linear.V1 (V1)
 import Linear.V2 (V2)
 import Linear.V3 (V3)
@@ -154,7 +155,7 @@ data Characteristic =
     , selectColor     :: Color
     , highlightColor  :: Color
     }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Presentation =

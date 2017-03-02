@@ -3,8 +3,6 @@
 {-# LANGUAGE RecordWildCards      #-}
 {-# LANGUAGE StandaloneDeriving   #-}
 
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 
 module InfoVis.Parallel.Types.Configuration (
   Configuration(..)
@@ -79,9 +77,6 @@ data Input =
   , clearButton     :: (Sensor, Int)
   }
     deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
-
-
-deriving instance Binary TopicConnection
 
 
 peersList :: Configuration a -> [(String, String)]
