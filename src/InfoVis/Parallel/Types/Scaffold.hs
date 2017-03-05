@@ -40,7 +40,7 @@ data Axis =
   {
     axisVariable :: VariableAlias
   }
-  deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+  deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type Axes1D = V1 Axis
@@ -82,7 +82,7 @@ data Grid =
     , labelColor          :: Color
     , labelSize           :: Double
     }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type GriddedLocation = (GridAlias, Location)
@@ -107,7 +107,7 @@ data Extent =
     , cornerY :: Location
     , cornerZ :: Location
     }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Container = -- FIXME: The dimensionality between extents and grids is not enforced to be consistent.  Can this be easily done at the type level?
@@ -126,7 +126,7 @@ data Container = -- FIXME: The dimensionality between extents and grids is not e
       extents    :: [Extent]
     , containeds :: [Container]
     }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
     
 
 type LinkAlias = String
@@ -145,7 +145,7 @@ data Link =
     , linkedGrids     :: [GridAlias]
     , characteristics :: [Characteristic]
     }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Characteristic =
@@ -167,7 +167,7 @@ data Presentation =
   , selectorColor :: Color               -- FIXME: Needs implementation.
   , selectorSize  :: Double              -- FIXME: Needs implementation.
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data WorldExtent =
@@ -178,7 +178,7 @@ data WorldExtent =
   , worldCornerY :: Location
   , worldCornerZ :: Location
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data World =
@@ -188,4 +188,4 @@ data World =
   , worldExtent   :: WorldExtent
   , baseSize      :: Double      -- FIXME: Needs implementation.
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

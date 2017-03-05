@@ -12,11 +12,12 @@ module InfoVis.Parallel.Process.Track (
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
 import Control.Distributed.Process (Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawnLocal)
+import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
 import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Types.Configuration (Input(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelectionAction(..), TrackerMessage(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
 import Linear.Affine (Point(..))
 import Linear.Epsilon (Epsilon)
 import Linear.Quaternion (Quaternion(..), axisAngle)
@@ -47,7 +48,7 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: (V3 Double -> Quaternion Double -> DisplayerMessage) -> [ProcessId] -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion :: Serializable a => (V3 Double -> Quaternion Double -> a) -> [ProcessId] -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     orientationVar <- liftIO . newMVar $ Quaternion 1 zero
@@ -85,13 +86,13 @@ trackPov listeners = -- FIXME: Support reset, termination, and faults.
     either trackStatic trackDynamic povInput
 
 
-trackRelocation :: [ProcessId] -> Process ()
-trackRelocation listeners = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: ProcessId -> Process ()
+trackRelocation selecterPid = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
     ResetTracker Input{..} <- expect
-    trackVectorQuaternion Relocate listeners kafka relocationInput
+    trackVectorQuaternion RelocateSelecter [selecterPid] kafka relocationInput
 
 
 trackSelection :: [ProcessId] -> Process ()
@@ -108,8 +109,7 @@ trackSelection listeners =
             let
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
-            mapM_ (`send` Select location Highlight) listeners
-            liftIO . putStrLn $ "SEND " ++ show location
+            mapM_ (`send` UpdateSelecter location Highlight) listeners
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
@@ -117,7 +117,7 @@ trackSelection listeners =
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar
-                                    mapM_ (`send` Select location selectionAction) listeners
+                                    mapM_ (`send` UpdateSelecter location selectionAction) listeners
       processInput _ _ =
         return ()
     consumerLoopProcess kafka processInput

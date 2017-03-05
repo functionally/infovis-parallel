@@ -1,5 +1,4 @@
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TupleSections   #-}
 
 
 module InfoVis.Parallel.Process.Display (
@@ -7,11 +6,9 @@ module InfoVis.Parallel.Process.Display (
 ) where
 
 
-import Control.Arrow (second)
-import Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, readMVar, swapMVar, tryTakeMVar)
-import Control.Monad (unless, void, when)
+import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar, tryTakeMVar)
+import Control.Monad (void, when)
 import Data.Default (Default(def))
-import Data.Function.MapReduce (mapReduce)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -23,19 +20,15 @@ import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
-import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (Configuration(..), Display(..), Viewers(..))
-import InfoVis.Parallel.Types.Display (DisplayList(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Scaffold (Presentation(..), World(..))
 import Linear.Affine (Point(..), (.+^))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Vector ((*^), zero)
 
-import qualified System.Clock as C
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
 
@@ -135,75 +128,42 @@ displayer :: Configuration Double
           -> GridsLinks
           -> MVar DisplayerMessage -- (Point V3 Double, Quaternion Double), MVar (V3 Double, Quaternion Double), MVar (Point V3 Double, SelectionAction))
           -> IO ()
-displayer configuration@Configuration{..} displayIndex gridsLinks@(grids, links) messageVar =
+displayer Configuration{..} displayIndex (grids, links) messageVar =
   do
     dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
     povVar <- newMVar (zero, Quaternion 1 zero)
     relocationVar <- newMVar (zero, Quaternion 1 zero)
-    selectionVar <- newMVar (zero, Highlight)
+    selectionVar <- newMVar zero
     let
       selector = color c >> drawFaces faces
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
           faces = brickFaces s s s
-    persistentColoringsRef <- newMVar . mapReduce id (curry $ second maximum) $ (, NormalColoring) <$> concatMap listVertexIdentifiers links
-    transientColoringsRef  <- newMVar . mapReduce id (curry $ second maximum) $ (, NormalColoring) <$> concatMap listVertexIdentifiers links
     idleCallback $= Just
       (
         do
-          t0 <- C.getTime C.Monotonic
-          let
-            takeMVars =
-              do
-                x <- tryTakeMVar messageVar
-                case x of
-                  Nothing -> return []
-                  Just x' -> (x' :) <$> takeMVars
-          messages <- takeMVars
-          sequence_
-            [
-              case message of
-                Track{..}    -> void $ swapMVar povVar (eyePosition, eyeOrientation)
-                Relocate{..} -> void $ swapMVar relocationVar (centerDisplacement, centerRotation)
-                Select{..}   -> do
-                                  putStrLn $ "RECV " ++ show selectPosition
-                                  void $ swapMVar selectionVar (selectPosition, selectState)
-                                  (P location, press) <- readMVar selectionVar  -- FIXME
-                                  (location', orientation') <- readMVar relocationVar
-                                  when (press /= Highlight)
-                                    $ modifyMVar_ selectionVar $ return . second (const Highlight)
-                                  persistentColorings <- readMVar persistentColoringsRef :: IO [(Int, Coloring)]
-                                  transientColorings <- readMVar transientColoringsRef :: IO [(Int, Coloring)]
-                                  let
-                                    ((persistentColorings', transientColorings'), changes) =
-                                      selecter
-                                        configuration
-                                        gridsLinks
-                                        (persistentColorings, transientColorings)
-                                        (P location, press)
-                                        (P location', orientation')
-                                  void $ swapMVar persistentColoringsRef persistentColorings'
-                                  void $ swapMVar transientColoringsRef transientColorings'
-                                  mapM_ (`updateBuffer` changes) linkBuffers
-                                  t1 <- C.getTime C.Monotonic
-                                  putStrLn $ "TIME " ++ show ((* 120) . (/ 1e9) . fromIntegral . C.toNanoSecs $ t1 `C.diffTimeSpec` t0)
-                _            -> return ()
-            |
-              message <- messages
-            ]
-          unless (null messages)
-            $ do
-              putStrLn $ "Message count: " ++ show (length messages)
-              idle
+          message <- tryTakeMVar messageVar
+          case message of
+            Just Track{..}    -> do
+                                   void $ swapMVar povVar (eyePosition, eyeOrientation)
+                                   idle
+            Just Relocate{..} -> do
+                                   void $ swapMVar relocationVar (centerDisplacement, centerRotation)
+                                   idle
+            Just Select{..}   -> do
+                                   void $ swapMVar selectionVar selectorLocation
+                                   mapM_ (`updateBuffer` selectionChanges) linkBuffers
+                                   idle
+            _                 -> return ()
       )
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
         preservingMatrix
           $ do
-            (P location, _) <- readMVar selectionVar  -- FIXME
+            P location <- readMVar selectionVar  -- FIXME
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
         preservingMatrix

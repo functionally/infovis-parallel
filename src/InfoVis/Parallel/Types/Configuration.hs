@@ -33,7 +33,7 @@ data Configuration a =
   , viewers      :: Viewers a
   , input        :: Input
   }
-    deriving (Binary, Eq, Generic, Read, Show)
+    deriving (Binary, Eq, Generic, Ord, Read, Show)
 
 instance (FromJSON a, Generic a) => FromJSON (Configuration a)
 
@@ -49,7 +49,7 @@ data Viewers a =
   , eyeSeparation :: V3 a
   , displays      :: [Display a]
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Display a =
@@ -61,7 +61,7 @@ data Display a =
   , geometry   :: Maybe String
   , screen     :: Screen a
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Input =

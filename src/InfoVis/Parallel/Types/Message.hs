@@ -1,10 +1,12 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric  #-}
+{-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE DeriveGeneric   #-}
 
 
 module InfoVis.Parallel.Types.Message (
-  -- * Types
-  Processes(..)
+  -- * Classes
+  SumTag(..)
+-- * Types
+, Processes(..)
 , Augmentation
 , SelectionAction(..)
   -- * Messages
@@ -18,11 +20,16 @@ module InfoVis.Parallel.Types.Message (
 import Control.Distributed.Process (ProcessId)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
-import InfoVis.Parallel.Types.Configuration (Input)
+import InfoVis.Parallel.Types (Coloring)
+import InfoVis.Parallel.Types.Configuration (Configuration, Input)
 import InfoVis.Parallel.Types.Display (DisplayList, DisplayType)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
+
+
+class SumTag a where
+  sumTag :: a -> Char
 
 
 data Processes =
@@ -48,6 +55,11 @@ data MasterMessage =
   | Exit
     deriving (Binary, Eq, Generic, Ord, Show)
 
+instance SumTag MasterMessage where
+  sumTag Ready   = '0'
+  sumTag Fault{} = '1'
+  sumTag Exit    = '2'
+
 
 data TrackerMessage =
     ResetTracker
@@ -55,21 +67,41 @@ data TrackerMessage =
       trackerInput :: Input
     }
   | TerminateTracker
-  | AugmentTracker
-    {
-      trackerAugmentations :: ([Augmentation], [Augmentation])
-    }
     deriving (Binary, Eq, Generic, Ord, Show)
+
+instance SumTag TrackerMessage where
+  sumTag ResetTracker{}   = '0'
+  sumTag TerminateTracker = '1'
 
 
 data SelecterMessage =
     ResetSelecter
+    {
+      selecterConfiguration :: Configuration Double
+    }
   | TerminateSelecter
   | AugmentSelecter
     {
       selecterAugmentations :: ([Augmentation], [Augmentation])
     }
+  | UpdateSelecter
+    {
+      selecterPosition :: Point V3 Double
+    , selecterState    :: SelectionAction
+    }
+  | RelocateSelecter
+    {
+      relocationDisplacement :: V3 Double
+    , relocationRotation     :: Quaternion Double
+    }
     deriving (Binary, Eq, Generic, Ord, Show)
+
+instance SumTag SelecterMessage where
+  sumTag ResetSelecter{}     = '0'
+  sumTag TerminateSelecter{} = '1'
+  sumTag AugmentSelecter{}   = '2'
+  sumTag UpdateSelecter{}    = '3'
+  sumTag RelocateSelecter{}  = '4'
 
 
 data DisplayerMessage =
@@ -92,14 +124,24 @@ data DisplayerMessage =
     }
   | Select
     {
-      selectPosition :: Point V3 Double
-    , selectState    :: SelectionAction
+      selectorLocation :: Point V3 Double
+    , selectionChanges :: [(Int, Coloring)]
     }
   | Debug
     {
-      debuggin :: Bool
+      debugging :: Bool
     }
     deriving (Binary, Eq, Generic, Ord, Show)
+
+instance SumTag DisplayerMessage where
+  sumTag ResetDisplayer     = '0'
+  sumTag TerminateDisplayer = '1'
+  sumTag DisplayDisplayer   = '2'
+  sumTag AugmentDisplayer{} = '3'
+  sumTag Track{}            = '4'
+  sumTag Relocate{}         = '5'
+  sumTag Select{}           = '6'
+  sumTag Debug{}            = '7'
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear

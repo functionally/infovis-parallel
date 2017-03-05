@@ -22,7 +22,7 @@ data Dataset =
     datasetIdentifier :: String
   , variables         :: [Variable]
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Variable =
@@ -35,7 +35,7 @@ data Variable =
   , upperBound    :: Maybe Double
   , jitter        :: Maybe Double -- FIXME: Needs implementation.
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type VariableAlias = String
