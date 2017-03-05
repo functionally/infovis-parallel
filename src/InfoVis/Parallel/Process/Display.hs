@@ -14,7 +14,7 @@ import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
 import Graphics.Rendering.Handa.Projection (OffAxisProjection(VTKOffAxis), projection)
 import Graphics.Rendering.Handa.Util (degree)
-import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
+import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Greater, Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), alphaFunc, blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
 import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, translate)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
@@ -67,6 +67,7 @@ setup title program Viewers{..} displayIndex =
     depthFunc $= Just Less 
     blend $= Enabled
     blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
+    alphaFunc $= Just (Greater, 0)
     return dlp
 
 
