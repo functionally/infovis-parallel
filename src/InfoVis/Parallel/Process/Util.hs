@@ -5,7 +5,7 @@ module InfoVis.Parallel.Process.Util (
 
 
 import Control.Concurrent.MVar (MVar, isEmptyMVar, newEmptyMVar, putMVar, readMVar)
-import Control.Distributed.Process (Process, expectTimeout)
+import Control.Distributed.Process (Process, expect, expectTimeout)
 import Control.Distributed.Process.Serializable (Serializable)
 import Data.Function (on)
 import Data.Function.MapReduce (groupReduceFlatten)
@@ -34,12 +34,12 @@ t0 :: IO Integer
 t0 =
   do
     e <- isEmptyMVar t0Var
-    case e of
-      False -> readMVar t0Var
-      True  -> do
+    if e
+      then do
                  t0' <- C.toNanoSecs <$> C.getTime C.Monotonic
                  putMVar t0Var t0'
                  return t0'
+      else readMVar t0Var
 
 
 collectMessages :: (Serializable a, SumTag a) => (a -> a -> Bool) -> Process [a]
@@ -53,10 +53,12 @@ collectMessages grouper =
             Nothing      -> return []
             Just message -> (message :) <$> collectMessages'
       collapser = fmap head . groupBy (grouper `on` snd)
+    message <- expect
     messages <- collectMessages'
     return
       . map snd
       . sortBy (compare `on` fst)
       . groupReduceFlatten (sumTag . snd) collapser
-      $ zip [(0::Int),-1..] messages
+      . zip [(0::Int),-1..]
+      $ message : messages
 

@@ -51,7 +51,7 @@ displayerProcess (configuration, displayIndex) =
   do
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
-    messageVar <- liftIO $ newEmptyMVar
+    messageVar <- liftIO newEmptyMVar
     let
       waitForGrid priors =
         do
@@ -61,7 +61,7 @@ displayerProcess (configuration, displayIndex) =
             _                    -> waitForGrid $ message : priors
       collector Track{}    _ = True
       collector Relocate{} _ = True
-      collector _         _ = False
+      collector _          _ = False
     (priors, gridsLinks) <- waitForGrid []
     void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar
     mapM_ (liftIO . putMVar messageVar) $ reverse priors
