@@ -5,6 +5,8 @@
 module InfoVis.Parallel.Types.Message (
   -- * Types
   Processes(..)
+, Augmentation
+, SelectionAction(..)
   -- * Messages
 , MasterMessage(..)
 , TrackerMessage(..)
@@ -16,7 +18,8 @@ module InfoVis.Parallel.Types.Message (
 import Control.Distributed.Process (ProcessId)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
-import InfoVis.Parallel.Types.Display (DisplayList)
+import InfoVis.Parallel.Types.Configuration (Input)
+import InfoVis.Parallel.Types.Display (DisplayList, DisplayType)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
@@ -33,6 +36,9 @@ data Processes =
     deriving (Binary, Eq, Generic, Show)
 
 
+type Augmentation = DisplayList (DisplayType, String) Int
+
+
 data MasterMessage =
     Ready
   | Fault
@@ -43,47 +49,58 @@ data MasterMessage =
     deriving (Binary, Eq, Generic, Ord, Show)
 
 
-data TrackerMessage a b =
+data TrackerMessage =
     ResetTracker
+    {
+      trackerInput :: Input
+    }
   | TerminateTracker
   | AugmentTracker
     {
-      trackerAugmentation :: DisplayList a b
+      trackerAugmentations :: ([Augmentation], [Augmentation])
     }
     deriving (Binary, Eq, Generic, Ord, Show)
 
 
-data SelecterMessage a b =
+data SelecterMessage =
     ResetSelecter
   | TerminateSelecter
   | AugmentSelecter
     {
-      selecterAugmentation :: DisplayList a b
+      selecterAugmentations :: ([Augmentation], [Augmentation])
     }
     deriving (Binary, Eq, Generic, Ord, Show)
 
 
-data DisplayerMessage a b =
+data DisplayerMessage =
     ResetDisplayer
   | TerminateDisplayer
   | DisplayDisplayer
   | AugmentDisplayer
     {
-      augmentation :: DisplayList a b
+      augmentations :: ([Augmentation], [Augmentation])
     }
   | Track
     {
-      eyePosition    :: Point V3 b
-    , eyeOrientation :: Quaternion b
+      eyePosition    :: Point V3 Double
+    , eyeOrientation :: Quaternion Double
     }
   | Relocate
     {
-      centerDisplacement :: V3 b
-    , centerRotation     :: Quaternion b
+      centerDisplacement :: V3 Double
+    , centerRotation     :: Quaternion Double
     }
   | Select
+    {
+      selectPosition :: Point V3 Double
+    , selectState    :: SelectionAction
+    }
   | Debug
     {
       debuggin :: Bool
     }
     deriving (Binary, Eq, Generic, Ord, Show)
+
+
+data SelectionAction = Highlight | Selection | Deselection | Clear
+ deriving (Binary, Eq, Generic, Ord, Show)

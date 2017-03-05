@@ -9,24 +9,21 @@ module InfoVis.Parallel.Process.Track (
 ) where
 
 
-import Control.Arrow (first, second)
-import Control.Concurrent (MVar, putMVar)
-import Control.Monad (when)
-import Data.IORef (IORef, modifyIORef)
+import Control.Concurrent (forkIO)
+import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
+import Control.Distributed.Process (Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawnLocal)
+import Control.Monad (forever, void, when)
 import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import InfoVis.Parallel.Types (SelectionAction(..))
 import InfoVis.Parallel.Types.Configuration (Input(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelectionAction(..), TrackerMessage(..))
 import Linear.Affine (Point(..))
 import Linear.Epsilon (Epsilon)
 import Linear.Quaternion (Quaternion(..), axisAngle)
 import Linear.V3 (V3(..))
-import Linear.Vector (basis)
-import Network.UI.Kafka (consumerLoop)
+import Linear.Vector (basis, zero)
+import Network.UI.Kafka (Sensor, TopicConnection, consumerLoop)
 import Network.UI.Kafka.Types (Button(IndexButton), Event(..), Toggle(..))
-
-
-type PointOfView a = (Point V3 a, Quaternion a)
 
 
 fromDegrees :: (Floating a, Num a) => a -> a
@@ -41,91 +38,85 @@ fromEuler (V3 phi theta psi) =
     ez `axisAngle` psi * ey `axisAngle` theta * ex `axisAngle` phi
 
 
-processInput' :: MVar () -> (a -> b -> IO ()) -> a -> b -> IO ()
-processInput' flag processInput s e =
+consumerLoopProcess :: TopicConnection -> (Sensor -> Event -> Process ()) -> Process ()
+consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and support termination.
   do
-    processInput s e
-    putMVar flag ()
+    forward <- liftIO newEmptyMVar
+    (_, consuming) <- liftIO . consumerLoop topicConnection $ (putMVar forward .) . (,)
+    void . spawnLocal . forever $ liftIO (takeMVar forward) >>= uncurry processor
+    void . liftIO . forkIO $ void consuming
 
     
-trackPov :: (Epsilon a, Fractional a, RealFloat a) => Input -> IORef (PointOfView a) -> MVar () -> IO ()
-trackPov Input{..} pov flag =
-  case povInput of
-    Left (location, orientation) -> modifyIORef pov $ const (P $ realToFrac <$> location, fromEuler $ realToFrac . fromDegrees <$> orientation)
-    Right povInput'              -> do
-                                      let
-                                        processInput sensor (LocationEvent (x, y, z)) =
-                                          when (sensor == povInput')
-                                            $ modifyIORef pov
-                                            $ first
-                                            $ const
-                                            $ realToFrac
-                                            <$> P (V3 x y z)
-                                        processInput sensor (OrientationEvent (w, x, y, z)) =
-                                          when (sensor == povInput')
-                                            $ modifyIORef pov
-                                            $ second
-                                            $ const
-                                            $ realToFrac
-                                            <$> Quaternion w (V3 x y z)
-                                        processInput _ _ =
-                                          return ()
-                                      (_, loop) <- consumerLoop kafka $ processInput' flag processInput
-                                      result <- loop
-                                      either print return result
-
-
-trackRelocation :: (Epsilon a, Fractional a, RealFloat a) => Input -> IORef (V3 a, Quaternion a) -> MVar () -> IO ()
-trackRelocation Input{..} relocation flag =
+trackVectorQuaternion :: (V3 Double -> Quaternion Double -> DisplayerMessage) -> [ProcessId] -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
+    orientationVar <- liftIO . newMVar $ Quaternion 1 zero
     let
       processInput sensor (LocationEvent (x, y, z)) =
-        when (sensor == relocationInput)
-          $ modifyIORef relocation
-          $ first
-          $ const
-          $ realToFrac
-          <$> V3 x y z
+        when (sensor == target)
+          $ do
+            orientation <- liftIO $ readMVar orientationVar
+            mapM_ (`send` messager (V3 x y z) orientation) listeners
       processInput sensor (OrientationEvent (w, x, y, z)) =
-        when (sensor == relocationInput)
-          $ modifyIORef relocation
-          $ second
-          $ const
-          $ realToFrac
-          <$> Quaternion w (V3 x y z)
+        when (sensor == target)
+          . liftIO
+          . void
+          . swapMVar orientationVar
+          $ Quaternion w $ V3 x y z
       processInput _ _ =
         return ()
-    (_, loop) <- consumerLoop kafka $ processInput' flag processInput
-    result <- loop
-    either print return result
+    consumerLoopProcess topicConnection processInput
 
 
-trackSelection :: (Epsilon a, Fractional a, RealFloat a) => Input -> IORef (V3 a, SelectionAction) -> MVar () -> IO ()
-trackSelection Input{..} selection flag =
+trackPov :: [ProcessId] -> Process ()
+trackPov listeners = -- FIXME: Support reset, termination, and faults.
   do
+    pid <- getSelfPid
+    say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
+    ResetTracker Input{..} <- expect
     let
-      processInput sensor (LocationEvent (x, y, z)) =
+      trackStatic (location, orientation) =
+        do
+          let
+            location' = P location
+            orientation' = fromEuler $ fromDegrees <$> orientation
+          mapM_ (`send` Track location' orientation') listeners
+      trackDynamic = trackVectorQuaternion (Track . P) listeners kafka
+    either trackStatic trackDynamic povInput
+
+
+trackRelocation :: [ProcessId] -> Process ()
+trackRelocation listeners = -- FIXME: Support reset, termination, and faults.
+  do
+    pid <- getSelfPid
+    say $ "Starting relocation tracker <" ++ show pid ++ ">."
+    ResetTracker Input{..} <- expect
+    trackVectorQuaternion Relocate listeners kafka relocationInput
+
+
+trackSelection :: [ProcessId] -> Process ()
+trackSelection listeners =
+  do
+    pid <- getSelfPid
+    say $ "Starting selection tracker <" ++ show pid ++ ">."
+    ResetTracker Input{..} <- expect
+    locationVar <- liftIO $ newMVar zero
+    let
+      processInput' sensor (x, y, z) =
         when (sensor == selectorInput)
-          $ modifyIORef selection
-          $ first 
-          $ const
-          $ realToFrac
-          <$> V3 x y z
-      processInput sensor (PointerEvent (x, y, z)) =
-        when (sensor == selectorInput)
-          $ modifyIORef selection
-          $ first
-          $ const
-          $ realToFrac
-          <$> V3 x y z
+          $ do
+            let
+              location = P $ V3 x y z
+            void . liftIO $ swapMVar locationVar location
+            mapM_ (`send` Select location Highlight) listeners
+      processInput sensor (LocationEvent xyz) = processInput' sensor xyz
+      processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
-        when ((sensor, i) `elem` [selectButton, deselectButton, clearButton])
-         $ modifyIORef selection
-         $ second
-         $ const
-         $ if (sensor, i) == selectButton then Select else (if (sensor, i) == deselectButton then Deselect else Clear)
+        case (sensor, i) `lookup` [(selectButton, Selection), (deselectButton, Deselection), (clearButton, Clear)] of
+          Nothing              -> return ()
+          Just selectionAction -> do
+                                    location <- liftIO $ readMVar locationVar
+                                    mapM_ (`send` Select location selectionAction) listeners
       processInput _ _ =
         return ()
-    (_, loop) <- consumerLoop kafka $ processInput' flag processInput
-    result <- loop
-    either print return result
+    consumerLoopProcess kafka processInput

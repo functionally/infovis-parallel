@@ -11,82 +11,64 @@ module InfoVis.Parallel.Process (
 ) where
 
 
-import Control.Concurrent (forkIO, forkOS)
-import Control.Concurrent.MVar (newEmptyMVar, takeMVar)
+import Control.Concurrent (forkOS)
+import Control.Concurrent.MVar (newMVar, swapMVar)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
-import Control.Monad (void)
-import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.DataProvider (GridsLinks, provider)
+import Control.Monad (forever, void)
+import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Process.Display (displayer)
-import InfoVis.Parallel.Process.Track -- FIXME
-import InfoVis.Parallel.Types (SelectionAction(Highlight))
+import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
 import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
-import Linear.Affine (Point)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelectionAction(Highlight), TrackerMessage(..))
 import Linear.Quaternion (Quaternion(..))
-import Linear.V3 (V3(..))
 import Linear.Vector (zero)
 
 
-providerProcess :: Configuration Float -> [ProcessId] -> Process ()
-providerProcess configuration listeners =
+providerProcess :: Configuration Double -> [ProcessId] -> [ProcessId] -> Process ()
+providerProcess configuration trackers displayers =
   do
     pid <- getSelfPid
     say $ "Starting data provider <" ++ show pid ++ ">."
     gridsLinks <- liftIO $ provider configuration
-    mapM_ (`send` gridsLinks) listeners
+    mapM_ (`send` AugmentTracker   gridsLinks) trackers
+    mapM_ (`send` AugmentDisplayer gridsLinks) displayers
 
 
-trackerProcess :: Configuration Float -> [ProcessId] -> Process ()
-trackerProcess Configuration{..} listeners =
+trackerProcesses :: Configuration Double -> [ProcessId] -> Process ()
+trackerProcesses Configuration{..} listeners =
   do
     pid <- getSelfPid
-    say $ "Starting tracker <" ++ show pid ++ ">."
-    _ <- expect :: Process GridsLinks
-    flag <- liftIO newEmptyMVar
-    pov <- liftIO $ newIORef (zero :: Point V3 Float , Quaternion 1 zero :: Quaternion Float)
-    relocation <- liftIO $ newIORef (zero :: V3 Float, Quaternion 1 zero :: Quaternion Float)
-    selection <- liftIO $ newIORef (zero :: V3 Float, Highlight)
-    void . liftIO . forkIO $ trackPov input pov flag
-    void . liftIO . forkIO $ trackRelocation input relocation flag
-    void . liftIO . forkIO $ trackSelection input selection flag
-    let
-      loop =
-        do
-          pov' <- liftIO $ readIORef pov
-          relocation' <- liftIO $ readIORef relocation
-          selection' <- liftIO $ readIORef selection
-          mapM_ (`send` (pov', relocation', selection')) listeners
-          liftIO $ takeMVar flag
-          loop
-    loop
+    say $ "Starting trackers <" ++ show pid ++ ">."
+    trackers <- mapM (spawnLocal . ($ listeners)) [trackPov, trackRelocation, trackSelection]
+    mapM_ (`send` ResetTracker input) trackers
+    AugmentTracker _ <- expect
+    return ()
 
 
-displayerProcess :: (Configuration Float, Int) -> Process ()
+displayerProcess :: (Configuration Double, Int) -> Process ()
 displayerProcess (configuration, displayIndex) =
   do
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
-    gridLinks <- expect
-    pov <- liftIO $ newIORef (zero :: Point V3 Float , Quaternion 1 zero :: Quaternion Float)
-    relocation <- liftIO $ newIORef (zero :: V3 Float, Quaternion 1 zero :: Quaternion Float)
-    selection <- liftIO $ newIORef (zero :: V3 Float, Highlight)
-    void . liftIO . forkOS $ displayer configuration displayIndex gridLinks (pov, relocation, selection)
-    let
-      loop =
-        do
-          (pov', relocation', selection') <- expect
-          liftIO $ writeIORef pov  pov'
-          liftIO $ writeIORef relocation relocation'
-          liftIO $ writeIORef selection selection'
-          loop
-    loop
+    povVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
+    relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
+    selectionVar <- liftIO $ newMVar (zero, Highlight)
+    forever
+      $ do
+        message <- expect
+        case message of
+          AugmentDisplayer{..} -> void . liftIO . forkOS $ displayer configuration displayIndex augmentations (povVar, relocationVar, selectionVar)
+          Track{..}            -> void . liftIO $ swapMVar povVar (eyePosition, eyeOrientation)
+          Relocate{..}         -> void . liftIO $ swapMVar relocationVar (centerDisplacement, centerRotation)
+          Select{..}           -> void . liftIO $ swapMVar selectionVar (selectPosition, selectState)
+          _                    -> return ()
 
 
 remotable ['displayerProcess]
 
 
-masterMain :: Configuration Float -> [NodeId] -> Process ()
+masterMain :: Configuration Double -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
     pid <- getSelfPid
@@ -100,17 +82,17 @@ masterMain configuration peers =
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
     say $ "Spawning tracker <" ++ show pid ++ ">."
-    trackerPid <- spawnLocal (trackerProcess configuration peerPids)
+    trackerPid <- spawnLocal $ trackerProcesses configuration peerPids
     say $ "Spawning data provider <" ++ show pid ++ ">."
-    void $ spawnLocal (providerProcess configuration (trackerPid : peerPids))
+    void . spawnLocal $ providerProcess configuration [trackerPid] peerPids
     expect :: Process ()
 
 
-soloMain :: Configuration Float -> [NodeId] -> Process ()
+soloMain :: Configuration Double -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
     peerPid <- spawnLocal (displayerProcess (configuration, 0))
-    trackerPid <- spawnLocal (trackerProcess configuration [peerPid])
-    void $ spawnLocal (providerProcess configuration [trackerPid, peerPid])
+    trackerPid <- spawnLocal $ trackerProcesses configuration [peerPid]
+    void . spawnLocal $ providerProcess configuration [trackerPid] [peerPid]
     expect :: Process ()
 soloMain _ (_ : _) = error "Some peers specified."

@@ -16,7 +16,7 @@ import InfoVis.Parallel.Types.Display (DisplayList, DisplayType)
 type GridsLinks = ([DisplayList (DisplayType, String) Int], [DisplayList (DisplayType, String) Int])
 
 
-provider :: Configuration Float -> IO GridsLinks
+provider :: Configuration Double -> IO GridsLinks
 provider Configuration{..} =
   do
     rs <- readDataset dataset

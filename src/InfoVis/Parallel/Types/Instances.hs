@@ -84,4 +84,6 @@ instance Binary PrimitiveMode where
   put Patches       = putWord8 10
 
 
+deriving instance Ord TopicConnection
+
 deriving instance Binary TopicConnection

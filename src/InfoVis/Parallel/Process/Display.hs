@@ -8,10 +8,11 @@ module InfoVis.Parallel.Process.Display (
 
 
 import Control.Arrow (second)
+import Control.Concurrent.MVar (MVar, modifyMVar_, readMVar)
 import Control.Monad (void, when)
 import Data.Default (Default(def))
 import Data.Function.MapReduce (mapReduce)
-import Data.IORef (IORef, modifyIORef, newIORef, readIORef)
+import Data.IORef (modifyIORef, newIORef, readIORef)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -25,9 +26,10 @@ import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Types (Coloring(..), SelectionAction(..))
+import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (Configuration(..), Display(..), Viewers(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
+import InfoVis.Parallel.Types.Message (SelectionAction(..))
 import InfoVis.Parallel.Types.Scaffold (Presentation(..), World(..))
 import Linear.Affine (Point(..), (.+^))
 import Linear.Quaternion (Quaternion(..))
@@ -44,7 +46,7 @@ type PointOfView a = (Point V3 a, Quaternion a)
 
 setup :: String
       -> String
-      -> Viewers GLfloat
+      -> Viewers Double
       -> Int
       -> IO DlpEncoding
 setup title program Viewers{..} displayIndex =
@@ -77,9 +79,9 @@ setup title program Viewers{..} displayIndex =
 
 
 dlpViewerDisplay ::DlpEncoding
-                 -> Viewers GLfloat
+                 -> Viewers Double
                  -> Int
-                 -> IORef (PointOfView GLfloat)
+                 -> MVar (PointOfView Double)
                  -> DisplayCallback
                  -> IO ()
 dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
@@ -89,11 +91,11 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
     reshapeCallback $= Just
       (\wh -> 
          do
-           (P eyePosition, _) <- readIORef pov
+           (P eyePosition, _) <- readMVar pov
            viewport $=! (Position 0 0, wh)
            matrixMode $=! Projection
            loadIdentity
-           projection VTKOffAxis screen (toVertex3 $ P eyePosition) nearPlane farPlane
+           projection VTKOffAxis screen (toVertex3 $ realToFrac <$> P eyePosition) nearPlane farPlane
            matrixMode $=! Modelview 0
       )
     dlpDisplayCallback $=!
@@ -101,7 +103,7 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
       {
         dlpEncoding = dlp
       , doDisplay = \eye -> do
-                              (eyePosition, eyeOrientation) <- readIORef pov
+                              (eyePosition, eyeOrientation) <- readMVar pov
                               let
                                 offset =
                                   case eye of
@@ -110,7 +112,7 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
                                 eyePosition' = eyePosition .+^ eyeOrientation `Q.rotate` (offset *^ eyeSeparation)
                               matrixMode $=! Projection
                               loadIdentity
-                              projection VTKOffAxis screen (toVertex3 $ eyePosition') nearPlane farPlane
+                              projection VTKOffAxis screen (toVertex3 $ realToFrac <$> eyePosition') nearPlane farPlane
                               matrixMode $=! Modelview 0
                               loadIdentity
                               displayAction
@@ -129,10 +131,10 @@ toRotation :: (Floating a, MatrixComponent a) => Quaternion a -> IO ()
 toRotation (Quaternion w (V3 x y z)) = rotate (2 * acos w * degree) $ Vector3 x y z
 
 
-displayer :: Configuration Float
+displayer :: Configuration Double
           -> Int
           -> GridsLinks
-          -> (IORef (Point V3 Float, Quaternion Float), IORef (V3 Float, Quaternion Float), IORef (V3 Float, SelectionAction))
+          -> (MVar (Point V3 Double, Quaternion Double), MVar (V3 Double, Quaternion Double), MVar (Point V3 Double, SelectionAction))
           -> IO ()
 displayer configuration@Configuration{..} displayIndex gridsLinks@(grids, links) (pov, relocation, selection) =
   do
@@ -151,24 +153,24 @@ displayer configuration@Configuration{..} displayIndex gridsLinks@(grids, links)
       $ do
         preservingMatrix
           $ do
-            (location, press) <- readIORef selection
-            (location', orientation') <- readIORef relocation
+            (P location, press) <- readMVar selection  -- FIXME
+            (location', orientation') <- readMVar relocation
             when (press /= Highlight)
-              $ modifyIORef selection $ second $ const Highlight
-            translate (toVector3 location :: Vector3 GLfloat)
+              $ modifyMVar_ selection $ return . second (const Highlight)
+            translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
             persistentColorings <- readIORef persistentColoringsRef :: IO [(Int, Coloring)]
             transientColorings <- readIORef transientColoringsRef :: IO [(Int, Coloring)]
             let
-              ((persistentColorings', transientColorings'), changes) = selecter configuration gridsLinks (persistentColorings, transientColorings) (location, press) (location', orientation')
+              ((persistentColorings', transientColorings'), changes) = selecter configuration gridsLinks (persistentColorings, transientColorings) (P location, press) (P location', orientation')
             modifyIORef persistentColoringsRef $ const persistentColorings'
             modifyIORef transientColoringsRef $ const transientColorings'
             mapM_ (`updateBuffer` changes) linkBuffers
         preservingMatrix
           $ do
-            (location, orientation) <- readIORef relocation
+            (location, orientation) <- readMVar relocation
             toRotation orientation
-            translate (toVector3 location :: Vector3 GLfloat)
+            translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
     mainLoop

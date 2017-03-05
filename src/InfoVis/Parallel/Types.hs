@@ -3,8 +3,7 @@
 
 
 module InfoVis.Parallel.Types (
-  SelectionAction(..)
-, Location
+  Location
 , Color
 , Coloring(..)
 ) where
@@ -16,10 +15,6 @@ import GHC.Generics (Generic)
 import Linear.Affine (Point(..))
 import Linear.V3 (V3)
 import Graphics.Rendering.OpenGL (Color4(..), GLfloat)
-
-
-data SelectionAction = Highlight | Select | Deselect | Clear
- deriving (Binary, Eq, Generic)
 
 
 type Location = Point V3 Double

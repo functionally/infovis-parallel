@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveAnyClass       #-}
 {-# LANGUAGE DeriveGeneric        #-}
 {-# LANGUAGE RecordWildCards      #-}
-{-# LANGUAGE StandaloneDeriving   #-}
 
 
 module InfoVis.Parallel.Types.Configuration (
@@ -76,7 +75,7 @@ data Input =
   , deselectButton  :: (Sensor, Int)
   , clearButton     :: (Sensor, Int)
   }
-    deriving (Binary, Eq, FromJSON, Generic, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 peersList :: Configuration a -> [(String, String)]

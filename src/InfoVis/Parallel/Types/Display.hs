@@ -28,7 +28,7 @@ data DisplayItem a b =
   , itemPrimitive  :: PrimitiveMode
   , itemVertices   :: [b]
   }
-    deriving (Eq, Generic, Show)
+    deriving (Eq, Generic, Ord, Show)
 
 instance Functor (DisplayItem a) where
   fmap f x@DisplayItem{..} = x {itemVertices = f <$> itemVertices}
@@ -49,4 +49,4 @@ data DisplayList a b =
 data DisplayType =
     GridType
   | LinkType
-    deriving (Binary, Eq, Generic, Show)
+    deriving (Binary, Eq, Generic, Ord, Show)
