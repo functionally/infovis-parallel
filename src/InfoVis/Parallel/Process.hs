@@ -12,7 +12,7 @@ module InfoVis.Parallel.Process (
 
 
 import Control.Concurrent (forkOS)
-import Control.Concurrent.MVar (newMVar, swapMVar)
+import Control.Concurrent.MVar (newEmptyMVar, putMVar)
 import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void)
@@ -20,9 +20,7 @@ import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Process.Display (displayer)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
 import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelectionAction(Highlight), TrackerMessage(..))
-import Linear.Quaternion (Quaternion(..))
-import Linear.Vector (zero)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), TrackerMessage(..))
 
 
 providerProcess :: Configuration Double -> [ProcessId] -> [ProcessId] -> Process ()
@@ -51,18 +49,18 @@ displayerProcess (configuration, displayIndex) =
   do
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
-    povVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
-    relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
-    selectionVar <- liftIO $ newMVar (zero, Highlight)
-    forever
-      $ do
-        message <- expect
-        case message of
-          AugmentDisplayer{..} -> void . liftIO . forkOS $ displayer configuration displayIndex augmentations (povVar, relocationVar, selectionVar)
-          Track{..}            -> void . liftIO $ swapMVar povVar (eyePosition, eyeOrientation)
-          Relocate{..}         -> void . liftIO $ swapMVar relocationVar (centerDisplacement, centerRotation)
-          Select{..}           -> void . liftIO $ swapMVar selectionVar (selectPosition, selectState)
-          _                    -> return ()
+    messageVar <- liftIO $ newEmptyMVar
+    let
+      waitForGrid priors =
+        do
+          message <- expect
+          case message of
+            AugmentDisplayer{..} -> return (priors, augmentations)
+            _                    -> waitForGrid $ message : priors
+    (priors, gridsLinks) <- waitForGrid []
+    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar
+    mapM_ (liftIO . putMVar messageVar) $ reverse priors
+    forever $ expect >>= liftIO . putMVar messageVar
 
 
 remotable ['displayerProcess]

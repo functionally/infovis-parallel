@@ -109,6 +109,7 @@ trackSelection listeners =
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
             mapM_ (`send` Select location Highlight) listeners
+            liftIO . putStrLn $ "SEND " ++ show location
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
