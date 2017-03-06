@@ -13,6 +13,7 @@ world            :
   baseSize       : 2.00
 viewers          :
   stereo         : QuadBuffer
+# stereo         : Mono
   eyeSeparation  : [-12.5,  0,  0]
   nearPlane      : 10
   farPlane       : 10000
@@ -23,6 +24,7 @@ viewers          :
       lowerLeft  : [-400,  -50, -100]
       lowerRight : [ 400,  -50, -100]
       upperLeft  : [-400,  550, -100]
+
 # Key to directions:
 #   x = leftward
 #   y = inward
