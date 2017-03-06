@@ -184,8 +184,9 @@ data WorldExtent =
 data World =
   World
   {
-    displayExtent :: WorldExtent
-  , worldExtent   :: WorldExtent
-  , baseSize      :: Double      -- FIXME: Needs implementation.
+    displayExtent  :: WorldExtent
+  , worldExtent    :: WorldExtent
+  , selectorOffset :: V3 Double
+  , baseSize       :: Double      -- FIXME: Needs implementation.
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

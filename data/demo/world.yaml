@@ -9,6 +9,7 @@ world            :
     worldCornerX : [ 200,   0,  100]
     worldCornerY : [-200,   0, -100]
     worldCornerZ : [-200, 300,  100]
+  selectorOffset : [   0,   0,    0]
   baseSize       : 2.00
 viewers          :
   stereo         : QuadBuffer

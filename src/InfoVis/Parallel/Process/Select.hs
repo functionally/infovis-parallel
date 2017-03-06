@@ -24,7 +24,7 @@ import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import InfoVis.Parallel.Types.Scaffold (Presentation(..), World(..))
-import Linear.Affine (Point(..), (.-.))
+import Linear.Affine (Point(..), (.-.), (.+^))
 import Linear.Conjugate (conjugate)
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -66,16 +66,17 @@ selecter0 listeners =
                                         persistentColorings <- liftIO $ readMVar persistentColoringsRef
                                         transientColorings <- liftIO $ readMVar transientColoringsRef
                                         let
+                                          selecterPosition' = selecterPosition .+^ selectorOffset (world configuration)
                                           ((persistentColorings', transientColorings'), changes) =
                                             selecter0'
                                               configuration
                                               gridsLinks
                                               (persistentColorings, transientColorings)
-                                              (selecterPosition, selecterState)
+                                              (selecterPosition', selecterState)
                                               (P relocation, reorientation)
                                         void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
                                         void .liftIO $ swapMVar transientColoringsRef transientColorings'
-                                        mapM_ (`send` Select selecterPosition changes) listeners
+                                        mapM_ (`send` Select selecterPosition' changes) listeners
               _                    -> return ()
           |
             message <- messages
@@ -138,16 +139,17 @@ selecter1 listeners =
                                         persistentColorings <- liftIO $ readMVar persistentColoringsRef
                                         transientColorings <- liftIO $ readMVar transientColoringsRef
                                         let
+                                          selecterPosition' = selecterPosition .+^ selectorOffset (world configuration)
                                           ((persistentColorings', transientColorings'), changes) =
                                             selecter1'
                                               configuration
                                               gridsLinks
                                               (persistentColorings, transientColorings)
-                                              (selecterPosition, selecterState)
+                                              (selecterPosition', selecterState)
                                               (P relocation, reorientation)
                                         void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
                                         void .liftIO $ swapMVar transientColoringsRef transientColorings'
-                                        mapM_ (`send` Select selecterPosition changes) listeners
+                                        mapM_ (`send` Select selecterPosition' changes) listeners
               _                    -> return ()
           |
             message <- messages

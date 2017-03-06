@@ -9,6 +9,7 @@ world            :
     worldCornerX : [-1.50  , -0.75  , 1.25  ]
     worldCornerY : [ 1.50  , -1.50  , 1.25  ]
     worldCornerZ : [ 1.50  , -0.75  , 2.00  ]
+  selectorOffset : [ 0     ,  0     , 0     ]
   baseSize       : 0.01
 viewers          :
   stereo         : Mono
