@@ -1,5 +1,5 @@
 name:                infovis-parallel
-version:             0.3.0.19
+version:             0.3.0.20
 synopsis:            Parallel-planes information visualization.
 description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -36,6 +36,7 @@ library
                ,    aeson                              >= 0.10
                ,    array                              >= 0.5.1
                ,    binary                             >= 0.7.5
+               ,    bitvec
                ,    bytestring                         >= 0.10.6
                ,    clock
                ,    containers                         >= 0.5.6.2
@@ -53,6 +54,7 @@ library
                ,    random                             >= 1.1
                ,    raft
                ,    split
+               ,    vector
                ,    yaml                               >= 0.8.15.2
   exposed-modules:  Control.Distributed.Process.Backend.SimpleWidenet
                     InfoVis.Parallel.IO
@@ -85,6 +87,7 @@ executable infovis-parallel
                ,    aeson
                ,    array
                ,    binary
+               ,    bitvec
                ,    bytestring
                ,    clock
                ,    cmdargs
@@ -102,6 +105,7 @@ executable infovis-parallel
                ,    OpenGL
                ,    raft
                ,    split
+               ,    vector
                ,    yaml
   hs-source-dirs:   src
   ghc-options:      -threaded -Wall

@@ -11,7 +11,10 @@ import Control.Arrow (second)
 import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
 import Control.Distributed.Process (Process, ProcessId, expect, getSelfPid, liftIO, say, send)
 import Control.Monad (forever, void)
+import Data.Bit (Bit, fromBool)
+import Data.Bits ((.|.))
 import Data.Function.MapReduce (mapReduce)
+import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import Graphics.Rendering.OpenGL (Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
@@ -27,11 +30,16 @@ import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Vector (zero)
 
+import qualified Data.Vector.Unboxed as U -- FIXME
 import qualified Linear.Quaternion as Q (rotate)
 
 
 selecter :: [ProcessId] -> Process ()
-selecter listeners =
+selecter = if True then selecter0 else selecter1
+
+
+selecter0 :: [ProcessId] -> Process ()
+selecter0 listeners =
   do
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
@@ -59,7 +67,7 @@ selecter listeners =
                                         transientColorings <- liftIO $ readMVar transientColoringsRef
                                         let
                                           ((persistentColorings', transientColorings'), changes) =
-                                            selecter'
+                                            selecter0'
                                               configuration
                                               gridsLinks
                                               (persistentColorings, transientColorings)
@@ -74,13 +82,13 @@ selecter listeners =
           ]
 
 
-selecter' :: Configuration Double
-         -> GridsLinks
-         -> ([(Int, Coloring)], [(Int, Coloring)])
-         -> (Point V3 Double, SelectionAction)
-         -> (Point V3 Double, Quaternion Double)
-         -> (([(Int, Coloring)], [(Int, Coloring)]), [(Int, Coloring)])
-selecter' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
+selecter0' :: Configuration Double
+           -> GridsLinks
+           -> ([(Int, Coloring)], [(Int, Coloring)])
+           -> (Point V3 Double, SelectionAction)
+           -> (Point V3 Double, Quaternion Double)
+           -> (([(Int, Coloring)], [(Int, Coloring)]), [(Int, Coloring)])
+selecter0' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
   let
     V3 x y z = realToFrac <$> (P $ conjugate orientation' `Q.rotate` location) .-. P location'
     d = realToFrac $ selectorSize presentation * baseSize world / 2
@@ -99,4 +107,85 @@ selecter' Configuration{..} (_, links) (persistentColorings, transientColorings)
     (
       (persistentColorings', transientColorings')
     , fmap snd $ filter (uncurry (/=)) $ zip transientColorings transientColorings'
+    )
+
+
+selecter1 :: [ProcessId] -> Process ()
+selecter1 listeners =
+  do
+    pid <- getSelfPid
+    say $ "Starting selector <" ++ show pid ++ ">."
+    ResetSelecter configuration <- expect
+    AugmentSelecter gridsLinks@(_, links) <- expect
+    relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
+    persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
+    transientColoringsRef  <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
+    forever
+      $ do
+        let
+          collector   RelocateSelecter{} _ = True
+          collector x@UpdateSelecter{}   y = selecterState x == selecterState y
+          collector _                    _ = False
+        messages <- collectMessages collector
+        sequence_
+          [
+            case message of
+              RelocateSelecter{..} -> do
+                                        void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
+                                        mapM_ (`send` Relocate relocationDisplacement relocationRotation) listeners
+              UpdateSelecter{..}   -> do
+                                        (relocation, reorientation) <- liftIO $ readMVar relocationVar
+                                        persistentColorings <- liftIO $ readMVar persistentColoringsRef
+                                        transientColorings <- liftIO $ readMVar transientColoringsRef
+                                        let
+                                          ((persistentColorings', transientColorings'), changes) =
+                                            selecter1'
+                                              configuration
+                                              gridsLinks
+                                              (persistentColorings, transientColorings)
+                                              (selecterPosition, selecterState)
+                                              (P relocation, reorientation)
+                                        void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
+                                        void .liftIO $ swapMVar transientColoringsRef transientColorings'
+                                        mapM_ (`send` Select selecterPosition changes) listeners
+              _                    -> return ()
+          |
+            message <- messages
+          ]
+
+
+selecter1' :: Configuration Double
+           -> GridsLinks
+           -> (U.Vector Bit, U.Vector Bit)
+           -> (Point V3 Double, SelectionAction)
+           -> (Point V3 Double, Quaternion Double)
+           -> ((U.Vector Bit, U.Vector Bit), [(Int, Coloring)])
+selecter1' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
+  let
+    zeroBits = U.map (const $ fromBool False) transientColorings
+    V3 x y z = realToFrac <$> (P $ conjugate orientation' `Q.rotate` location) .-. P location'
+    d = realToFrac $ selectorSize presentation * baseSize world / 2
+    h w w' = abs (w - w' + d) <= d
+    f (Vertex3 x' y' z') = h x x' && h y y' && h z z'
+    g DisplayList{..} = map (second f) $ zip listVertexIdentifiers listVertices
+    selections = U.accum ((. fromBool) . (.|.)) zeroBits $ (concatMap g links :: [(Int, Bool)])
+    persistentColorings' =
+      case press of
+        Highlight       -> persistentColorings
+        Deselection     -> persistentColorings `intersection` invert selections
+        Selection       -> persistentColorings `union` selections
+        Clear           -> zeroBits
+    dp = persistentColorings `symDiff` persistentColorings'
+    dt = transientColorings  `symDiff` selections
+    dd = dp `union` dt
+    newHighlight = listBits $ selections `intersection` dd
+    newNohighlight = invert selections `intersection` dd
+    newSelect = listBits $ newNohighlight `intersection` persistentColorings'
+    newNormal = listBits $ newNohighlight `intersection` invert persistentColorings'
+  in
+    (
+      (persistentColorings', selections)
+    ,      fmap (, HighlightColoring) newHighlight
+        ++ fmap (, SelectColoring   ) newSelect
+        ++ fmap (, NormalColoring   ) newNormal
     )

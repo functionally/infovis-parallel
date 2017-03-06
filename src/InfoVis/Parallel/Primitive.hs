@@ -42,7 +42,7 @@ prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (Di
 prepareLinks world presentation dataset rs =
   prepare LinkType
     . concat 
-    . zipWith (linkPresentation presentation) [1..]
+    . zipWith (linkPresentation presentation) [0..]
     $ scaleToWorld world presentation dataset
     <$> rs
 
