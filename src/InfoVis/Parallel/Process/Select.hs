@@ -45,6 +45,7 @@ selecter0 listeners =
     say $ "Starting selector <" ++ show pid ++ ">."
     ResetSelecter configuration <- expect
     AugmentSelecter gridsLinks@(_, links) <- expect
+    selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar . mapReduce id (curry $ second maximum) $ (, NormalColoring) <$> concatMap listVertexIdentifiers links
     transientColoringsRef  <- liftIO . newMVar . mapReduce id (curry $ second maximum) $ (, NormalColoring) <$> concatMap listVertexIdentifiers links
@@ -54,6 +55,23 @@ selecter0 listeners =
           collector   RelocateSelecter{} _ = True
           collector x@UpdateSelecter{}   y = selecterState x == selecterState y
           collector _                    _ = False
+          refresh selecterState' =
+            do
+              selecterPosition' <- liftIO $ readMVar  selecterVar
+              (relocation, reorientation) <- liftIO $ readMVar relocationVar
+              persistentColorings <- liftIO $ readMVar persistentColoringsRef
+              transientColorings <- liftIO $ readMVar transientColoringsRef
+              let
+                ((persistentColorings', transientColorings'), changes) =
+                  selecter0'
+                    configuration
+                    gridsLinks
+                    (persistentColorings, transientColorings)
+                    (selecterPosition', selecterState')
+                    (P relocation, reorientation)
+              void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
+              void .liftIO $ swapMVar transientColoringsRef transientColorings'
+              mapM_ (`send` Select selecterPosition' changes) listeners
         messages <- collectMessages collector
         sequence_
           [
@@ -61,22 +79,10 @@ selecter0 listeners =
               RelocateSelecter{..} -> do
                                         void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
                                         mapM_ (`send` Relocate relocationDisplacement relocationRotation) listeners
+                                        refresh Highlight
               UpdateSelecter{..}   -> do
-                                        (relocation, reorientation) <- liftIO $ readMVar relocationVar
-                                        persistentColorings <- liftIO $ readMVar persistentColoringsRef
-                                        transientColorings <- liftIO $ readMVar transientColoringsRef
-                                        let
-                                          selecterPosition' = selecterPosition .+^ selectorOffset (world configuration)
-                                          ((persistentColorings', transientColorings'), changes) =
-                                            selecter0'
-                                              configuration
-                                              gridsLinks
-                                              (persistentColorings, transientColorings)
-                                              (selecterPosition', selecterState)
-                                              (P relocation, reorientation)
-                                        void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
-                                        void .liftIO $ swapMVar transientColoringsRef transientColorings'
-                                        mapM_ (`send` Select selecterPosition' changes) listeners
+                                        void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)
+                                        refresh selecterState
               _                    -> return ()
           |
             message <- messages
