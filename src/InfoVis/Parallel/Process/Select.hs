@@ -9,16 +9,16 @@ module InfoVis.Parallel.Process.Select (
 
 import Control.Arrow (second)
 import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
-import Control.Distributed.Process (Process, ProcessId, expect, getSelfPid, liftIO, say, send)
+import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, liftIO, receiveChan, say, sendChan)
 import Control.Monad (forever, void)
-import Data.Bit (Bit, fromBool)
-import Data.Bits ((.|.))
+--import Data.Bit (Bit, fromBool)
+--import Data.Bits ((.|.))
 import Data.Function.MapReduce (mapReduce)
-import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
+--import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import Graphics.Rendering.OpenGL (Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
-import InfoVis.Parallel.Process.Util (collectMessages)
+import InfoVis.Parallel.Process.Util (collectChanMessages)
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
@@ -30,21 +30,17 @@ import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
 import Linear.Vector (zero)
 
-import qualified Data.Vector.Unboxed as U -- FIXME
+--import qualified Data.Vector.Unboxed as U -- FIXME
 import qualified Linear.Quaternion as Q (rotate)
 
 
-selecter :: [ProcessId] -> Process ()
-selecter = if True then selecter0 else selecter1
-
-
-selecter0 :: [ProcessId] -> Process ()
-selecter0 listeners =
+selecter :: ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+selecter control listener =
   do
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
-    ResetSelecter configuration <- expect
-    AugmentSelecter gridsLinks@(_, links) <- expect
+    ResetSelecter configuration <- receiveChan control
+    AugmentSelecter gridsLinks@(_, links) <- receiveChan control
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar . mapReduce id (curry $ second maximum) $ (, NormalColoring) <$> concatMap listVertexIdentifiers links
@@ -63,7 +59,7 @@ selecter0 listeners =
               transientColorings <- liftIO $ readMVar transientColoringsRef
               let
                 ((persistentColorings', transientColorings'), changes) =
-                  selecter0'
+                  selecter'
                     configuration
                     gridsLinks
                     (persistentColorings, transientColorings)
@@ -71,14 +67,14 @@ selecter0 listeners =
                     (P relocation, reorientation)
               void . liftIO $ swapMVar persistentColoringsRef persistentColorings'
               void . liftIO $ swapMVar transientColoringsRef transientColorings'
-              mapM_ (`send` Select selecterPosition' changes) listeners
-        messages <- collectMessages collector
+              listener `sendChan` Select selecterPosition' changes
+        messages <- collectChanMessages control collector
         sequence_
           [
             case message of
               RelocateSelecter{..} -> do
                                         void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
-                                        mapM_ (`send` Relocate relocationDisplacement relocationRotation) listeners
+                                        listener `sendChan` Relocate relocationDisplacement relocationRotation
                                         refresh Highlight
               UpdateSelecter{..}   -> do
                                         void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)
@@ -89,13 +85,13 @@ selecter0 listeners =
           ]
 
 
-selecter0' :: Configuration Double
+selecter' :: Configuration Double
            -> GridsLinks
            -> ([(Int, Coloring)], [(Int, Coloring)])
            -> (Point V3 Double, SelectionAction)
            -> (Point V3 Double, Quaternion Double)
            -> (([(Int, Coloring)], [(Int, Coloring)]), [(Int, Coloring)])
-selecter0' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
+selecter' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
   let
     V3 x y z = realToFrac <$> (P $ conjugate orientation' `Q.rotate` location) .-. P location'
     d = realToFrac $ selectorSize presentation * baseSize world / 2
@@ -117,8 +113,9 @@ selecter0' Configuration{..} (_, links) (persistentColorings, transientColorings
     )
 
 
-selecter1 :: [ProcessId] -> Process ()
-selecter1 listeners =
+{-
+selecter1 :: ProcessId -> Process ()
+selecter1 listener =
   do
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
@@ -139,7 +136,7 @@ selecter1 listeners =
             case message of
               RelocateSelecter{..} -> do
                                         void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
-                                        mapM_ (`send` Relocate relocationDisplacement relocationRotation) listeners
+                                        listener `send` Relocate relocationDisplacement relocationRotation
               UpdateSelecter{..}   -> do
                                         (relocation, reorientation) <- liftIO $ readMVar relocationVar
                                         persistentColorings <- liftIO $ readMVar persistentColoringsRef
@@ -155,7 +152,7 @@ selecter1 listeners =
                                               (P relocation, reorientation)
                                         void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
                                         void .liftIO $ swapMVar transientColoringsRef transientColorings'
-                                        mapM_ (`send` Select selecterPosition' changes) listeners
+                                        listener `send` Select selecterPosition' changes
               _                    -> return ()
           |
             message <- messages
@@ -197,3 +194,4 @@ selecter1' Configuration{..} (_, links) (persistentColorings, transientColorings
         ++ fmap (, SelectColoring   ) newSelect
         ++ fmap (, NormalColoring   ) newNormal
     )
+-}

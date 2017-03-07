@@ -11,7 +11,7 @@ module InfoVis.Parallel.Process.Track (
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
-import Control.Distributed.Process (Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawnLocal)
+import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
 import Graphics.Rendering.Handa.Util (degree)
@@ -48,8 +48,8 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: Serializable a => (V3 Double -> Quaternion Double -> a) -> [ProcessId] -> TopicConnection -> Sensor -> Process ()
-trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Support reset, termination, and faults.
+trackVectorQuaternion :: Serializable a => (V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     locationVar <- liftIO $ newMVar zero
     orientationVar <- liftIO . newMVar $ Quaternion 1 zero
@@ -61,7 +61,7 @@ trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Supp
               location = V3 x y z
             void . liftIO $ swapMVar locationVar location
             orientation <- liftIO $ readMVar orientationVar
-            mapM_ (`send` messager location orientation) listeners
+            listener `sendChan` messager location orientation
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
           $ do
@@ -69,14 +69,14 @@ trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Supp
             let
               orientation = Quaternion w $ V3 x y z
             void . liftIO $ swapMVar orientationVar orientation
-            mapM_ (`send` messager location orientation) listeners
+            listener `sendChan` messager location orientation
       processInput _ _ =
         return ()
     consumerLoopProcess topicConnection processInput
 
 
-trackPov :: [ProcessId] -> Process ()
-trackPov listeners = -- FIXME: Support reset, termination, and faults.
+trackPov :: SendPort DisplayerMessage -> Process ()
+trackPov listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
@@ -87,22 +87,22 @@ trackPov listeners = -- FIXME: Support reset, termination, and faults.
           let
             location' = P location
             orientation' = fromEuler $ fromDegrees <$> orientation
-          mapM_ (`send` Track location' orientation') listeners
-      trackDynamic = trackVectorQuaternion (Track . P) listeners kafka
+          listener `sendChan` Track location' orientation'
+      trackDynamic = trackVectorQuaternion (Track . P) listener kafka
     either trackStatic trackDynamic povInput
 
 
-trackRelocation :: ProcessId -> Process ()
-trackRelocation selecterPid = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: SendPort SelecterMessage -> Process ()
+trackRelocation listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
     ResetTracker Input{..} <- expect
-    trackVectorQuaternion RelocateSelecter [selecterPid] kafka relocationInput
+    trackVectorQuaternion RelocateSelecter listener kafka relocationInput
 
 
-trackSelection :: [ProcessId] -> Process ()
-trackSelection listeners =
+trackSelection :: SendPort SelecterMessage -> Process ()
+trackSelection listener =
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
@@ -115,7 +115,7 @@ trackSelection listeners =
             let
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
-            mapM_ (`send` UpdateSelecter location Highlight) listeners
+            listener `sendChan` UpdateSelecter location Highlight
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
@@ -123,7 +123,7 @@ trackSelection listeners =
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar
-                                    mapM_ (`send` UpdateSelecter location selectionAction) listeners
+                                    listener `sendChan` UpdateSelecter location selectionAction
       processInput _ _ =
         return ()
     consumerLoopProcess kafka processInput

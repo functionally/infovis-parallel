@@ -12,63 +12,97 @@ module InfoVis.Parallel.Process (
 
 
 import Control.Concurrent (forkOS)
-import Control.Concurrent.MVar (newEmptyMVar, putMVar)
-import Control.Distributed.Process (NodeId, Process, ProcessId, expect, getSelfPid, liftIO, say, send, spawn, spawnLocal)
+import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
-import Control.Monad (forever, void)
+import Control.Monad (forever, unless, void)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Process.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (collectMessages)
+import InfoVis.Parallel.Process.Util (collectChanMessages)
 import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), TrackerMessage(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), TrackerMessage(..))
 
 
-providerProcess :: Configuration Double -> ProcessId -> [ProcessId] -> Process ()
-providerProcess configuration selecterPid displayers =
+providerProcess :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+providerProcess configuration selecterSend multiplexer =
   do
     pid <- getSelfPid
     say $ "Starting data provider <" ++ show pid ++ ">."
     gridsLinks <- liftIO $ provider configuration
-    selecterPid `send` AugmentSelecter gridsLinks
-    mapM_ (`send` AugmentDisplayer gridsLinks) displayers
+    selecterSend `sendChan` AugmentSelecter gridsLinks
+    multiplexer `sendChan` AugmentDisplayer gridsLinks
 
 
-trackerProcesses :: Configuration Double -> ProcessId -> [ProcessId] -> Process ()
-trackerProcesses Configuration{..} selecterPid listeners =
+trackerProcesses :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+trackerProcesses Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid
     say $ "Starting trackers <" ++ show pid ++ ">."
-    povTrackerPid <- spawnLocal $ trackPov listeners
-    relocationTrackerPid <- spawnLocal $ trackRelocation selecterPid
-    selectionTrackerPid <- spawnLocal $ trackSelection [selecterPid]
+    povTrackerPid <- spawnLocal $ trackPov multiplexer
+    relocationTrackerPid <- spawnLocal $ trackRelocation selecterSend
+    selectionTrackerPid <- spawnLocal $ trackSelection selecterSend
     mapM_ (`send` ResetTracker input) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
 
 
-displayerProcess :: (Configuration Double, Int) -> Process ()
-displayerProcess (configuration, displayIndex) =
+multiplexerProcess :: ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
+multiplexerProcess control content displayerPids =
   do
     pid <- getSelfPid
-    say $ "Starting displayer <" ++ show pid ++ ">."
-    messageVar <- liftIO newEmptyMVar
+    say $ "Starting multiplexer <" ++ show pid ++ ">."
     let
       waitForGrid priors =
         do
-          message <- expect
+          message <- receiveChan content
           case message of
-            AugmentDisplayer{..} -> return (priors, augmentations)
+            AugmentDisplayer{..} -> return $ message : reverse priors
             _                    -> waitForGrid $ message : priors
       collector Track{}    _ = True
       collector Relocate{} _ = True
       collector _          _ = False
-    (priors, gridsLinks) <- waitForGrid []
-    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar
-    mapM_ (liftIO . putMVar messageVar) $ reverse priors
+    prior0 : priors <- waitForGrid []
+    mapM_ (`send` prior0) displayerPids
+    sequence_
+      [
+        do
+          mapM_ (`send` message) displayerPids
+          DisplayDisplayer <- receiveChan control
+          mapM_ (`send` DisplayDisplayer) displayerPids
+      |
+        message <- priors
+      ]
     forever
       $ do
-        messages <- collectMessages collector
-        mapM_ (liftIO . putMVar messageVar) messages
+        messages <- collectChanMessages content collector
+        sequence_
+          [
+            do
+              mapM_ (`send` message) displayerPids
+              DisplayDisplayer <- receiveChan control
+              mapM_ (`send` DisplayDisplayer) displayerPids
+          |
+            message <- messages
+          ]
+
+
+displayerProcess :: (Configuration Double, ProcessId, Int) -> Process ()
+displayerProcess (configuration, masterPid, displayIndex) =
+  do
+    pid <- getSelfPid
+    say $ "Starting displayer <" ++ show pid ++ ">."
+    AugmentDisplayer gridsLinks <- expect
+    readyVar <- liftIO newEmptyMVar
+    messageVar <- liftIO newEmptyMVar
+    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar readyVar
+    forever
+      $ do
+        message <- expect
+        liftIO $ putMVar messageVar message
+        unless (message == DisplayDisplayer)
+          $ do 
+            liftIO $ takeMVar readyVar
+            masterPid `send` Ready
 
 
 remotable ['displayerProcess]
@@ -83,27 +117,42 @@ masterMain configuration peers =
         [
           do
             say $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
-            spawn peer ($(mkClosure 'displayerProcess) (configuration, i))
+            spawn peer ($(mkClosure 'displayerProcess) (configuration, pid, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
-    say $ "Spawning selecter <" ++ show pid ++ ">."
-    selecterPid <- spawnLocal $ selecter displayerPids
-    selecterPid `send` ResetSelecter configuration
-    say $ "Spawning tracker <" ++ show pid ++ ">."
-    void . spawnLocal $ trackerProcesses configuration selecterPid displayerPids
-    say $ "Spawning data provider <" ++ show pid ++ ">."
-    void . spawnLocal $ providerProcess configuration selecterPid displayerPids
-    expect :: Process ()
+    commonMain configuration displayerPids
 
 
 soloMain :: Configuration Double -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
-    displayerPids <- (: []) <$> spawnLocal (displayerProcess (configuration, 0))
-    selecterPid <- spawnLocal $ selecter displayerPids
-    selecterPid `send` ResetSelecter configuration
-    void . spawnLocal $ trackerProcesses configuration selecterPid displayerPids
-    void . spawnLocal $ providerProcess configuration selecterPid displayerPids
-    expect :: Process ()
+    pid <- getSelfPid
+    displayerPids <- spawnLocal (displayerProcess (configuration, pid, 0))
+    commonMain configuration [displayerPids]
 soloMain _ (_ : _) = error "Some peers specified."
+
+
+commonMain :: Configuration Double -> [ProcessId] -> Process ()
+commonMain configuration displayerPids =
+  do
+    pid <- getSelfPid
+    say $ "Starting master <" ++ show pid ++ ">."
+    (contentSend, contentReceive) <- newChan
+    (controlSend, controlReceive) <- newChan
+    void . spawnLocal $ multiplexerProcess controlReceive contentReceive displayerPids
+    (selecterSend, selecterReceive) <- newChan
+    void . spawnLocal $ selecter selecterReceive contentSend
+    selecterSend `sendChan` ResetSelecter configuration
+    void . spawnLocal $ trackerProcesses configuration selecterSend contentSend
+    void . spawnLocal $ providerProcess configuration selecterSend contentSend
+    let
+      waitForAllReady counter =
+        do
+          Ready <- expect
+          if counter >= length displayerPids
+            then do
+                   controlSend `sendChan` DisplayDisplayer
+                   waitForAllReady 1
+            else waitForAllReady $ counter + 1
+    waitForAllReady 1 :: Process ()

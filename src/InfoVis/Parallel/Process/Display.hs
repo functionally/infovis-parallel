@@ -6,7 +6,7 @@ module InfoVis.Parallel.Process.Display (
 ) where
 
 
-import Control.Concurrent.MVar (MVar, newMVar, readMVar, swapMVar, tryTakeMVar)
+import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
 import Control.Monad (void, when)
 import Data.Default (Default(def))
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
@@ -128,8 +128,9 @@ displayer :: Configuration Double
           -> Int
           -> GridsLinks
           -> MVar DisplayerMessage -- (Point V3 Double, Quaternion Double), MVar (V3 Double, Quaternion Double), MVar (Point V3 Double, SelectionAction))
+          -> MVar ()
           -> IO ()
-displayer Configuration{..} displayIndex (grids, links) messageVar =
+displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
   do
     dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
@@ -148,17 +149,18 @@ displayer Configuration{..} displayIndex (grids, links) messageVar =
         do
           message <- tryTakeMVar messageVar
           case message of
-            Just Track{..}    -> do
-                                   void $ swapMVar povVar (eyePosition, eyeOrientation)
-                                   idle
-            Just Relocate{..} -> do
-                                   void $ swapMVar relocationVar (centerDisplacement, centerRotation)
-                                   idle
-            Just Select{..}   -> do
-                                   void $ swapMVar selectionVar selectorLocation
-                                   mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                   idle
-            _                 -> return ()
+            Just Track{..}        -> do
+                                       void $ swapMVar povVar (eyePosition, eyeOrientation)
+                                       putMVar readyVar ()
+            Just Relocate{..}     -> do
+                                       void $ swapMVar relocationVar (centerDisplacement, centerRotation)
+                                       putMVar readyVar ()
+            Just Select{..}       -> do
+                                       void $ swapMVar selectionVar selectorLocation
+                                       mapM_ (`updateBuffer` selectionChanges) linkBuffers
+                                       putMVar readyVar ()
+            Just DisplayDisplayer -> idle
+            _                     -> return ()
       )
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
