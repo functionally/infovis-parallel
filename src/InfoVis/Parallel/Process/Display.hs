@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE RecordWildCards #-}
 
 
@@ -9,7 +10,6 @@ module InfoVis.Parallel.Process.Display (
 import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
 import Control.Monad (void, when)
 import Data.Default (Default(def))
-import Graphics.GL.Util (joinSwapGroup)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -33,6 +33,9 @@ import Linear.Vector ((*^), zero)
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
 
+#ifdef SYNC_DISPLAYS
+import Graphics.GL.Util (joinSwapGroup)
+#endif
 
 
 type PointOfView a = (Point V3 a, Quaternion a)
@@ -177,5 +180,7 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
-    joinSwapGroup win 1
+#ifdef SYNC_DISPLAYS
+    void $ joinSwapGroup win 1
+#endif
     mainLoop

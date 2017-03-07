@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP             #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections   #-}
@@ -15,7 +16,7 @@ import Control.Concurrent (forkOS)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
-import Control.Monad (forever, unless, void)
+import Control.Monad (forever, unless, void, when)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Process.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
@@ -23,6 +24,14 @@ import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection
 import InfoVis.Parallel.Process.Util (collectChanMessages)
 import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), TrackerMessage(..))
+
+
+syncDisplays :: Bool
+#ifdef SYNC_DISPLAYS
+syncDisplays = True
+#else
+syncDisplays = False
+#endif
 
 
 providerProcess :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
@@ -61,29 +70,21 @@ multiplexerProcess control content displayerPids =
       collector Track{}    _ = True
       collector Relocate{} _ = True
       collector _          _ = False
-    prior0 : priors <- waitForGrid []
-    mapM_ (`send` prior0) displayerPids
-    sequence_
-      [
-        do
-          mapM_ (`send` message) displayerPids
-          DisplayDisplayer <- receiveChan control
-          mapM_ (`send` DisplayDisplayer) displayerPids
-      |
-        message <- priors
-      ]
-    forever
-      $ do
-        messages <- collectChanMessages content collector
+      sendSequence messages =
         sequence_
           [
             do
               mapM_ (`send` message) displayerPids
-              DisplayDisplayer <- receiveChan control
+              when syncDisplays
+                . void $ receiveChan control
               mapM_ (`send` DisplayDisplayer) displayerPids
           |
             message <- messages
           ]
+    prior : priors <- waitForGrid []
+    mapM_ (`send` prior) displayerPids
+    sendSequence priors
+    forever (sendSequence =<< collectChanMessages content collector)
 
 
 displayerProcess :: (Configuration Double, ProcessId, Int) -> Process ()
@@ -102,7 +103,8 @@ displayerProcess (configuration, masterPid, displayIndex) =
         unless (message == DisplayDisplayer)
           $ do 
             liftIO $ takeMVar readyVar
-            masterPid `send` Ready
+            when syncDisplays
+              $ masterPid `send` Ready
 
 
 remotable ['displayerProcess]

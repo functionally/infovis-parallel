@@ -44,7 +44,7 @@ getWindow = read . drop 7 . show -- FIXME: Depends on implementation of 'Window.
 unsafeGetWindow :: IO CInt
 unsafeGetWindow = dyn_glutGetWindow ptr_glutGetWindow
 
-foreign import ccall "dynamic" dyn_glutGetWindow :: FunPtr (IO CInt) -> (IO CInt)
+foreign import ccall "dynamic" dyn_glutGetWindow :: FunPtr (IO CInt) -> IO CInt
 
 {-# NOINLINE ptr_glutGetWindow #-}
 ptr_glutGetWindow :: FunPtr a
