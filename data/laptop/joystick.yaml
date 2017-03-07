@@ -6,22 +6,22 @@ sensor      : joystick
 device      : /dev/input/js0
 xAxis       :
   axisNumber: 2
-  increment : 2.00
+  increment : 0.20
 yAxis       :
   axisNumber: 1
-  increment : -2.00
+  increment : -0.20
 zAxis       :
   axisNumber: 3
-  increment : 2.00
+  increment : 0.20
 phiAxis     :
   axisNumber: 4
-  increment : 0.02
+  increment : 0.002
 thetaAxis   :
   axisNumber: 0
-  increment : -0.02
+  increment : -0.002
 psiAxis     :
   axisNumber: 5
-  increment : 0.02
+  increment : 0.002
 location    : [0, 0, 0]
 orientation : [0, 0, 0]
 flying      : false

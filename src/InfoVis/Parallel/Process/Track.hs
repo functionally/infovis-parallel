@@ -51,19 +51,25 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
 trackVectorQuaternion :: Serializable a => (V3 Double -> Quaternion Double -> a) -> [ProcessId] -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion messager listeners topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
+    locationVar <- liftIO $ newMVar zero
     orientationVar <- liftIO . newMVar $ Quaternion 1 zero
     let
       processInput sensor (LocationEvent (x, y, z)) =
         when (sensor == target)
           $ do
+            let
+              location = V3 x y z
+            void . liftIO $ swapMVar locationVar location
             orientation <- liftIO $ readMVar orientationVar
-            mapM_ (`send` messager (V3 x y z) orientation) listeners
+            mapM_ (`send` messager location orientation) listeners
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
-          . liftIO
-          . void
-          . swapMVar orientationVar
-          $ Quaternion w $ V3 x y z
+          $ do
+            location <- liftIO $ readMVar locationVar
+            let
+              orientation = Quaternion w $ V3 x y z
+            void . liftIO $ swapMVar orientationVar orientation
+            mapM_ (`send` messager location orientation) listeners
       processInput _ _ =
         return ()
     consumerLoopProcess topicConnection processInput
