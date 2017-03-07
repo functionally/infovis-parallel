@@ -9,6 +9,7 @@ module InfoVis.Parallel.Process.Display (
 import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
 import Control.Monad (void, when)
 import Data.Default (Default(def))
+import Graphics.GL.Util (joinSwapGroup)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -17,7 +18,7 @@ import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Greater, Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), alphaFunc, blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
 import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, translate)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
+import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), Window, createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
@@ -41,7 +42,7 @@ setup :: String
       -> String
       -> Viewers Double
       -> Int
-      -> IO DlpEncoding
+      -> IO (Window, DlpEncoding)
 setup title program Viewers{..} displayIndex =
   do
     let
@@ -61,14 +62,14 @@ setup title program Viewers{..} displayIndex =
     initialDisplayMode $=
       (if stereo == QuadBuffer then (Stereoscopic :) else id)
         [WithDepthBuffer, DoubleBuffered]
-    void $ createWindow title
+    win <- createWindow title
     when (geometry == Just "fullscreen")
       fullScreen
     depthFunc $= Just Less 
     blend $= Enabled
     blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
     alphaFunc $= Just (Greater, 0)
-    return dlp
+    return (win, dlp)
 
 
 dlpViewerDisplay ::DlpEncoding
@@ -132,7 +133,7 @@ displayer :: Configuration Double
           -> IO ()
 displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
   do
-    dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
+    (win, dlp) <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
     povVar <- newMVar (zero, Quaternion 1 zero)
@@ -176,4 +177,5 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
+    joinSwapGroup win 1
     mainLoop
