@@ -69,8 +69,8 @@ selecter0 listeners =
                     (persistentColorings, transientColorings)
                     (selecterPosition', selecterState')
                     (P relocation, reorientation)
-              void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
-              void .liftIO $ swapMVar transientColoringsRef transientColorings'
+              void . liftIO $ swapMVar persistentColoringsRef persistentColorings'
+              void . liftIO $ swapMVar transientColoringsRef transientColorings'
               mapM_ (`send` Select selecterPosition' changes) listeners
         messages <- collectMessages collector
         sequence_
@@ -109,7 +109,7 @@ selecter0' Configuration{..} (_, links) (persistentColorings, transientColorings
         Deselection     -> zipWith (\(i, o) (_, n) -> (i, if n then NormalColoring    else o)) persistentColorings selections
         Selection       -> zipWith (\(i, o) (_, n) -> (i, if n then SelectColoring    else o)) persistentColorings selections
         Clear           -> map (\(i, _) -> (i, NormalColoring))                                persistentColorings
-    transientColorings'  = zipWith (\(i, o) (_, n) -> (i, if n then HighlightColoring else o)) persistentColorings selections
+    transientColorings'  = zipWith (\(i, o) (_, n) -> (i, if n then HighlightColoring else o)) persistentColorings' selections
   in
     (
       (persistentColorings', transientColorings')

@@ -18,8 +18,8 @@ viewers          :
   farPlane       : 10000
   displays       :
   - identifier   : :0.0
-    geometry     : fullscreen
-##  geometry     : 1200x800+700+0
+##  geometry     : fullscreen
+    geometry     : 1200x800+700+0
     screen       :
       lowerLeft  : [-200, 0, 100]
       lowerRight : [ 200, 0, 100]
