@@ -1,7 +1,7 @@
 module Graphics.GL.Util (
   joinSwapGroup
 , unsafeGetCurrentDisplay
-, unsafeGetWindow
+, unsafeGetCurrentDrawable
 , unsafeJoinSwapGroupNV
 ) where
 
@@ -10,21 +10,18 @@ import Foreign.C.Types
 import Foreign.Ptr
 import Graphics.GL.GetProcAddress (getProcAddress)
 import Graphics.GL.Types (GLuint)
-import Graphics.UI.GLUT.Window (Window)
 import Graphics.X11.Xlib.Types (Display(..))
 import System.IO.Unsafe (unsafePerformIO)
 
 
-joinSwapGroup :: Window -> Int -> IO Bool
-joinSwapGroup win grp =
-  if ptr_glxGetCurrentDisplay == nullFunPtr || ptr_glxJoinSwapGroupNV == nullFunPtr
+joinSwapGroup :: Int -> IO Bool
+joinSwapGroup grp =
+  if nullFunPtr `elem` [ptr_glxGetCurrentDisplay, ptr_glXGetCurrentDrawable, ptr_glxJoinSwapGroupNV]
     then return False
     else do
            dpy <- unsafeGetCurrentDisplay
-           let
-             win' = getWindow win
-             grp' = fromIntegral grp
-           unsafeJoinSwapGroupNV dpy win' grp'
+           win <- unsafeGetCurrentDrawable
+           unsafeJoinSwapGroupNV dpy win $ fromIntegral grp
 
     
 unsafeGetCurrentDisplay :: IO Display
@@ -37,18 +34,14 @@ ptr_glxGetCurrentDisplay :: FunPtr a
 ptr_glxGetCurrentDisplay = unsafePerformIO $ getProcAddress "glXGetCurrentDisplay"
 
 
-getWindow :: Window -> CInt
-getWindow = read . drop 7 . show -- FIXME: Depends on implementation of 'Window.show.
+unsafeGetCurrentDrawable :: IO CInt
+unsafeGetCurrentDrawable = dyn_glXGetCurrentDrawable ptr_glXGetCurrentDrawable
 
+foreign import ccall "dynamic" dyn_glXGetCurrentDrawable :: FunPtr (IO CInt) -> IO CInt
 
-unsafeGetWindow :: IO CInt
-unsafeGetWindow = dyn_glutGetWindow ptr_glutGetWindow
-
-foreign import ccall "dynamic" dyn_glutGetWindow :: FunPtr (IO CInt) -> IO CInt
-
-{-# NOINLINE ptr_glutGetWindow #-}
-ptr_glutGetWindow :: FunPtr a
-ptr_glutGetWindow = unsafePerformIO $ getProcAddress "glutGetWindow"
+{-# NOINLINE ptr_glXGetCurrentDrawable #-}
+ptr_glXGetCurrentDrawable :: FunPtr a
+ptr_glXGetCurrentDrawable = unsafePerformIO $ getProcAddress "glXGetCurrentDrawable"
 
 
 unsafeJoinSwapGroupNV :: Display -> CInt -> GLuint -> IO Bool
