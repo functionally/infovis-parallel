@@ -98,17 +98,15 @@ selecter' :: Configuration Double
           -> ((U.Vector Bit, U.Vector Bit), [(Int, Coloring)])
 selecter' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
   let
+    merge = foldl (flip (:))
+    skipDuplicates (e : es@(e': _)) = if e == e' then skipDuplicates es else e : skipDuplicates es
+    skipDuplicates es = es
     zeroBits = U.replicate (U.length transientColorings) (fromBool False)
     V3 x y z = realToFrac <$> (P $ conjugate orientation' `Q.rotate` location) .-. P location'
     d = realToFrac $ selectorSize presentation * baseSize world / 2
     h w w' = abs (w - w' + d) <= d
     f (Vertex3 x' y' z') = h x x' && h y y' && h z z'
-    g DisplayList{..} = skip $ fst <$> filter (f . snd) (zip listVertexIdentifiers listVertices)
-    skip [] = []
-    skip [e] = [e]
-    skip (e : es@(e': _))
-      | e == e'   = skip es
-      | otherwise =  e : skip es
+    g DisplayList{..} = skipDuplicates $ fst <$> filter (f . snd) (zip listVertexIdentifiers listVertices)
     selections = U.accum (const . const $ fromBool True) zeroBits $ fmap (, undefined) $ concatMap g links
     persistentColorings' =
       case press of
@@ -126,7 +124,7 @@ selecter' Configuration{..} (_, links) (persistentColorings, transientColorings)
   in
     (
       (persistentColorings', selections)
-    ,      fmap (, HighlightColoring) newHighlight
-        ++ fmap (, SelectColoring   ) newSelect
-        ++ fmap (, NormalColoring   ) newNormal
+    ,                fmap (, HighlightColoring) newHighlight
+        `merge` fmap (, SelectColoring   ) newSelect
+        `merge` fmap (, NormalColoring   ) newNormal
     )
