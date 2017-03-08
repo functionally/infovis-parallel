@@ -13,17 +13,18 @@ import Data.Function.MapReduce (groupReduceFlatten)
 import Data.List (groupBy, sortBy)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Types.Message (SumTag(..))
-import System.Clock as C
+import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 import System.IO.Unsafe (unsafePerformIO)
 
 
 
-timestamp :: String -> IO ()
+timestamp :: String -> IO Double
 timestamp s =
   do
     t0' <- t0
-    t <- C.toNanoSecs <$> C.getTime C.Monotonic
+    t <- toNanoSecs <$> getTime Monotonic
     putStrLn $ show (fromIntegral (t - t0') * 120 / 1e9 :: Double) ++ "\t" ++ s
+    return $ fromIntegral t * 120 / 1e9
 
 
 t0Var :: MVar Integer
@@ -37,7 +38,7 @@ t0 =
     e <- isEmptyMVar t0Var
     if e
       then do
-                 t0' <- C.toNanoSecs <$> C.getTime C.Monotonic
+                 t0' <- toNanoSecs <$> getTime Monotonic
                  putMVar t0Var t0'
                  return t0'
       else readMVar t0Var
