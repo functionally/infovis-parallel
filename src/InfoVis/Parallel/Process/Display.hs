@@ -182,7 +182,6 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
 #ifdef SYNC_DISPLAYS
-    didJoinSwapGroup <- joinSwapGroup 1
-    putStrLn $ "Successfully joined swap group? " ++ show didJoinSwapGroup
+    void $ joinSwapGroup 1
 #endif
     mainLoop
