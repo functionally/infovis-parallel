@@ -18,7 +18,7 @@ import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Greater, Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), alphaFunc, blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
 import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, translate)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), Window, createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
+import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
@@ -46,7 +46,7 @@ setup :: String
       -> String
       -> Viewers Double
       -> Int
-      -> IO (Window, DlpEncoding)
+      -> IO DlpEncoding
 setup title program Viewers{..} displayIndex =
   do
     let
@@ -66,14 +66,14 @@ setup title program Viewers{..} displayIndex =
     initialDisplayMode $=
       (if stereo == QuadBuffer then (Stereoscopic :) else id)
         [WithDepthBuffer, DoubleBuffered]
-    win <- createWindow title
+    void $ createWindow title
     when (geometry == Just "fullscreen")
       fullScreen
     depthFunc $= Just Less 
     blend $= Enabled
     blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
     alphaFunc $= Just (Greater, 0)
-    return (win, dlp)
+    return dlp
 
 
 dlpViewerDisplay ::DlpEncoding
@@ -137,7 +137,7 @@ displayer :: Configuration Double
           -> IO ()
 displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
   do
-    (win, dlp) <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
+    dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
     povVar <- newMVar (zero, Quaternion 1 zero)
@@ -182,6 +182,7 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
 #ifdef SYNC_DISPLAYS
-    void $ joinSwapGroup win 1
+    didJoinSwapGroup <- joinSwapGroup 1
+    putStrLn $ "Successfully joined swap group? " ++ show didJoinSwapGroup
 #endif
     mainLoop
