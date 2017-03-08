@@ -1,34 +1,45 @@
-name:                infovis-parallel
-version:             0.3.0.29
-synopsis:            Parallel-planes information visualization.
-description:         This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
+name         : infovis-parallel
+version      : 0.3.0.30
+synopsis     : Parallel-planes information visualization.
+description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
-license:             MIT
-license-file:        LICENSE
-author:              Brian W Bush <brian.bush@nrel.gov>
-maintainer:          Brian W Bush <brian.bush@nrel.gov>
-copyright:           (c) 2015-17 National Renewable Energy Laboratory
-category:            Graphics
-build-type:          Simple
-cabal-version:       >= 1.10
-homepage:            https://bitbucket.org/bwbush/infovis-parallel
-bug-reports:         https://bwbush.atlassian.net/projects/HIVPP/issues/
-package-url:         https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-0.2.3.13.tar.gz
+license      : MIT
+license-file : LICENSE
+author       : Brian W Bush <brian.bush@nrel.gov>
+maintainer   : Brian W Bush <brian.bush@nrel.gov>
+copyright    : (c) 2015-17 National Renewable Energy Laboratory
+category     : Graphics
+build-type   : Simple
+cabal-version: >= 1.10
+homepage     : https://bitbucket.org/bwbush/infovis-parallel
+bug-reports  : https://bwbush.atlassian.net/projects/HIVPP/issues/
+package-url  : https://bitbucket.org/bwbush/infovis-parallel/downloads/infovis-parallel-$version.tar.gz
 
 extra-source-files:  ReadMe.md
-data-dir: data
-data-files: ENB2012.md
-            ENB2012.tsv
-            diagnostics.yaml
-            optoma-projector-stick.yaml
-            optoma-projector.yaml
-            single.yaml
-            stick.yaml
-            ESIF.yaml
+data-dir          : data
+data-files        : ENB2012.md
+                    ENB2012.tsv
+                    ENB2012.yaml
+                    presentation.yaml
+                    launch-laptop.sh
+                    laptop/input.yaml
+                    laptop/joystick.yaml
+                    laptop/spacenav.yaml
+                    laptop/world.yaml
+                    launch-zspace.sh
+                    zspace/input.yaml
+                    zspace/world.yaml
+                    launch-diagnostics.sh
+                    diagnostics/input.yaml
+                    diagnostics/spacenav.yaml
+                    diagnostics/world.yaml
+                    launch-cave.sh
+                    cave/input.yaml
+                    cave/world.yaml
 
 
 source-repository head
-  type: git
+  type    : git
   location: https://bwbush@bitbucket.org/bwbush/infovis-parallel.git
 
 
@@ -38,31 +49,7 @@ flag SyncDisplays
 
 
 library
-  build-depends:    base                               >= 4.8.1 && < 5
-               ,    aeson                              >= 0.10
-               ,    array                              >= 0.5.1
-               ,    binary                             >= 0.7.5
-               ,    bitvec
-               ,    bytestring                         >= 0.10.6
-               ,    clock
-               ,    containers                         >= 0.5.6.2
-               ,    data-default                       >= 0.5.3
-               ,    distributed-process                >= 0.5.5.1
-               ,    distributed-process-simplelocalnet >= 0.2.3.1
-               ,    GLUT                               >= 2.7.0.1
-               ,    handa-opengl                       >= 0.1.13.0
-               ,    kafka-device
-               ,    linear
-               ,    network                            >= 2.6.2.1
-               ,    network-transport                  >= 0.4.2
-               ,    opengl-dlp-stereo
-               ,    OpenGL                             >= 2.12.0.1
-               ,    random                             >= 1.1
-               ,    raft
-               ,    split
-               ,    vector
-               ,    yaml                               >= 0.8.15.2
-  exposed-modules:  InfoVis.Parallel.IO
+  exposed-modules : InfoVis.Parallel.IO
                     InfoVis.Parallel.Presenting
                     InfoVis.Parallel.Primitive
                     InfoVis.Parallel.Process
@@ -79,49 +66,74 @@ library
                     InfoVis.Parallel.Types.Display
                     InfoVis.Parallel.Types.Message
                     InfoVis.Parallel.Types.Instances
-                    InfoVis.Parallel.Types.Scaffold
-  other-modules:    Control.Distributed.Process.Backend.SimpleWidenet
-  hs-source-dirs:   src
-  exposed:          True
-  buildable:        True
-  if flag(SyncDisplays)
-    other-modules: Graphics.GL.Util
-    cpp-options  : "-DSYNC_DISPLAYS"
-    cc-options   : "-DUSE_DLSYM"
-    build-depends: OpenGLRaw, X11
-  ghc-options:      -Wall
+                    InfoVis.Parallel.Types.Presentation
+                    InfoVis.Parallel.Types.World
+  other-modules   : Control.Distributed.Process.Backend.SimpleWidenet
+  build-depends   : base                               >= 4.8 && < 5
+                  , aeson
+                  , array
+                  , binary                             >= 0.7.5
+                  , bitvec
+                  , bytestring                         >= 0.10.6
+                  , clock
+                  , containers                         >= 0.5.6.2
+                  , data-default                       >= 0.5.3
+                  , distributed-process                >= 0.5.5.1
+                  , distributed-process-simplelocalnet >= 0.2.3.1
+                  , GLUT                               >= 2.7.0.1
+                  , handa-opengl                       >= 0.1.13.0
+                  , kafka-device
+                  , linear
+                  , network                            >= 2.6.2.1
+                  , network-transport                  >= 0.4.2
+                  , opengl-dlp-stereo
+                  , OpenGL                             >= 2.12.0.1
+                  , random                             >= 1.1
+                  , raft
+                  , split
+                  , vector
+                  , yaml                               >= 0.8.15.2
+  hs-source-dirs  : src
+  exposed         : True
+  buildable       : True
+  ghc-options     : -Wall
   default-language: Haskell2010
+  if flag(SyncDisplays)
+    other-modules : Graphics.GL.Util
+    cpp-options   : "-DSYNC_DISPLAYS"
+    cc-options    : "-DUSE_DLSYM"
+    build-depends : OpenGLRaw, X11
 
 executable infovis-parallel
-  main-is:          Main.hs
-  build-depends:    base
-               ,    aeson
-               ,    array
-               ,    binary
-               ,    bitvec
-               ,    bytestring
-               ,    clock
-               ,    cmdargs
-               ,    containers
-               ,    data-default
-               ,    distributed-process
-               ,    distributed-process-simplelocalnet
-               ,    GLUT
-               ,    handa-opengl
-               ,    kafka-device
-               ,    linear
-               ,    network
-               ,    network-transport
-               ,    opengl-dlp-stereo
-               ,    OpenGL
-               ,    raft
-               ,    split
-               ,    vector
-               ,    yaml
-  hs-source-dirs:   src
-  if flag(SyncDisplays)
-    cpp-options  : "-DSYNC_DISPLAYS"
-    cc-options   : "-DUSE_DLSYM"
-    build-depends: OpenGLRaw, X11
-  ghc-options:      -threaded -Wall
+  main-is         : Main.hs
+  hs-source-dirs  : src
+  build-depends   : base
+                  , aeson
+                  , array
+                  , binary
+                  , bitvec
+                  , bytestring
+                  , clock
+                  , cmdargs
+                  , containers
+                  , data-default
+                  , distributed-process
+                  , distributed-process-simplelocalnet
+                  , GLUT
+                  , handa-opengl
+                  , kafka-device
+                  , linear
+                  , network
+                  , network-transport
+                  , opengl-dlp-stereo
+                  , OpenGL
+                  , raft
+                  , split
+                  , vector
+                  , yaml
+  ghc-options     : -threaded -Wall
   default-language: Haskell2010
+  if flag(SyncDisplays)
+    cpp-options   : "-DSYNC_DISPLAYS"
+    cc-options    : "-DUSE_DLSYM"
+    build-depends : OpenGLRaw, X11

@@ -15,7 +15,7 @@ import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat, PrimitiveMode(..), Vertex3)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import InfoVis.Parallel.Types.Scaffold (Characteristic)
+import InfoVis.Parallel.Types.Presentation (Characteristic)
 
 
 type Primitive3D = Vertex3 GLfloat

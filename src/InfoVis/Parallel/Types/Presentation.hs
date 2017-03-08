@@ -2,7 +2,7 @@
 {-# LANGUAGE DeriveGeneric  #-}
 
 
-module InfoVis.Parallel.Types.Scaffold (
+module InfoVis.Parallel.Types.Presentation (
   Axis(..)
 , Axes1D
 , Axes2D
@@ -16,8 +16,6 @@ module InfoVis.Parallel.Types.Scaffold (
 , Link(..)
 , Characteristic(..)
 , Presentation(..)
-, WorldExtent(..)
-, World(..)
 ) where
 
 
@@ -166,27 +164,5 @@ data Presentation =
   , animation     :: Maybe VariableAlias -- FIXME: Needs implementation.
   , selectorColor :: Color               -- FIXME: Needs implementation.
   , selectorSize  :: Double              -- FIXME: Needs implementation.
-  }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
-
-
-data WorldExtent =
-  WorldExtent
-  {
-    worldOrigin  :: Location
-  , worldCornerX :: Location
-  , worldCornerY :: Location
-  , worldCornerZ :: Location
-  }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
-
-
-data World =
-  World
-  {
-    displayExtent  :: WorldExtent
-  , worldExtent    :: WorldExtent
-  , selectorOffset :: V3 Double
-  , baseSize       :: Double      -- FIXME: Needs implementation.
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

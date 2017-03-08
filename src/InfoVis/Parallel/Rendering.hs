@@ -27,7 +27,7 @@ import Graphics.Rendering.OpenGL.GL.VertexArrays (Capability(..), ClientArrayTyp
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4)
 import InfoVis.Parallel.Types (Color, Coloring(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
-import InfoVis.Parallel.Types.Scaffold (Characteristic(..))
+import InfoVis.Parallel.Types.Presentation (Characteristic(..))
 
 
 data Shape =

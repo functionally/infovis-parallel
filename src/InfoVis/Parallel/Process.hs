@@ -34,27 +34,6 @@ syncDisplays = False
 #endif
 
 
-providerProcess :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-providerProcess configuration selecterSend multiplexer =
-  do
-    pid <- getSelfPid
-    say $ "Starting data provider <" ++ show pid ++ ">."
-    gridsLinks <- liftIO $ provider configuration
-    selecterSend `sendChan` AugmentSelecter gridsLinks
-    multiplexer `sendChan` AugmentDisplayer gridsLinks
-
-
-trackerProcesses :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-trackerProcesses Configuration{..} selecterSend multiplexer =
-  do
-    pid <- getSelfPid
-    say $ "Starting trackers <" ++ show pid ++ ">."
-    povTrackerPid <- spawnLocal $ trackPov multiplexer
-    relocationTrackerPid <- spawnLocal $ trackRelocation selecterSend
-    selectionTrackerPid <- spawnLocal $ trackSelection selecterSend
-    mapM_ (`send` ResetTracker input) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
-
-
 multiplexerProcess :: ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
 multiplexerProcess control content displayerPids =
   do
@@ -85,6 +64,17 @@ multiplexerProcess control content displayerPids =
     mapM_ (`send` prior) displayerPids
     sendSequence priors
     forever (sendSequence =<< collectChanMessages content collector)
+
+
+trackerProcesses :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+trackerProcesses Configuration{..} selecterSend multiplexer =
+  do
+    pid <- getSelfPid
+    say $ "Starting trackers <" ++ show pid ++ ">."
+    povTrackerPid <- spawnLocal $ trackPov multiplexer
+    relocationTrackerPid <- spawnLocal $ trackRelocation selecterSend
+    selectionTrackerPid <- spawnLocal $ trackSelection selecterSend
+    mapM_ (`send` ResetTracker input) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
 
 
 displayerProcess :: (Configuration Double, ProcessId, Int) -> Process ()
@@ -147,7 +137,7 @@ commonMain configuration displayerPids =
     void . spawnLocal $ selecter selecterReceive contentSend
     selecterSend `sendChan` ResetSelecter configuration
     void . spawnLocal $ trackerProcesses configuration selecterSend contentSend
-    void . spawnLocal $ providerProcess configuration selecterSend contentSend
+    void . spawnLocal $ provider configuration selecterSend contentSend
     let
       waitForAllReady counter =
         do
