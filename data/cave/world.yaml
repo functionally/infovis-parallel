@@ -5,15 +5,15 @@ world            :
     worldCornerY : [0, 1, 0]
     worldCornerZ : [0, 0, 1]
   worldExtent    :
-    worldOrigin  : [ 2.00   , -0.25  , 0.90  ]
-    worldCornerX : [-2.00   , -0.25  , 0.90  ]
-    worldCornerY : [ 2.00   , -1.50  , 0.90  ]
-    worldCornerZ : [ 2.00   , -0.25  , 2.15  ]
+    worldOrigin  : [ 1.75   , -0.25  , 0.90  ]
+    worldCornerX : [-1.75   , -0.25  , 0.90  ]
+    worldCornerY : [ 1.75   , -1.50  , 0.90  ]
+    worldCornerZ : [ 1.75   , -0.25  , 2.15  ]
   selectorOffset : [ 0      ,  0.10  , 0     ]
   baseSize       : 0.01
 viewers          :
   stereo         : QuadBuffer
-  eyeSeparation  : [-0.06  , 0.00  ,  0.00  ]
+  eyeSeparation  : [-0.08  , 0.00  ,  0.00  ]
   nearPlane      : 0.1
   farPlane       : 100
   displays            :
