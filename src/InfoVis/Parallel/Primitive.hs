@@ -14,8 +14,8 @@ import Graphics.Rendering.OpenGL (GLfloat, Vertex3(..))
 import InfoVis.Parallel.Presenting (linkPresentation, presentWorld)
 import InfoVis.Parallel.Scaling (scaleToWorld)
 import InfoVis.Parallel.Types (Location)
-import InfoVis.Parallel.Types.Dataset (Dataset, Record, RecordIdentifier)
-import InfoVis.Parallel.Types.Display (DisplayItem(..), DisplayList(..), DisplayType(..))
+import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(..))
+import InfoVis.Parallel.Types.Display (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, LinkAlias, Presentation)
 import InfoVis.Parallel.Types.World (World)
 import Linear.Affine (Point(..))
@@ -33,10 +33,20 @@ fromLocations :: [DisplayItem a Location] -> [DisplayItem a Primitive3D]
 fromLocations = fmap (fmap fromLocation)
 
 
-prepareGrids :: World -> Presentation -> [DisplayList (DisplayType, GridAlias) Int]
-prepareGrids world presentation =
-  prepare GridType
-    $ presentWorld world presentation
+prepareGrids :: World -> Presentation -> Dataset -> ([DisplayList (DisplayType, GridAlias) Int], [DisplayText String Location])
+prepareGrids world presentation Dataset{..} =
+  let
+    (grids, texts) = presentWorld world presentation
+  in
+    (
+      prepare GridType grids
+    , [
+        text {textContent = n}
+      |
+        text@DisplayText{..} <- texts
+      , let Just n = textContent `lookup` [(variableAlias, variableName) | ContinuousVariable{..} <- variables]
+      ]
+    )
 
 
 prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (DisplayType, LinkAlias) RecordIdentifier]

@@ -8,6 +8,7 @@ module InfoVis.Parallel.Types.Display (
 , DisplayItem(..)
 , DisplayList(..)
 , DisplayType(..)
+, DisplayText(..)
 ) where
 
 
@@ -15,6 +16,7 @@ import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat, PrimitiveMode(..), Vertex3)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
+import InfoVis.Parallel.Types (Color)
 import InfoVis.Parallel.Types.Presentation (Characteristic)
 
 
@@ -50,3 +52,18 @@ data DisplayType =
     GridType
   | LinkType
     deriving (Binary, Eq, Generic, Ord, Show)
+
+
+data DisplayText a b =
+  DisplayText
+  {
+    textContent :: a
+  , textOrigin  :: b
+  , textWidth   :: b
+  , textHeight  :: b
+  , textColor   :: Color
+  }
+    deriving (Binary, Eq, Generic, Ord, Show)
+
+instance Functor (DisplayText a) where
+  fmap f x@DisplayText{..} = x {textOrigin = f textOrigin, textWidth = f textWidth, textHeight = f textHeight}

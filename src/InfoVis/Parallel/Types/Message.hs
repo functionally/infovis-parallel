@@ -20,9 +20,9 @@ module InfoVis.Parallel.Types.Message (
 import Control.Distributed.Process (ProcessId)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
-import InfoVis.Parallel.Types (Coloring)
+import InfoVis.Parallel.Types (Coloring, Location)
 import InfoVis.Parallel.Types.Configuration (Configuration, Input)
-import InfoVis.Parallel.Types.Display (DisplayList, DisplayType)
+import InfoVis.Parallel.Types.Display (DisplayList, DisplayText, DisplayType)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
@@ -82,7 +82,7 @@ data SelecterMessage =
   | TerminateSelecter
   | AugmentSelecter
     {
-      selecterAugmentations :: ([Augmentation], [Augmentation])
+      selecterAugmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
   | UpdateSelecter
     {
@@ -110,7 +110,7 @@ data DisplayerMessage =
   | DisplayDisplayer
   | AugmentDisplayer
     {
-      augmentations :: ([Augmentation], [Augmentation])
+      augmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
   | Track
     {

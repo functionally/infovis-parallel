@@ -40,7 +40,7 @@ selecter control listener =
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
     ResetSelecter configuration <- receiveChan control
-    AugmentSelecter gridsLinks@(_, links) <- receiveChan control
+    AugmentSelecter gridsLinks@(_, _, links) <- receiveChan control
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
@@ -97,7 +97,7 @@ selecter' :: Configuration Double
           -> (Point V3 Double, SelectionAction)
           -> (Point V3 Double, Quaternion Double)
           -> ((U.Vector Bit, U.Vector Bit), [(Int, Coloring)])
-selecter' Configuration{..} (_, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
+selecter' Configuration{..} (_, _, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
   let
     merge = foldl (flip (:))
     skipDuplicates (e : es@(e': _)) = if e == e' then skipDuplicates es else e : skipDuplicates es

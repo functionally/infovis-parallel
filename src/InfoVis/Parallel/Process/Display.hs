@@ -8,6 +8,7 @@ module InfoVis.Parallel.Process.Display (
 
 
 import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
+import Control.Exception (IOException, catch)
 import Control.Monad (void, when)
 import Data.Default (Default(def))
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
@@ -16,20 +17,23 @@ import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
 import Graphics.Rendering.Handa.Projection (OffAxisProjection(VTKOffAxis), projection)
 import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Greater, Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), alphaFunc, blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
-import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, translate)
+import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, scale, translate)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), createWindow, depthFunc, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, reshapeCallback)
+import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), StrokeFont(Roman), createWindow, depthFunc, fontHeight, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, renderString, reshapeCallback, stringWidth)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Types.Configuration (Configuration(..), Display(..), Viewers(..))
+import InfoVis.Parallel.Types.Display (DisplayText(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
 import Linear.Affine (Point(..), (.+^))
+import Linear.Conjugate (conjugate)
+import Linear.Metric (dot, normalize)
 import Linear.Quaternion (Quaternion(..))
-import Linear.V3 (V3(..))
-import Linear.Vector ((*^), zero)
+import Linear.V3 (V3(..), cross)
+import Linear.Vector ((*^), (^/), zero)
 
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
@@ -135,7 +139,7 @@ displayer :: Configuration Double
           -> MVar DisplayerMessage -- (Point V3 Double, Quaternion Double), MVar (V3 Double, Quaternion Double), MVar (Point V3 Double, SelectionAction))
           -> MVar ()
           -> IO ()
-displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
+displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyVar =
   do
     dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
@@ -167,6 +171,10 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             Just DisplayDisplayer -> idle
             _                     -> return ()
       )
+    h <-
+     catch (fontHeight Roman)
+       ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
+
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
         preservingMatrix
@@ -181,6 +189,35 @@ displayer Configuration{..} displayIndex (grids, links) messageVar readyVar =
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
+            sequence_
+              [
+                preservingMatrix $ do
+                  color textColor
+                  translate $ Vector3 xo yo zo
+                  toRotation qrot
+                  scale s s s
+                  translate $ Vector3 0 (- h) 0
+                  renderString Roman textContent
+              |
+                DisplayText{..} <- texts
+              , let P (V3 xo yo zo) = realToFrac <$> textOrigin
+              , let P (V3 xw yw zw) = realToFrac <$> textWidth
+              , let P (V3 xh yh zh) = realToFrac <$> textHeight
+              , let s = 0.05 + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
+              , let v1 = normalize $ V3 1         0         0
+                    v2 = normalize $ V3 (xw - xo) (yw - yo) (zw - zo)
+                    v = normalize $ v1 + v2
+                    qrot = Quaternion (v `dot` v2) $ v `cross` v2
+{-
+Before rotation: u0, v0. After rotation: u2, v2.
+Quaternion q2 = Quaternion::fromTwoVectors(u0, u2);
+Vector v1 = v2.rotate(q2.conjugate());
+Vector v0_proj = v0.projectPlane(u0);
+Vector v1_proj = v1.projectPlane(u0);
+Quaternion q1 = Quaternion::fromTwoVectors(v0_proj, v1_proj);
+return (q2 * q1).normalized();
+-}
+              ]
 #ifdef SYNC_DISPLAYS
     void $ joinSwapGroup 1
 #endif
