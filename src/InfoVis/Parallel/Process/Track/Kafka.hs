@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections   #-}
 
 
-module InfoVis.Parallel.Process.Track (
+module InfoVis.Parallel.Process.Track.Kafka (
   trackPov
 , trackRelocation
 , trackSelection
