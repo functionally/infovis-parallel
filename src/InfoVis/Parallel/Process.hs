@@ -54,9 +54,9 @@ multiplexerProcess control content displayerPids =
           [
             do
               mapM_ (`send` message) displayerPids
-              when syncDisplays
-                . void $ receiveChan control
-              mapM_ (`send` DisplayDisplayer) displayerPids
+--            when syncDisplays
+---             . void $ receiveChan control
+--            mapM_ (`send` DisplayDisplayer) displayerPids
           |
             message <- messages
           ]
@@ -90,11 +90,11 @@ displayerProcess (configuration, masterPid, displayIndex) =
       $ do
         message <- expect
         liftIO $ putMVar messageVar message
-        unless (message == DisplayDisplayer)
-          $ do 
-            liftIO $ takeMVar readyVar
-            when syncDisplays
-              $ masterPid `send` Ready
+--      unless (message == DisplayDisplayer)
+--        $ do 
+--          liftIO $ takeMVar readyVar
+--          when syncDisplays
+--            $ masterPid `send` Ready
 
 
 remotable ['displayerProcess]

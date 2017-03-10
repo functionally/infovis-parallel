@@ -152,30 +152,27 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
           faces = brickFaces s s s
-    idleCallback $= Just
-      (
-        do
-          message <- tryTakeMVar messageVar
-          case message of
-            Just Track{..}        -> do
-                                       void $ swapMVar povVar (eyePosition, eyeOrientation)
-                                       putMVar readyVar ()
-            Just Relocate{..}     -> do
-                                       void $ swapMVar relocationVar (centerDisplacement, centerRotation)
-                                       putMVar readyVar ()
-            Just Select{..}       -> do
-                                       void $ swapMVar selectionVar selectorLocation
-                                       mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                       putMVar readyVar ()
-            Just DisplayDisplayer -> idle
-            _                     -> return ()
-      )
+    idleCallback $= Just idle
     h <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
 
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
+        message <- tryTakeMVar messageVar
+        case message of
+          Just Track{..}        -> do
+                                     void $ swapMVar povVar (eyePosition, eyeOrientation)
+--                                   putMVar readyVar ()
+          Just Relocate{..}     -> do
+                                     void $ swapMVar relocationVar (centerDisplacement, centerRotation)
+--                                   putMVar readyVar ()
+          Just Select{..}       -> do
+                                     void $ swapMVar selectionVar selectorLocation
+{- slows things down -}              mapM_ (`updateBuffer` selectionChanges) linkBuffers
+--                                   putMVar readyVar ()
+--        Just DisplayDisplayer -> idle
+          _                     -> return ()
         preservingMatrix
           $ do
             P location <- readMVar selectionVar  -- FIXME
@@ -202,7 +199,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               , let P (V3 xo yo zo) = realToFrac <$> textOrigin
               , let P (V3 xw yw zw) = realToFrac <$> textWidth
               , let P (V3 xh yh zh) = realToFrac <$> textHeight
-              , let s = 0.05 + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
+              , let s = 0.05 / h + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
               , let v1 = normalize $ V3 1         0         0
                     v2 = normalize $ V3 (xw - xo) (yw - yo) (zw - zo)
                     v = normalize $ v1 + v2
