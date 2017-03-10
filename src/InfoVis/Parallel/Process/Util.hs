@@ -69,15 +69,16 @@ collectChanMessages :: (Serializable a, SumTag a) => ReceivePort a -> (a -> a ->
 collectChanMessages chan grouper =
   do
     let
-      collectMessages' =
+      collectMessages' 0 = return []
+      collectMessages' n =
         do
           maybeMessage <- receiveChanTimeout 1 chan
           case maybeMessage of
             Nothing      -> return []
-            Just message -> (message :) <$> collectMessages'
+            Just message -> (message :) <$> collectMessages' (n - 1)
       collapser = fmap head . groupBy (grouper `on` snd)
     message <- receiveChan chan
-    messages <- collectMessages'
+    messages <- collectMessages' 0
     return
       . map snd
       . sortBy (compare `on` fst)

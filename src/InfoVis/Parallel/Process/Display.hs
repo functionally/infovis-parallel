@@ -156,7 +156,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     h <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
-
+    print h
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
         message <- tryTakeMVar messageVar
@@ -168,6 +168,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
                                      void $ swapMVar relocationVar (centerDisplacement, centerRotation)
 --                                   putMVar readyVar ()
           Just Select{..}       -> do
+--                                   putStrLn $ "IDLE\t" ++ show selectorLocation
                                      void $ swapMVar selectionVar selectorLocation
 {- slows things down -}              mapM_ (`updateBuffer` selectionChanges) linkBuffers
 --                                   putMVar readyVar ()
@@ -176,13 +177,14 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
         preservingMatrix
           $ do
             P location <- readMVar selectionVar  -- FIXME
+--          putStrLn $ "DISP\t" ++ show location
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
         preservingMatrix
           $ do
             (location, orientation) <- readMVar relocationVar
             toRotation orientation
-            translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
+--          translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
             sequence_
@@ -199,7 +201,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               , let P (V3 xo yo zo) = realToFrac <$> textOrigin
               , let P (V3 xw yw zw) = realToFrac <$> textWidth
               , let P (V3 xh yh zh) = realToFrac <$> textHeight
-              , let s = 0.05 / h + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
+              , let s = 0.00002 + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
               , let v1 = normalize $ V3 1         0         0
                     v2 = normalize $ V3 (xw - xo) (yw - yo) (zw - zo)
                     v = normalize $ v1 + v2

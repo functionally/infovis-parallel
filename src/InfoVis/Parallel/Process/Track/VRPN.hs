@@ -33,13 +33,14 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
     updatedVar <- liftIO newEmptyMVar
     let
       callback :: PositionCallback Int Double
-      callback _ _ (lx, ly, lz) (ox, oy, oz, ow) =
+      callback _ 0 (lx, ly, lz) (ox, oy, oz, ow) =
         do
           writeIORef locationVar . P $ V3 lx ly lz
           writeIORef orientationVar $ Quaternion ow $ V3 ox oy oz
           void $ tryPutMVar updatedVar ()
+      callback _ _ _ _ = return ()
       device :: Device Int Int Int Double
-      device = Tracker "Head0@10.60.6.100" (Just callback) Nothing Nothing
+      device = Tracker "Tracker0@192.168.56.100" (Just callback) Nothing Nothing
     remote <- liftIO $ openDevice device
     let
       loop =
@@ -75,23 +76,24 @@ trackSelection listener = -- FIXME: Support reset, termination, and faults.
     updatedVar <- liftIO newEmptyMVar
     let
       callback :: PositionCallback Int Double
-      callback _ _ (lx, ly, lz) _ =
+      callback _ 1 (lx, ly, lz) _ =
         do
           writeIORef locationVar . P $ V3 lx ly lz
           void $ tryPutMVar updatedVar ()
+      callback _ _ _ _ = return ()
       callback' :: ButtonCallback Int
       callback' _ button pressed =
         void
           $ case (button, pressed) of
             (1, True ) -> writeIORef buttonVar Selection   >> tryPutMVar updatedVar ()
-            (3, True ) -> writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
-            (2, True ) -> writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
+            (2, True ) -> writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
+            (0, True ) -> writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
             (_, False) -> writeIORef buttonVar Highlight   >> tryPutMVar updatedVar ()
             _          -> return False
       device :: Device Int Int Int Double
-      device = Tracker "Joystick0@10.60.6.100" (Just callback) Nothing Nothing
+      device = Tracker "Tracker0@192.168.56.100" (Just callback) Nothing Nothing
       device' :: Device Int Int Int Double
-      device' = Button "JoystickA@10.60.6.100:3884" (Just callback')
+      device' = Button "Tracker0@192.168.56.100" (Just callback')
     remotes <- liftIO $ mapM openDevice [device, device']
     let
       loop =
@@ -102,6 +104,7 @@ trackSelection listener = -- FIXME: Support reset, termination, and faults.
             $ do
               location <- liftIO $ readIORef locationVar
               button <- liftIO $ readIORef buttonVar
+--            liftIO . putStrLn $ "TRCK\t" ++ show location
               listener `sendChan` UpdateSelecter location button
           loop
     loop

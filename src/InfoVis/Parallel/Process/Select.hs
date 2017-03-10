@@ -72,7 +72,7 @@ selecter control listener =
               t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
                 delay = maximum [1000000 `div` 60 - fromIntegral (t1 - t0) `div` 1000, 0]
-              when (delay > 0)
+              when (False && delay > 0)
                 . liftIO $ threadDelay delay -- FIXME: We don't want to update the selection more than once per half frame.
         messages <- collectChanMessages control collector
         sequence_
@@ -83,6 +83,7 @@ selecter control listener =
                                         listener `sendChan` Relocate relocationDisplacement relocationRotation
                                         refresh Highlight
               UpdateSelecter{..}   -> do
+--                                      liftIO . putStrLn $ "SELE\t" ++ show (selecterPosition)
                                         void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)
                                         refresh selecterState
               _                    -> return ()
