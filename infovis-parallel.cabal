@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.39
+version      : 0.3.0.40
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -27,14 +27,16 @@ data-files        : ENB2012.md
                     laptop/spacenav.yaml
                     laptop/world.yaml
                     launch-zspace.sh
-                    zspace/input.yaml
+                    zspace/input-kafka.yaml
+                    zspace/input-vrpn.yaml
                     zspace/world.yaml
                     launch-diagnostics.sh
                     diagnostics/input.yaml
                     diagnostics/spacenav.yaml
                     diagnostics/world.yaml
                     launch-cave.sh
-                    cave/input.yaml
+                    cave/input-kafka.yaml
+                    cave/input-vrpn.yaml
                     cave/world.yaml
 
 
