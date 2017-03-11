@@ -61,6 +61,7 @@ data DisplayText a b =
   , textOrigin  :: b
   , textWidth   :: b
   , textHeight  :: b
+  , textSize    :: Double
   , textColor   :: Color
   }
     deriving (Binary, Eq, Generic, Ord, Show)

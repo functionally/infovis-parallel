@@ -37,7 +37,7 @@ import Linear.Vector ((*^), zero)
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
 
-#ifdef SYNC_DISPLAYS
+#ifdef INFOVIS_SYNC
 import Graphics.GL.Util (joinSwapGroup)
 #endif
 
@@ -173,7 +173,6 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     h <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
-
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
         preservingMatrix
@@ -192,9 +191,9 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               [
                 preservingMatrix $ do
                   color textColor
-                  translate $ Vector3 xo yo zo
+                  translate $ Vector3 xo yo (zo :: GLfloat)
                   toRotation qrot
-                  scale s s s
+                  scale s s (s :: GLfloat)
                   translate $ Vector3 0 (- h) 0
                   renderString Roman textContent
               |
@@ -202,7 +201,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               , let P (V3 xo yo zo) = realToFrac <$> textOrigin
               , let P (V3 xw yw zw) = realToFrac <$> textWidth
               , let P (V3 xh yh zh) = realToFrac <$> textHeight
-              , let s = 0.05 + 0 * sqrt ( (xh - xo) * (xh - xo) + (yh - yo) * (yh - yo) + (zh - zo) * (zh - zo)) / h
+              , let s = realToFrac textSize * (realToFrac $ baseSize world) / h
               , let v1 = normalize $ V3 1         0         0
                     v2 = normalize $ V3 (xw - xo) (yw - yo) (zw - zo)
                     v = normalize $ v1 + v2
@@ -217,7 +216,7 @@ Quaternion q1 = Quaternion::fromTwoVectors(v0_proj, v1_proj);
 return (q2 * q1).normalized();
 -}
               ]
-#ifdef SYNC_DISPLAYS
+#ifdef INFOVIS_SYNC
     void $ joinSwapGroup 1
 #endif
     mainLoop

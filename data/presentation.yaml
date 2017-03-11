@@ -39,7 +39,7 @@ presentation               :
           selectColor      : [0.4, 0.4, 0.0, 0.8]
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         labelColor         : [0.1, 0.6, 0.2, 1.0]
-        labelSize          : 1
+        labelSize          : 5
     - tag                  : Singleton
       extent               :
         tag                : Extent3D
@@ -66,7 +66,7 @@ presentation               :
           selectColor      : [0.4, 0.4, 0.0, 0.8]
           highlightColor   : [0.4, 0.0, 0.0, 0.8]
         labelColor         : [0.1, 0.6, 0.2, 1.0]
-        labelSize          : 1
+        labelSize          : 5
   - tag                    : Array
     extents                :
     - tag                  : Extent2D
@@ -107,7 +107,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : RectangleGrid
       gridAlias            : plane2
       axes2D               :
@@ -125,7 +125,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : RectangleGrid
       gridAlias            : plane3
       axes2D               :
@@ -143,7 +143,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : RectangleGrid
       gridAlias            : plane4
       axes2D               :
@@ -161,7 +161,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : RectangleGrid
       gridAlias            : plane5
       axes2D               :
@@ -179,7 +179,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
   - tag                    : Array
     extents                :
     - tag                  : Extent1D
@@ -224,7 +224,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line2
       axes1D               :
@@ -236,7 +236,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line3
       axes1D               :
@@ -248,7 +248,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line4
       axes1D               :
@@ -260,7 +260,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line5
       axes1D               :
@@ -272,7 +272,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line6
       axes1D               :
@@ -284,7 +284,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line7
       axes1D               :
@@ -296,7 +296,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line8
       axes1D               :
@@ -308,7 +308,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line9
       axes1D               :
@@ -320,7 +320,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
     - tag                  : LineGrid
       gridAlias            : line10
       axes1D               :
@@ -332,7 +332,7 @@ presentation               :
         selectColor        : [0.4, 0.4, 0.0, 0.8]
         highlightColor     : [0.4, 0.0, 0.0, 0.8]
       labelColor           : [0.1, 0.6, 0.2, 1.0]
-      labelSize            : 1
+      labelSize            : 5
   links                    :
     - tag                  : Point
       linkAlias            : heatingScatterplot

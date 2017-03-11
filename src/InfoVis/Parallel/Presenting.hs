@@ -111,6 +111,7 @@ presentGrid LineGrid{..} =
         textWidth   = P $ V3 1 0             0
         textHeight  = P $ V3 0 (- labelSize) 0
         textColor   = labelColor
+        textSize    = labelSize
       in
         DisplayText{..}
     ]
@@ -142,6 +143,7 @@ presentGrid g@RectangleGrid{..} =
         textWidth     = P $ V3 1 0             0
         textHeight    = P $ V3 0 (- labelSize) 0
         textColor     = labelColor
+        textSize      = labelSize
       in
         DisplayText{..}
     , let
@@ -151,6 +153,7 @@ presentGrid g@RectangleGrid{..} =
         textWidth     = P $ V3 0             1 0
         textHeight    = P $ V3 (- labelSize) 0 0
         textColor     = labelColor
+        textSize      = labelSize
       in
         DisplayText{..}
     ]
@@ -216,6 +219,7 @@ presentGrid g@BoxGrid{..} =
         textWidth       = P $ V3 1                      0                      0
         textHeight      = P $ V3 0                      (- labelSize / sqrt 2) (- labelSize / sqrt 2)
         textColor       = labelColor
+        textSize        = labelSize
       in
         DisplayText{..}
     , let
@@ -225,6 +229,7 @@ presentGrid g@BoxGrid{..} =
         textWidth       = P $ V3 0                      1 0
         textHeight      = P $ V3 (- labelSize / sqrt 2) 0 (- labelSize / sqrt 2)
         textColor       = labelColor
+        textSize        = labelSize
       in
         DisplayText{..}
     , let
@@ -234,6 +239,7 @@ presentGrid g@BoxGrid{..} =
         textWidth       = P $ V3 0                      0                      1
         textHeight      = P $ V3 (- labelSize / sqrt 2) (- labelSize / sqrt 2) 0
         textColor       = labelColor
+        textSize        = labelSize
       in
         DisplayText{..}
     ]
