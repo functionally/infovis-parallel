@@ -1,6 +1,6 @@
 #!/bin/bash
 
-CFG="$* zspace/world.yaml zspace/input.yaml"
+CFG="$* zspace/world.yaml zspace/input-vrpn.yaml"
 EXE=../dist/build/infovis-parallel/infovis-parallel
 
 echo Configutation: $CFG

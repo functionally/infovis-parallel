@@ -16,7 +16,8 @@ import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
 import Graphics.Rendering.Handa.Util (degree)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import InfoVis.Parallel.Types.Configuration (Input(..))
+import InfoVis.Parallel.Types.Input (Input(InputKafka))
+import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
 import Linear.Affine (Point(..))
 import Linear.Epsilon (Epsilon)
@@ -80,7 +81,7 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputKafka Input{..}) <- expect
     let
       trackStatic (location, orientation) =
         do
@@ -97,7 +98,7 @@ trackRelocation listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputKafka Input{..}) <- expect
     trackVectorQuaternion RelocateSelecter listener kafka relocationInput
 
 
@@ -106,7 +107,7 @@ trackSelection listener =
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputKafka Input{..}) <- expect
     locationVar <- liftIO $ newMVar zero
     let
       processInput' sensor (x, y, z) =

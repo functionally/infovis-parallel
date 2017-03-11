@@ -108,7 +108,7 @@ selecter' Configuration{..} (_, _, links) (persistentColorings, transientColorin
     h w w' = abs (w - w' + d) <= d
     f (Vertex3 x' y' z') = h x x' && h y y' && h z z'
     g DisplayList{..} = skipDuplicates $ fst <$> filter (f . snd) (zip listVertexIdentifiers listVertices)
-    selections = U.accum (const . const $ fromBool True) zeroBits $ fmap (, undefined) $ concatMap g links
+    selections = U.accum (const . const $ fromBool True) zeroBits ((, undefined) <$> concatMap g links)
     persistentColorings' =
       case press of
         Highlight       -> persistentColorings

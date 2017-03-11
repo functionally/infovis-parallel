@@ -13,7 +13,8 @@ import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftI
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import InfoVis.Parallel.Types.Configuration (Input(..))
+import InfoVis.Parallel.Types.Input (Input(InputVRPN))
+import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
@@ -27,19 +28,20 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputVRPN Input{..}) <- expect
     locationVar <- liftIO $ newIORef zero
     orientationVar <- liftIO $ newIORef zero
     updatedVar <- liftIO newEmptyMVar
     let
       callback :: PositionCallback Int Double
-      callback _ _ (lx, ly, lz) (ox, oy, oz, ow) =
-        do
-          writeIORef locationVar . P $ V3 lx ly lz
-          writeIORef orientationVar $ Quaternion ow $ V3 ox oy oz
-          void $ tryPutMVar updatedVar ()
+      callback _ sensor (lx, ly, lz) (ox, oy, oz, ow) =
+        when (sensor == headSensor)
+          $ do
+            writeIORef locationVar . P $ V3 lx ly lz
+            writeIORef orientationVar $ Quaternion ow $ V3 ox oy oz
+            void $ tryPutMVar updatedVar ()
       device :: Device Int Int Int Double
-      device = Tracker "Head0@10.60.6.100" (Just callback) Nothing Nothing
+      device = Tracker headDevice (Just callback) Nothing Nothing
     remote <- liftIO $ openDevice device
     let
       loop =
@@ -60,7 +62,7 @@ trackRelocation _ = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputVRPN Input{..}) <- expect
     return ()
 
 
@@ -69,29 +71,28 @@ trackSelection listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
-    ResetTracker Input{..} <- expect
+    ResetTracker (InputVRPN Input{..}) <- expect
     locationVar <- liftIO $ newIORef zero
     buttonVar <- liftIO $ newIORef Highlight
     updatedVar <- liftIO newEmptyMVar
     let
       callback :: PositionCallback Int Double
-      callback _ _ (lx, ly, lz) _ =
-        do
-          writeIORef locationVar . P $ V3 lx ly lz
-          void $ tryPutMVar updatedVar ()
+      callback _ sensor (lx, ly, lz) _ =
+        when (sensor == selectSensor)
+          $ do
+            writeIORef locationVar . P $ V3 lx ly lz
+            void $ tryPutMVar updatedVar ()
       callback' :: ButtonCallback Int
-      callback' _ button pressed =
-        void
-          $ case (button, pressed) of
-            (1, True ) -> writeIORef buttonVar Selection   >> tryPutMVar updatedVar ()
-            (3, True ) -> writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
-            (2, True ) -> writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
-            (_, False) -> writeIORef buttonVar Highlight   >> tryPutMVar updatedVar ()
-            _          -> return False
+      callback' _ button pressed
+        | (button, pressed) == (selectButton  , True ) = void $ writeIORef buttonVar Selection   >> tryPutMVar updatedVar ()
+        | (button, pressed) == (deselectButton, True ) = void $ writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
+        | (button, pressed) == (clearButton   , True ) = void $ writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
+        |          pressed                             = void $ writeIORef buttonVar Highlight   >> tryPutMVar updatedVar ()
+        | otherwise                                    = return ()
       device :: Device Int Int Int Double
-      device = Tracker "Joystick0@10.60.6.100" (Just callback) Nothing Nothing
+      device = Tracker selectDevice (Just callback) Nothing Nothing
       device' :: Device Int Int Int Double
-      device' = Button "JoystickA@10.60.6.100:3884" (Just callback')
+      device' = Button buttonDevice (Just callback')
     remotes <- liftIO $ mapM openDevice [device, device']
     let
       loop =

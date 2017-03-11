@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.34
+version      : 0.3.0.38
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -44,104 +44,125 @@ source-repository head
 
 
 flag SyncDisplays
-  description: Synchronize multiple displays
+  description: Synchronize multiple displays.
   default    : True
 
+flag UseKafka
+  description: Support the use of Kafka for input.
+  default    : True
+
+flag UseVRPN
+  description: Support the use of VRPN for input.
+  default    : True
 
 library
 
-  exposed-modules : InfoVis.Parallel.IO
-                    InfoVis.Parallel.Presenting
-                    InfoVis.Parallel.Primitive
-                    InfoVis.Parallel.Process
-                    InfoVis.Parallel.Process.DataProvider
-                    InfoVis.Parallel.Process.Display
-                    InfoVis.Parallel.Process.Select
-                    InfoVis.Parallel.Process.Track.Kafka
-                    InfoVis.Parallel.Process.Track.VRPN
-                    InfoVis.Parallel.Process.Util
-                    InfoVis.Parallel.Rendering
-                    InfoVis.Parallel.Scaling
-                    InfoVis.Parallel.Types
-                    InfoVis.Parallel.Types.Configuration
-                    InfoVis.Parallel.Types.Dataset
-                    InfoVis.Parallel.Types.Display
-                    InfoVis.Parallel.Types.Message
-                    InfoVis.Parallel.Types.Instances
-                    InfoVis.Parallel.Types.Presentation
-                    InfoVis.Parallel.Types.World
-  other-modules   : Control.Distributed.Process.Backend.SimpleWidenet
-  build-depends   : base                               >= 4.8 && < 5
-                  , aeson
-                  , array
-                  , binary                             >= 0.7.5
-                  , bitvec
-                  , bytestring                         >= 0.10.6
-                  , clock
-                  , containers                         >= 0.5.6.2
-                  , data-default                       >= 0.5.3
-                  , distributed-process                >= 0.5.5.1
-                  , distributed-process-simplelocalnet >= 0.2.3.1
-                  , GLUT                               >= 2.7.0.1
-                  , handa-opengl                       >= 0.1.13.0
-                  , kafka-device
-                  , linear
-                  , network                            >= 2.6.2.1
-                  , network-transport                  >= 0.4.2
-                  , opengl-dlp-stereo
-                  , OpenGL                             >= 2.12.0.1
-                  , random                             >= 1.1
-                  , raft
-                  , split
-                  , vector
-                  , vrpn
-                  , yaml                               >= 0.8.15.2
-  hs-source-dirs  : src
-  exposed         : True
-  buildable       : True
-  ghc-options     : -Wall
-  default-language: Haskell2010
+  exposed-modules  : InfoVis.Parallel.IO
+                     InfoVis.Parallel.Presenting
+                     InfoVis.Parallel.Primitive
+                     InfoVis.Parallel.Process
+                     InfoVis.Parallel.Process.DataProvider
+                     InfoVis.Parallel.Process.Display
+                     InfoVis.Parallel.Process.Select
+                     InfoVis.Parallel.Process.Util
+                     InfoVis.Parallel.Rendering
+                     InfoVis.Parallel.Scaling
+                     InfoVis.Parallel.Types
+                     InfoVis.Parallel.Types.Configuration
+                     InfoVis.Parallel.Types.Dataset
+                     InfoVis.Parallel.Types.Display
+                     InfoVis.Parallel.Types.Input
+                     InfoVis.Parallel.Types.Instances
+                     InfoVis.Parallel.Types.Message
+                     InfoVis.Parallel.Types.Presentation
+                     InfoVis.Parallel.Types.World
+  other-modules    : Control.Distributed.Process.Backend.SimpleWidenet
+  build-depends    : base                               >= 4.8 && < 5
+                   , aeson
+                   , array
+                   , binary                             >= 0.7.5
+                   , bitvec
+                   , bytestring                         >= 0.10.6
+                   , clock
+                   , containers                         >= 0.5.6.2
+                   , data-default                       >= 0.5.3
+                   , distributed-process                >= 0.5.5.1
+                   , distributed-process-simplelocalnet >= 0.2.3.1
+                   , GLUT                               >= 2.7.0.1
+                   , handa-opengl                       >= 0.1.13.0
+                   , linear
+                   , network                            >= 2.6.2.1
+                   , network-transport                  >= 0.4.2
+                   , opengl-dlp-stereo
+                   , OpenGL                             >= 2.12.0.1
+                   , random                             >= 1.1
+                   , raft
+                   , split
+                   , vector
+                   , yaml                               >= 0.8.15.2
+  hs-source-dirs   : src
+  exposed          : True
+  buildable        : True
+  ghc-options      : -Wall
+  default-language : Haskell2010
 
   if flag(SyncDisplays)
-    other-modules : Graphics.GL.Util
-    cpp-options   : "-DSYNC_DISPLAYS"
-    cc-options    : "-DUSE_DLSYM"
-    build-depends : OpenGLRaw, X11
+    other-modules  : Graphics.GL.Util
+    build-depends  : OpenGLRaw, X11
+    cpp-options    : "-DINFOVIS_SYNC"
+    cc-options     : "-DUSE_DLSYM"
+
+  if flag(UseKafka)
+    exposed-modules: InfoVis.Parallel.Process.Track.Kafka
+    build-depends  : kafka-device
+    cpp-options    : "-DINFOVIS_KAFKA"
+
+  if flag(UseVRPN)
+    exposed-modules: InfoVis.Parallel.Process.Track.VRPN
+    build-depends  : vrpn
+    cpp-options    : "-DINFOVIS_VRPN"
 
 
 executable infovis-parallel
 
-  main-is         : Main.hs
-  hs-source-dirs  : src
-  build-depends   : base
-                  , aeson
-                  , array
-                  , binary
-                  , bitvec
-                  , bytestring
-                  , clock
-                  , cmdargs
-                  , containers
-                  , data-default
-                  , distributed-process
-                  , distributed-process-simplelocalnet
-                  , GLUT
-                  , handa-opengl
-                  , kafka-device
-                  , linear
-                  , network
-                  , network-transport
-                  , opengl-dlp-stereo
-                  , OpenGL
-                  , raft
-                  , split
-                  , vector
-                  , vrpn
-                  , yaml
-  ghc-options     : -threaded -Wall
-  default-language: Haskell2010
+  main-is          : Main.hs
+  hs-source-dirs   : src
+  build-depends    : base
+                   , aeson
+                   , array
+                   , binary
+                   , bitvec
+                   , bytestring
+                   , clock
+                   , cmdargs
+                   , containers
+                   , data-default
+                   , distributed-process
+                   , distributed-process-simplelocalnet
+                   , GLUT
+                   , handa-opengl
+                   , linear
+                   , network
+                   , network-transport
+                   , opengl-dlp-stereo
+                   , OpenGL
+                   , raft
+                   , split
+                   , vector
+                   , yaml
+  ghc-options      : -threaded -Wall
+  default-language : Haskell2010
 
   if flag(SyncDisplays)
-    cpp-options   : "-DSYNC_DISPLAYS"
-    cc-options    : "-DUSE_DLSYM"
-    build-depends : OpenGLRaw, X11
+    other-modules  : Graphics.GL.Util
+    build-depends  : OpenGLRaw, X11
+    cpp-options    : "-DINFOVIS_SYNC"
+    cc-options     : "-DUSE_DLSYM"
+
+  if flag(UseKafka)
+    build-depends  : kafka-device
+    cpp-options    : "-DINFOVIS_KAFKA"
+
+  if flag(UseVRPN)
+    build-depends  : vrpn
+    cpp-options    : "-DINFOVIS_VRPN"

@@ -1,0 +1,11 @@
+input              :
+  tag              : InputVRPN
+  contents         :
+    headDevice     : Tracker0@192.168.56.100
+    headSensor     : 0
+    selectDevice   : Tracker0@192.168.56.100
+    selectSensor   : 1
+    buttonDevice   : Tracker0@192.168.56.100
+    selectButton   : 1
+    deselectButton : 2
+    clearButton    : 0

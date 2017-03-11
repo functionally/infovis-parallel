@@ -7,7 +7,6 @@ module InfoVis.Parallel.Types.Configuration (
   Configuration(..)
 , Viewers(..)
 , Display(..)
-, Input(..)
 , peersList
 ) where
 
@@ -19,10 +18,10 @@ import GHC.Generics (Generic)
 import Graphics.Rendering.Handa.Projection (Screen)
 import Graphics.UI.Handa.Setup (Stereo)
 import InfoVis.Parallel.Types.Dataset (Dataset)
+import InfoVis.Parallel.Types.Input (Input)
 import InfoVis.Parallel.Types.Presentation (Presentation)
 import InfoVis.Parallel.Types.World (World)
 import Linear.V3 (V3)
-import Network.UI.Kafka (Sensor, TopicConnection(..))
 
 
 data Configuration a =
@@ -61,20 +60,6 @@ data Display a =
   , identifier :: Maybe String
   , geometry   :: Maybe String
   , screen     :: Screen a
-  }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
-
-
-data Input =
-  Input
-  {
-    kafka           :: TopicConnection
-  , povInput        :: Either (V3 Double, V3 Double) Sensor
-  , relocationInput :: Sensor
-  , selectorInput   :: Sensor
-  , selectButton    :: (Sensor, Int)
-  , deselectButton  :: (Sensor, Int)
-  , clearButton     :: (Sensor, Int)
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 

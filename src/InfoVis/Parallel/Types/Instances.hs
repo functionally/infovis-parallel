@@ -22,7 +22,6 @@ import Linear.V3 (V3)
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..))
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Network.UI.Kafka (TopicConnection(..))
 
 
 instance FromJSON a => FromJSON (V1 a)
@@ -82,8 +81,3 @@ instance Binary PrimitiveMode where
   put QuadStrip     = putWord8 8
   put Polygon       = putWord8 9
   put Patches       = putWord8 10
-
-
-deriving instance Ord TopicConnection
-
-deriving instance Binary TopicConnection
