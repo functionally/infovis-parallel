@@ -14,8 +14,7 @@ import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMV
 import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
-import Graphics.Rendering.Handa.Util (degree)
-import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
+import Data.Math.Util (fromDegrees)
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
@@ -26,10 +25,6 @@ import Linear.V3 (V3(..))
 import Linear.Vector (basis, zero)
 import Network.UI.Kafka (Sensor, TopicConnection, consumerLoop)
 import Network.UI.Kafka.Types (Button(IndexButton), Event(..), Toggle(..))
-
-
-fromDegrees :: (Floating a, Num a) => a -> a
-fromDegrees = (/ degree)
 
 
 fromEuler :: (Epsilon a, Num a, RealFloat a) => V3 a -> Quaternion a

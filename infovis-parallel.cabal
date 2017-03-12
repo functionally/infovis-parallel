@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.42
+version      : 0.3.0.43
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -71,18 +71,25 @@ library
                      InfoVis.Parallel.Process.Select
                      InfoVis.Parallel.Process.Util
                      InfoVis.Parallel.Rendering.Display
-                     InfoVis.Parallel.Rendering.Instances
                      InfoVis.Parallel.Rendering.Shapes
                      InfoVis.Parallel.Rendering.Types
                      InfoVis.Parallel.Types
                      InfoVis.Parallel.Types.Configuration
                      InfoVis.Parallel.Types.Dataset
                      InfoVis.Parallel.Types.Input
-                     InfoVis.Parallel.Types.Instances
                      InfoVis.Parallel.Types.Message
                      InfoVis.Parallel.Types.Presentation
                      InfoVis.Parallel.Types.World
   other-modules    : Control.Distributed.Process.Backend.SimpleWidenet
+                     Data.Math.Util
+                     Graphics.UI.Util
+                     Graphics.UI.Util.Faces
+                     Graphics.UI.Util.Instances
+                     Graphics.UI.Util.Projection
+                     Graphics.UI.Util.Setup
+                     Graphics.UI.Util.Types
+                     Linear.Util.Graphics
+                     Linear.Util.Instances
   build-depends    : base                               >= 4.8 && < 5
                    , aeson
                    , array
@@ -95,7 +102,6 @@ library
                    , distributed-process                >= 0.5.5.1
                    , distributed-process-simplelocalnet >= 0.2.3.1
                    , GLUT                               >= 2.7.0.1
-                   , handa-opengl                       >= 0.1.13.0
                    , linear
                    , network                            >= 2.6.2.1
                    , network-transport                  >= 0.4.2
@@ -148,7 +154,6 @@ executable infovis-parallel
                    , distributed-process
                    , distributed-process-simplelocalnet
                    , GLUT
-                   , handa-opengl
                    , linear
                    , network
                    , network-transport

@@ -1,20 +1,45 @@
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE StandaloneDeriving #-}
-
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE DeriveDataTypeable   #-}
+{-# LANGUAGE DeriveGeneric        #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE TypeFamilies         #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
-module InfoVis.Parallel.Rendering.Instances (
+module Graphics.UI.Util.Instances (
 ) where
 
 
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary(..), getWord8, putWord8)
+import Data.Data (Data)
 import GHC.Generics (Generic)
+import Graphics.Rendering.OpenGL (Vector3(..), Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..))
-import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
+
+
+deriving instance Data a => Data (Vector3 a)
+
+deriving instance Generic a => Generic (Vector3 a)
+
+deriving instance (Binary a, Generic a) => Binary (Vector3 a)
+
+deriving instance (FromJSON a, Generic a) => FromJSON (Vector3 a)
+
+deriving instance (ToJSON a, Generic a) => ToJSON (Vector3 a)
+
+
+deriving instance Data a => Data (Vertex3 a)
+
+deriving instance Generic a => Generic (Vertex3 a)
+
+deriving instance (Binary a, Generic a) => Binary (Vertex3 a)
+
+deriving instance (FromJSON a, Generic a) => FromJSON (Vertex3 a)
+
+deriving instance (ToJSON a, Generic a) => ToJSON (Vertex3 a)
 
 
 instance Binary a => Binary (Color4 a)

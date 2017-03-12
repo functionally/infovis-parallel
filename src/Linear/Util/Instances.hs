@@ -5,7 +5,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
-module InfoVis.Parallel.Types.Instances (
+module Linear.Util.Instances (
 ) where
 
 

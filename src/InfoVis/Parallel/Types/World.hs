@@ -12,7 +12,7 @@ import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Types (Location)
-import InfoVis.Parallel.Types.Instances ()
+import Linear.Util.Instances ()
 import Linear.V3 (V3)
 
 

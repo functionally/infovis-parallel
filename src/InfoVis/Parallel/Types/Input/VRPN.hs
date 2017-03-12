@@ -10,7 +10,6 @@ module InfoVis.Parallel.Types.Input.VRPN (
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
-import InfoVis.Parallel.Types.Instances ()
 
 
 data InputVRPN =

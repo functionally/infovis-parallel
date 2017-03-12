@@ -15,7 +15,6 @@ module InfoVis.Parallel.Rendering.Types (
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat, PrimitiveMode(..), Vertex3)
-import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Types (Color)
 import InfoVis.Parallel.Types.Presentation (Characteristic)
 

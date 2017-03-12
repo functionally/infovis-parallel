@@ -11,17 +11,16 @@ import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryT
 import Control.Exception (IOException, catch)
 import Control.Monad (unless, void, when)
 import Data.Default (Default(def))
+import Data.Math.Util (oneDegree)
 import Data.Maybe (fromMaybe)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
-import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
-import Graphics.Rendering.Handa.Projection (OffAxisProjection(VTKOffAxis), projection)
-import Graphics.Rendering.Handa.Util (degree)
-import Graphics.Rendering.OpenGL (BlendingFactor(..), Capability(Enabled), ComparisonFunction(Greater, Less), GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), Vertex3(..), ($=!), ($=), alphaFunc, blend, blendFunc, color, loadIdentity, matrixMode, preservingMatrix, viewport)
+import Graphics.UI.Util.Faces (brickFaces, drawFaces)
+import Graphics.UI.Util.Projection (OffAxisProjection(VTKOffAxis), projection)
+import Graphics.Rendering.OpenGL (GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), ($=!), ($=), color, loadIdentity, matrixMode, preservingMatrix, viewport)
 import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, scale, translate)
-import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
-import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), StrokeFont(Roman), createWindow, depthFunc, fontHeight, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, renderString, reshapeCallback, stringWidth)
-import Graphics.UI.Handa.Setup (Stereo(..), idle)
+import Graphics.UI.GLUT (DisplayCallback, StrokeFont(Roman), fontHeight, idleCallback, mainLoop, renderString, reshapeCallback, stringWidth)
+import Graphics.UI.Util.Setup (idle, setup)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
@@ -34,10 +33,10 @@ import Linear.Conjugate (Conjugate, conjugate)
 import Linear.Epsilon (Epsilon)
 import Linear.Metric (dot, normalize)
 import Linear.Quaternion (Quaternion(..))
+import Linear.Util.Graphics (toVector3)
 import Linear.V3 (V3(..), cross)
 import Linear.Vector ((^-^), (*^), zero)
 
-import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
 
 #ifdef INFOVIS_SWAP_GROUP
@@ -46,42 +45,6 @@ import Graphics.GL.Util (joinSwapGroup)
 
 
 type PointOfView a = (Point V3 a, Quaternion a)
-
-
-setup :: Bool
-      -> String
-      -> String
-      -> Viewers Double
-      -> Int
-      -> IO DlpEncoding
-setup debug title program Viewers{..} displayIndex =
-  do
-    let
-      Display{..} = displays !! displayIndex
-      dlp = case stereo of
-        DLP        -> D.FrameSequential
-        QuadBuffer -> D.QuadBuffer
-        Cardboard  -> D.SideBySide
-        Mono       -> D.LeftOnly
-    void
-      . initialize program
-      . (if debug then ("-gldebug" :) else id)
-      . maybe id ((("-display"  :) .) .(:)) identifier
-      $ case geometry of
-          Nothing           -> []
-          Just "fullscreen" -> []
-          Just geometry'    -> ["-geometry", geometry']
-    initialDisplayMode $=
-      (if stereo == QuadBuffer then (Stereoscopic :) else id)
-        [WithDepthBuffer, DoubleBuffered]
-    void $ createWindow title
-    when (geometry == Just "fullscreen")
-      fullScreen
-    depthFunc $= Just Less 
-    blend $= Enabled
-    blendFunc $= (SrcAlpha, OneMinusSrcAlpha)
-    alphaFunc $= Just (Greater, 0)
-    return dlp
 
 
 dlpViewerDisplay ::DlpEncoding
@@ -101,7 +64,7 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
            viewport $=! (Position 0 0, wh)
            matrixMode $=! Projection
            loadIdentity
-           projection VTKOffAxis screen (toVertex3 $ realToFrac <$> P eyePosition) nearPlane farPlane
+           projection VTKOffAxis screen (realToFrac <$> P eyePosition) nearPlane farPlane
            matrixMode $=! Modelview 0
       )
     dlpDisplayCallback $=!
@@ -118,23 +81,15 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
                                 eyePosition' = eyePosition .+^ eyeOrientation `Q.rotate` (offset *^ eyeSeparation)
                               matrixMode $=! Projection
                               loadIdentity
-                              projection VTKOffAxis screen (toVertex3 $ realToFrac <$> eyePosition') nearPlane farPlane
+                              projection VTKOffAxis screen (realToFrac <$> eyePosition') nearPlane farPlane
                               matrixMode $=! Modelview 0
                               loadIdentity
                               displayAction
       }
 
 
-toVertex3 :: Point V3 a -> Vertex3 a
-toVertex3 (P (V3 x y z)) = Vertex3 x y z
-
-
-toVector3 :: V3 a -> Vector3 a
-toVector3 (V3 x y z) = Vector3 x y z
-
-
 toRotation :: (Floating a, MatrixComponent a) => Quaternion a -> IO ()
-toRotation (Quaternion w (V3 x y z)) = rotate (2 * acos w * degree) $ Vector3 x y z
+toRotation (Quaternion w (V3 x y z)) = rotate (2 * acos w * oneDegree) $ Vector3 x y z
 
 
 displayer :: Configuration Double
