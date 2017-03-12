@@ -14,25 +14,16 @@ import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMV
 import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
-import Data.Math.Util (fromDegrees)
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
 import Linear.Affine (Point(..))
-import Linear.Epsilon (Epsilon)
-import Linear.Quaternion (Quaternion(..), axisAngle)
+import Linear.Quaternion (Quaternion(..))
+import Linear.Util (fromEulerd)
 import Linear.V3 (V3(..))
-import Linear.Vector (basis, zero)
+import Linear.Vector (zero)
 import Network.UI.Kafka (Sensor, TopicConnection, consumerLoop)
 import Network.UI.Kafka.Types (Button(IndexButton), Event(..), Toggle(..))
-
-
-fromEuler :: (Epsilon a, Num a, RealFloat a) => V3 a -> Quaternion a
-fromEuler (V3 phi theta psi) =
-  let
-    [ex, ey, ez] = basis
-  in
-    ez `axisAngle` psi * ey `axisAngle` theta * ex `axisAngle` phi
 
 
 consumerLoopProcess :: TopicConnection -> (Sensor -> Event -> Process ()) -> Process ()
@@ -79,11 +70,7 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
     ResetTracker (InputKafka Input{..}) <- expect
     let
       trackStatic (location, orientation) =
-        do
-          let
-            location' = P location
-            orientation' = fromEuler $ fromDegrees <$> orientation
-          listener `sendChan` Track location' orientation'
+        listener `sendChan` Track (P location) (fromEulerd orientation)
       trackDynamic = trackVectorQuaternion (Track . P) listener kafka
     either trackStatic trackDynamic povInput
 

@@ -1,4 +1,4 @@
-module Graphics.UI.Util.Faces (
+module Graphics.OpenGL.Util.Faces (
   -- * Types
   Face
 , Edges
@@ -13,9 +13,10 @@ module Graphics.UI.Util.Faces (
 
 
 import Data.Math.Util (cosd, sind)
-import Graphics.UI.Util (vertex3)
-import Graphics.Rendering.OpenGL.GL (PrimitiveMode(..), VertexComponent, renderPrimitive)
-
+import Graphics.OpenGL.Util (vertex3)
+import Graphics.Rendering.OpenGL.GL.BeginEnd (renderPrimitive)
+import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
+import Graphics.Rendering.OpenGL.GL.VertexSpec (VertexComponent)
 
 -- | Edges are paired series of triple of vertex components.
 type Edges a = [(a, a, a)]

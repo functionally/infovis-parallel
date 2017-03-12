@@ -4,6 +4,8 @@ module Data.Math.Util (
 , toDegrees
 , cosd
 , sind
+, acosd
+, asind
 ) where
 
 
@@ -12,11 +14,11 @@ oneDegree :: Floating a => a
 oneDegree = 180 / pi
 
 
-fromDegrees :: (Floating a, Num a) => a -> a
+fromDegrees :: (Floating a) => a -> a
 fromDegrees = (/ oneDegree)
 
 
-toDegrees :: (Floating a, Num a) => a -> a
+toDegrees :: (Floating a) => a -> a
 toDegrees = (* oneDegree)
 
 
@@ -28,3 +30,11 @@ cosd = cos . (/ oneDegree)
 -- | Sine with its argument in degrees.
 sind :: Floating a => a -> a
 sind = sin . (/ oneDegree)
+
+
+acosd :: Floating a => a -> a
+acosd = (* oneDegree) . acos
+
+
+asind :: Floating a => a -> a
+asind = (* oneDegree) . asin

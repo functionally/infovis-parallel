@@ -15,24 +15,23 @@ import Data.Bit (Bit, fromBool)
 import Data.Default (def)
 import Data.Maybe (fromMaybe)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
-import Graphics.Rendering.OpenGL (Vertex3(..))
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Util (collectChanMessages)
-import InfoVis.Parallel.Rendering.Types (DisplayList(..))
+import InfoVis.Parallel.Rendering.Types (DisplayList(..), inBox)
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
-import Linear.Affine (Point(..), (.-.), (.+^))
+import Linear.Affine (Point(..), (.+^), (.-^))
 import Linear.Conjugate (conjugate)
-import Linear.Quaternion (Quaternion(..))
+import Linear.Quaternion (Quaternion(..), rotate)
 import Linear.V3 (V3(..))
+import Linear.Util.Graphics (toVertex3)
 import Linear.Vector (zero)
 import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
-import qualified Linear.Quaternion as Q (rotate)
 
 
 selecter :: ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
@@ -68,7 +67,7 @@ selecter control listener =
                     gridsLinks
                     (persistentColorings, transientColorings)
                     (selecterPosition', selecterState')
-                    (P relocation, reorientation)
+                    (relocation, reorientation)
               void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
               void .liftIO $ swapMVar transientColoringsRef transientColorings'
               listener `sendChan` Select selecterPosition' changes
@@ -94,23 +93,21 @@ selecter control listener =
           ]
 
 
-selecter' :: Configuration Double
+selecter' :: Configuration
           -> GridsLinks
           -> (U.Vector Bit, U.Vector Bit)
           -> (Point V3 Double, SelectionAction)
-          -> (Point V3 Double, Quaternion Double)
+          -> (V3 Double, Quaternion Double)
           -> ((U.Vector Bit, U.Vector Bit), [(Int, Coloring)])
-selecter' Configuration{..} (_, _, links) (persistentColorings, transientColorings) (P location, press) (P location', orientation') =
+selecter' Configuration{..} (_, _, links) (persistentColorings, transientColorings) (P location, press) (location', orientation') =
   let
     merge = foldl (flip (:))
     skipDuplicates (e : es@(e': _)) = if e == e' then skipDuplicates es else e : skipDuplicates es
     skipDuplicates es = es
     zeroBits = U.replicate (U.length transientColorings) (fromBool False)
-    V3 x y z = realToFrac <$> (P $ conjugate orientation' `Q.rotate` location) .-. P location'
+    location'' = toVertex3 $ realToFrac <$> (P $ conjugate orientation' `rotate` location) .-^ location'
     d = realToFrac $ selectorSize presentation * baseSize world / 2
-    h w w' = abs (w - w' + d) <= d
-    f (Vertex3 x' y' z') = h x x' && h y y' && h z z'
-    g DisplayList{..} = skipDuplicates $ fst <$> filter (f . snd) (zip listVertexIdentifiers listVertices)
+    g DisplayList{..} = skipDuplicates $ fst <$> filter (inBox d location'' . snd) (zip listVertexIdentifiers listVertices)
     selections = U.accum (const . const $ fromBool True) zeroBits ((, undefined) <$> concatMap g links)
     persistentColorings' =
       case press of

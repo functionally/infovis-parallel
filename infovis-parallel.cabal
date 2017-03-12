@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.43
+version      : 0.3.0.44
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -82,36 +82,37 @@ library
                      InfoVis.Parallel.Types.World
   other-modules    : Control.Distributed.Process.Backend.SimpleWidenet
                      Data.Math.Util
-                     Graphics.UI.Util
-                     Graphics.UI.Util.Faces
-                     Graphics.UI.Util.Instances
-                     Graphics.UI.Util.Projection
-                     Graphics.UI.Util.Setup
-                     Graphics.UI.Util.Types
+                     Graphics.OpenGL.Util
+                     Graphics.OpenGL.Util.Faces
+                     Graphics.OpenGL.Util.Instances
+                     Graphics.OpenGL.Util.Projection
+                     Graphics.OpenGL.Util.Setup
+                     Graphics.OpenGL.Util.Types
+                     Linear.Util
                      Linear.Util.Graphics
                      Linear.Util.Instances
   build-depends    : base                               >= 4.8 && < 5
                    , aeson
                    , array
                    , binary                             >= 0.7.5
-                   , bitvec
+                   , bitvec                             >= 0.1.0
                    , bytestring                         >= 0.10.6
-                   , clock
-                   , containers                         >= 0.5.6.2
-                   , data-default                       >= 0.5.3
-                   , distributed-process                >= 0.5.5.1
-                   , distributed-process-simplelocalnet >= 0.2.3.1
-                   , GLUT                               >= 2.7.0.1
-                   , linear
-                   , network                            >= 2.6.2.1
+                   , clock                              >= 0.7.2
+                   , containers                         >= 0.5.6
+                   , data-default                       >= 0.7.1
+                   , distributed-process                >= 0.6.6
+                   , distributed-process-simplelocalnet >= 0.2.3
+                   , GLUT                               >= 2.7
+                   , linear                             >= 1.20.5
+                   , network                            >= 2.6.3
                    , network-transport                  >= 0.4.2
-                   , opengl-dlp-stereo
-                   , OpenGL                             >= 2.12.0.1
+                   , opengl-dlp-stereo                  >= 0.1.5.4
+                   , OpenGL                             >= 3.0.1
                    , random                             >= 1.1
-                   , raft
-                   , split
-                   , vector
-                   , yaml                               >= 0.8.15.2
+                   , raft                               >= 0.3.11
+                   , split                              >= 0.2.3
+                   , vector                             >= 0.11.0
+                   , yaml                               >= 0.8.22
   hs-source-dirs   : src
   exposed          : True
   buildable        : True
@@ -119,8 +120,9 @@ library
   default-language : Haskell2010
 
   if flag(SwapGroup)
-    other-modules  : Graphics.GL.Util
-    build-depends  : OpenGLRaw, X11
+    other-modules  : Graphics.OpenGL.Functions
+    build-depends  : OpenGLRaw >= 2.0
+                   , X11       >= 1.8
     cpp-options    : "-DINFOVIS_SWAP_GROUP"
     cc-options     : "-DUSE_DLSYM"
 
@@ -148,7 +150,7 @@ executable infovis-parallel
                    , bitvec
                    , bytestring
                    , clock
-                   , cmdargs
+                   , cmdargs                            >= 0.10.14
                    , containers
                    , data-default
                    , distributed-process
@@ -167,8 +169,9 @@ executable infovis-parallel
   default-language : Haskell2010
 
   if flag(SwapGroup)
-    other-modules  : Graphics.GL.Util
-    build-depends  : OpenGLRaw, X11
+    other-modules  : Graphics.OpenGL.Functions
+    build-depends  : OpenGLRaw >= 2.0
+                   , X11       >= 1.8
     cpp-options    : "-DINFOVIS_SWAP_GROUP"
     cc-options     : "-DUSE_DLSYM"
 

@@ -2,35 +2,19 @@
 
 
 module InfoVis.Parallel.Presentation.Displaying (
-  fromLocation
-, fromLocations
-, prepareGrids
+  prepareGrids
 , prepareLinks
 ) where
 
 
 import Data.Function.MapReduce (groupReduceByKey)
-import Graphics.Rendering.OpenGL (GLfloat, Vertex3(..))
 import InfoVis.Parallel.Presentation.Presenting (linkPresentation, presentWorld)
 import InfoVis.Parallel.Presentation.Scaling (scaleToWorld)
-import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..))
+import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..), fromLocations)
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, LinkAlias, Presentation)
 import InfoVis.Parallel.Types.World (World)
-import Linear.Affine (Point(..))
-import Linear.V3 (V3(..))
-
-
-type Primitive3D = Vertex3 GLfloat
-
-
-fromLocation :: Location -> Primitive3D
-fromLocation (P (V3 x y z)) = realToFrac <$> Vertex3 x y z
-
-
-fromLocations :: [DisplayItem a Location] -> [DisplayItem a Primitive3D]
-fromLocations = fmap (fmap fromLocation)
 
 
 prepareGrids :: World -> Presentation -> Dataset -> ([DisplayList (DisplayType, GridAlias) Int], [DisplayText String Location])

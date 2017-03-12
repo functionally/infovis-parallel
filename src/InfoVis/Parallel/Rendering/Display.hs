@@ -11,88 +11,33 @@ import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryT
 import Control.Exception (IOException, catch)
 import Control.Monad (unless, void, when)
 import Data.Default (Default(def))
-import Data.Math.Util (oneDegree)
 import Data.Maybe (fromMaybe)
-import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
-import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
-import Graphics.UI.Util.Faces (brickFaces, drawFaces)
-import Graphics.UI.Util.Projection (OffAxisProjection(VTKOffAxis), projection)
-import Graphics.Rendering.OpenGL (GLfloat, MatrixComponent, MatrixMode(..), Position(..), Vector3(..), ($=!), ($=), color, loadIdentity, matrixMode, preservingMatrix, viewport)
-import Graphics.Rendering.OpenGL.GL.CoordTrans (rotate, scale, translate)
-import Graphics.UI.GLUT (DisplayCallback, StrokeFont(Roman), fontHeight, idleCallback, mainLoop, renderString, reshapeCallback, stringWidth)
-import Graphics.UI.Util.Setup (idle, setup)
+import Graphics.OpenGL.Util.Faces (brickFaces, drawFaces)
+import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
+import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=), color, preservingMatrix, scale, translate)
+import Graphics.UI.GLUT.Begin (mainLoop)
+import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
+import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
-import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), Display(..), Viewers(..))
+import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
-import Linear.Affine (Point(..), (.+^))
-import Linear.Conjugate (Conjugate, conjugate)
-import Linear.Epsilon (Epsilon)
-import Linear.Metric (dot, normalize)
+import Linear.Affine (Point(..), (.-.))
 import Linear.Quaternion (Quaternion(..))
-import Linear.Util.Graphics (toVector3)
-import Linear.V3 (V3(..), cross)
-import Linear.Vector ((^-^), (*^), zero)
-
-import qualified Linear.Quaternion as Q (rotate)
+import Linear.Util (rotationFromPlane)
+import Linear.Util.Graphics (toRotation, toVector3)
+import Linear.V3 (V3(..))
+import Linear.Vector (zero)
 
 #ifdef INFOVIS_SWAP_GROUP
-import Graphics.GL.Util (joinSwapGroup)
+import Graphics.OpenGL.Functions (joinSwapGroup)
 #endif
 
 
-type PointOfView a = (Point V3 a, Quaternion a)
-
-
-dlpViewerDisplay ::DlpEncoding
-                 -> Viewers Double
-                 -> Int
-                 -> MVar (PointOfView Double)
-                 -> DisplayCallback
-                 -> IO ()
-dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
-  do
-    let
-      Display{..} = displays !! displayIndex
-    reshapeCallback $= Just
-      (\wh -> 
-         do
-           (P eyePosition, _) <- readMVar pov
-           viewport $=! (Position 0 0, wh)
-           matrixMode $=! Projection
-           loadIdentity
-           projection VTKOffAxis screen (realToFrac <$> P eyePosition) nearPlane farPlane
-           matrixMode $=! Modelview 0
-      )
-    dlpDisplayCallback $=!
-      def
-      {
-        dlpEncoding = dlp
-      , doDisplay = \eye -> do
-                              (eyePosition, eyeOrientation) <- readMVar pov
-                              let
-                                offset =
-                                  case eye of
-                                    LeftDlp  -> -0.5
-                                    RightDlp ->  0.5
-                                eyePosition' = eyePosition .+^ eyeOrientation `Q.rotate` (offset *^ eyeSeparation)
-                              matrixMode $=! Projection
-                              loadIdentity
-                              projection VTKOffAxis screen (realToFrac <$> eyePosition') nearPlane farPlane
-                              matrixMode $=! Modelview 0
-                              loadIdentity
-                              displayAction
-      }
-
-
-toRotation :: (Floating a, MatrixComponent a) => Quaternion a -> IO ()
-toRotation (Quaternion w (V3 x y z)) = rotate (2 * acos w * oneDegree) $ Vector3 x y z
-
-
-displayer :: Configuration Double
+displayer :: Configuration
           -> Int
           -> GridsLinks
           -> MVar DisplayerMessage
@@ -142,7 +87,23 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     h <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
-    dlpViewerDisplay dlp viewers displayIndex povVar
+    let
+      drawText =
+        sequence_
+          [
+            preservingMatrix $ do
+              color textColor
+              translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
+              toRotation qrot
+              scale s s (s :: GLfloat)
+              translate $ Vector3 0 (- h) 0
+              renderString Roman textContent
+          |
+            DisplayText{..} <- texts
+          , let s = realToFrac textSize * realToFrac (baseSize world) / h
+          , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
+          ]
+    dlpViewerDisplay dlp viewers displayIndex (readMVar povVar)
       $ do
         unless useIdleLoop messageLoop
         preservingMatrix
@@ -157,58 +118,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
-            sequence_
-              [
-                preservingMatrix $ do
-                  color textColor
-                  translate $ Vector3 xo yo (zo :: GLfloat)
-                  toRotation qrot
-                  scale s s (s :: GLfloat)
-                  translate $ Vector3 0 (- h) 0
-                  renderString Roman textContent
-              |
-                DisplayText{..} <- texts
-              , let
-                  fromTwoVectors :: (Epsilon a, Floating a) => V3 a -> V3 a -> Quaternion a
-                  fromTwoVectors v1 v2 =
-                    let v1n = normalize v1
-                        v2n = normalize v2
-                        v12n = normalize $ v1n + v2n
-                    in
-                      Quaternion (v12n `dot` v2n) $ v12n `cross` v2n
-                  projectPlane :: (Epsilon a, Floating a) => V3 a -> V3 a -> V3 a
-                  projectPlane v u =
-                    let
-                      un = normalize u
-                    in
-                      v ^-^ (v `dot` un) *^ un
-                  realign :: (Conjugate a, Epsilon a, RealFloat a) => V3 a -> V3 a -> V3 a -> V3 a -> Quaternion a
-                  realign u0 v0 u2 v2 =
-                    let
-                      q2 = fromTwoVectors u0 u2
-                      v1 = conjugate q2 `Q.rotate` v2
-                      v0p = v0 `projectPlane` u0
-                      v1p = v1 `projectPlane` u0
-                      q1 = fromTwoVectors v0p v1p
-                    in
-                      normalize $ q2 * q1
-              , let P (V3 xo yo zo) = realToFrac <$> textOrigin
-              , let P (V3 xw yw zw) = realToFrac <$> textWidth
-              , let P (V3 xh yh zh) = realToFrac <$> textHeight
-              , let s = realToFrac textSize * realToFrac (baseSize world) / h
-              , let qrot = realign (V3 1 0 0) (V3 0 (-1) 0) (V3 (xw - xo) (yw - yo) (zw - zo)) (V3 (xh - xo) (yh - yo) (zh - zo))
-{-
-http://robokitchen.tumblr.com/post/67060392720/finding-a-rotation-quaternion-from-two-pairs-of
-http://stackoverflow.com/questions/4670070/deriving-axis-angle-rotation-from-two-pairs-of-three-points-or-two-pairs-of-tw
-Before rotation: u0, v0. After rotation: u2, v2.
-Quaternion q2 = Quaternion::fromTwoVectors(u0, u2);
-Vector v1 = v2.rotate(q2.conjugate());
-Vector v0_proj = v0.projectPlane(u0);
-Vector v1_proj = v1.projectPlane(u0);
-Quaternion q1 = Quaternion::fromTwoVectors(v0_proj, v1_proj);
-return (q2 * q1).normalized();
--}
-              ]
+            drawText
 #ifdef INFOVIS_SWAP_GROUP
     maybe (return ()) (void . joinSwapGroup) useSwapGroup
 #endif

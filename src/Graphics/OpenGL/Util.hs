@@ -1,11 +1,14 @@
-module Graphics.UI.Util (
+module Graphics.OpenGL.Util (
   vertex3
 , vector3
 , color4
 ) where
 
 
-import Graphics.Rendering.OpenGL.GL (Color4(..), ColorComponent, Vector3(..), Vertex3(..), VertexComponent, color, vertex)
+import Graphics.Rendering.OpenGL.GL.Tensor (Vector3(..), Vertex3(..))
+import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..), ColorComponent, VertexComponent, color, vertex)
+
+
 -- | Action for a four-component color from a tuple.
 color4 :: ColorComponent a => (a, a, a, a) -> IO ()
 color4 (r, g, b, a) = color $ Color4 r g b a

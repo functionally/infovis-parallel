@@ -78,7 +78,7 @@ instance SumTag TrackerMessage where
 data SelecterMessage =
     ResetSelecter
     {
-      selecterConfiguration :: Configuration Double
+      selecterConfiguration :: Configuration
     }
   | TerminateSelecter
   | AugmentSelecter

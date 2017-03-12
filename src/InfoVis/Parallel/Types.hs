@@ -12,9 +12,10 @@ module InfoVis.Parallel.Types (
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
+import Graphics.Rendering.OpenGL (GLfloat)
+import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..))
 import Linear.Affine (Point(..))
 import Linear.V3 (V3)
-import Graphics.Rendering.OpenGL (Color4(..), GLfloat)
 
 
 type Location = Point V3 Double

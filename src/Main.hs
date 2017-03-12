@@ -24,6 +24,9 @@ import qualified Control.Distributed.Process.Backend.SimpleWidenet as W (initial
 import qualified InfoVis.Parallel.Process as P (__remoteTable, masterMain, soloMain)
 
 
+{-# ANN module "HLint: ignore Reduce duplication" #-}
+
+
 data InfoVisParallel =
     Master
     {

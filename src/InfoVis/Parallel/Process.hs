@@ -63,7 +63,7 @@ trackSelection InputKafka{} = Kafka.trackSelection
 trackSelection InputVRPN{} = VRPN.trackSelection
 #endif
 
-multiplexerProcess :: Configuration Double -> ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
+multiplexerProcess :: Configuration -> ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
 multiplexerProcess Configuration{..} control content displayerPids =
   do
     pid <- getSelfPid
@@ -97,7 +97,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
     forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
 
 
-trackerProcesses :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 trackerProcesses Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid
@@ -108,7 +108,7 @@ trackerProcesses Configuration{..} selecterSend multiplexer =
     mapM_ (`send` ResetTracker input) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
 
 
-displayerProcess :: (Configuration Double, ProcessId, Int) -> Process ()
+displayerProcess :: (Configuration , ProcessId, Int) -> Process ()
 displayerProcess (configuration, masterPid, displayIndex) =
   do
     pid <- getSelfPid
@@ -132,7 +132,7 @@ displayerProcess (configuration, masterPid, displayIndex) =
 remotable ['displayerProcess]
 
 
-masterMain :: Configuration Double -> [NodeId] -> Process ()
+masterMain :: Configuration -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
     pid <- getSelfPid
@@ -148,7 +148,7 @@ masterMain configuration peers =
     commonMain configuration displayerPids
 
 
-soloMain :: Configuration Double -> [NodeId] -> Process ()
+soloMain :: Configuration -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
     pid <- getSelfPid
@@ -157,7 +157,7 @@ soloMain configuration [] =
 soloMain _ (_ : _) = error "Some peers specified."
 
 
-commonMain :: Configuration Double -> [ProcessId] -> Process ()
+commonMain :: Configuration -> [ProcessId] -> Process ()
 commonMain configuration displayerPids =
   do
     pid <- getSelfPid

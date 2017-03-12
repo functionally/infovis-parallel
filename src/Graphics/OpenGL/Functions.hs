@@ -1,4 +1,4 @@
-module Graphics.GL.Util (
+module Graphics.OpenGL.Functions (
   joinSwapGroup
 , unsafeGetCurrentDisplay
 , unsafeGetCurrentDrawable
@@ -6,12 +6,15 @@ module Graphics.GL.Util (
 ) where
 
 
-import Foreign.C.Types
-import Foreign.Ptr
+import Foreign.C.Types (CInt(..))
+import Foreign.Ptr (FunPtr, nullFunPtr)
 import Graphics.GL.GetProcAddress (getProcAddress)
 import Graphics.GL.Types (GLuint)
 import Graphics.X11.Xlib.Types (Display(..))
 import System.IO.Unsafe (unsafePerformIO)
+
+
+{-# ANN module "HLint: ignore Use camelCase" #-}
 
 
 joinSwapGroup :: Int -> IO Bool

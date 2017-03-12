@@ -17,28 +17,24 @@ import Data.Binary (Binary)
 import Data.Default (Default(..))
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
-import Graphics.UI.Util.Types (Display(..), Viewers(..))
+import Graphics.OpenGL.Util.Types (Display(..), Viewers(..))
 import InfoVis.Parallel.Types.Dataset (Dataset)
 import InfoVis.Parallel.Types.Input (Input)
 import InfoVis.Parallel.Types.Presentation (Presentation)
 import InfoVis.Parallel.Types.World (World)
 
 
-data Configuration a =
+data Configuration =
   Configuration
   {
     dataset      :: Dataset
   , presentation :: Presentation
   , world        :: World
-  , viewers      :: Viewers a
+  , viewers      :: Viewers Double
   , input        :: Input
   , advanced     :: Maybe AdvancedSettings
   }
-    deriving (Binary, Eq, Generic, Ord, Read, Show)
-
-instance (FromJSON a, Generic a) => FromJSON (Configuration a)
-
-instance (ToJSON a, Generic a) => ToJSON (Configuration a)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data AdvancedSettings =
@@ -72,7 +68,7 @@ instance Default AdvancedSettings where
     }   
 
 
-peersList :: Configuration a -> [(String, String)]
+peersList :: Configuration -> [(String, String)]
 peersList Configuration{..} =
   [
     (fromMaybe "localhost" host, show $ fromMaybe 44444 port)

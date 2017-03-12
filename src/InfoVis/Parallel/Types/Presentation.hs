@@ -22,13 +22,16 @@ module InfoVis.Parallel.Types.Presentation (
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
-import Graphics.UI.Util.Instances ()
+import Graphics.OpenGL.Util.Instances ()
 import InfoVis.Parallel.Types (Color, Location)
 import InfoVis.Parallel.Types.Dataset (VariableAlias)
 import Linear.Util.Instances ()
 import Linear.V1 (V1)
 import Linear.V2 (V2)
 import Linear.V3 (V3)
+
+
+{-# ANN module "HLint: ignore Use newtype instead of data" #-}
 
 
 type GridAlias = String

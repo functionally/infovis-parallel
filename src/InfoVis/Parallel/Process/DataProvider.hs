@@ -19,7 +19,7 @@ import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..)
 type GridsLinks = ([DisplayText String Location], [DisplayList (DisplayType, String) Int], [DisplayList (DisplayType, String) Int])
 
 
-provider :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+provider :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 provider Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid

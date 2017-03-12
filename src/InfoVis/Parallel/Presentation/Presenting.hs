@@ -11,9 +11,8 @@ module InfoVis.Parallel.Presentation.Presenting (
 
 import Control.Arrow ((***))
 import Data.Maybe (fromMaybe)
-import Graphics.Rendering.OpenGL (PrimitiveMode(..))
 import InfoVis.Parallel.Presentation.Scaling (scaleToExtent, scaleToWorldExtent)
-import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayText(..))
+import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayText(..), PrimitiveMode(..))
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Dataset (RecordIdentifier, VariableAlias)
 import InfoVis.Parallel.Types.Presentation (Axis(..), Characteristic, Container(..), Grid(..), GriddedLocation, GridAlias, Link(..), LinkAlias, Presentation(..))
@@ -22,6 +21,7 @@ import Linear.Affine (Point(..))
 import Linear.V1 (V1(..))
 import Linear.V2 (V2(..))
 import Linear.V3 (V3(..))
+import Linear.Vector ((*^), zero)
 
 
 pointsToLines :: RecordIdentifier -> Link -> [Location] -> [DisplayItem (LinkAlias, (RecordIdentifier, [Characteristic])) Location]
@@ -84,8 +84,21 @@ quadToLines n g ls =
   ]
 
 
+makeText :: Grid -> Axis -> V3 Double -> V3 Double -> DisplayText VariableAlias Location
+makeText grid Axis{..} width height =
+  DisplayText
+  {
+    textContent = axisVariable
+  , textOrigin  = zero
+  , textWidth   = P width
+  , textHeight  = P $ labelSize grid *^ height
+  , textColor   = labelColor grid
+  , textSize    = labelSize  grid
+  }
+
+
 presentGrid :: Grid -> ([DisplayItem (GridAlias, (Int, [Characteristic])) Location], [DisplayText VariableAlias Location])
-presentGrid LineGrid{..} =
+presentGrid grid@LineGrid{..} =
   (
     [
       DisplayItem
@@ -105,22 +118,16 @@ presentGrid LineGrid{..} =
     ]
   , [
       let
-        V1 Axis{..} = axes1D
-        textContent = axisVariable
-        textOrigin  = P $ V3 0 0             0
-        textWidth   = P $ V3 1 0             0
-        textHeight  = P $ V3 0 (- labelSize) 0
-        textColor   = labelColor
-        textSize    = labelSize
+        V1 axis = axes1D
       in
-        DisplayText{..}
+         makeText grid axis (V3 1 0 0) (V3 0 (-1) 0)
     ]
   )
-presentGrid g@RectangleGrid{..} =
+presentGrid grid@RectangleGrid{..} =
   (
     concat
       [
-        quadToLines n g
+        quadToLines n grid
           [
             P $ (* d) <$> V3  i       j      0
           , P $ (* d) <$> V3  i      (j + 1) 0
@@ -137,32 +144,20 @@ presentGrid g@RectangleGrid{..} =
       ]
   , [
       let
-        V2 Axis{..} _ = axes2D
-        textContent   = axisVariable
-        textOrigin    = P $ V3 0 0             0
-        textWidth     = P $ V3 1 0             0
-        textHeight    = P $ V3 0 (- labelSize) 0
-        textColor     = labelColor
-        textSize      = labelSize
+        V2 axis _ = axes2D
       in
-        DisplayText{..}
+        makeText grid axis (V3 1 0 0) (V3 0 (-1) 0)
     , let
-        V2 _ Axis{..} = axes2D
-        textContent   = axisVariable
-        textOrigin    = P $ V3 0             0 0
-        textWidth     = P $ V3 0             1 0
-        textHeight    = P $ V3 (- labelSize) 0 0
-        textColor     = labelColor
-        textSize      = labelSize
+        V2 _ axis = axes2D
       in
-        DisplayText{..}
+        makeText grid axis (V3 0 1 0) (V3 (-1) 0 0)
     ]
   )
-presentGrid g@BoxGrid{..} =
+presentGrid grid@BoxGrid{..} =
   (
     concat
       [
-        concatMap (quadToLines n g)
+        concatMap (quadToLines n grid)
           [
             [
               P $ (* d) <$> V3  i       j       k     
@@ -213,35 +208,17 @@ presentGrid g@BoxGrid{..} =
       ]
   , [
       let
-        V3 Axis{..} _ _ = axes3D
-        textContent     = axisVariable
-        textOrigin      = P $ V3 0                      0                      0
-        textWidth       = P $ V3 1                      0                      0
-        textHeight      = P $ V3 0                      (- labelSize / sqrt 2) (- labelSize / sqrt 2)
-        textColor       = labelColor
-        textSize        = labelSize
+        V3 axis _ _ = axes3D
       in
-        DisplayText{..}
+        makeText grid axis (V3 1 0 0) (V3 0 (- 1 / sqrt 2) (- 1 / sqrt 2))
     , let
-        V3 _ Axis{..} _ = axes3D
-        textContent     = axisVariable
-        textOrigin      = P $ V3 0                      0 0
-        textWidth       = P $ V3 0                      1 0
-        textHeight      = P $ V3 (- labelSize / sqrt 2) 0 (- labelSize / sqrt 2)
-        textColor       = labelColor
-        textSize        = labelSize
+        V3 _ axis _ = axes3D
       in
-        DisplayText{..}
+        makeText grid axis (V3 0 1 0) (V3 (- 1 / sqrt 2) 0 (- 1 / sqrt 2))
     , let
-        V3 _ _ Axis{..} = axes3D
-        textContent     = axisVariable
-        textOrigin      = P $ V3 0                      0                      0
-        textWidth       = P $ V3 0                      0                      1
-        textHeight      = P $ V3 (- labelSize / sqrt 2) (- labelSize / sqrt 2) 0
-        textColor       = labelColor
-        textSize        = labelSize
+        V3 _ _ axis = axes3D
       in
-        DisplayText{..}
+        makeText grid axis (V3 0 0 1) (V3 (- 1 / sqrt 2) (- 1 / sqrt 2) 0)
     ]
   )
 

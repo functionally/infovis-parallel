@@ -7,7 +7,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 
-module Graphics.UI.Util.Instances (
+module Graphics.OpenGL.Util.Instances (
 ) where
 
 
@@ -15,8 +15,8 @@ import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Data (Data)
 import GHC.Generics (Generic)
-import Graphics.Rendering.OpenGL (Vector3(..), Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
+import Graphics.Rendering.OpenGL.GL.Tensor (Vector3(..), Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..))
 
 

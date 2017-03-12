@@ -4,12 +4,13 @@
 {-# LANGUAGE RecordWildCards    #-}
 
 
-module Graphics.UI.Util.Types (
+module Graphics.OpenGL.Util.Types (
   Stereo(..)
 , Viewers(..)
 , Display(..)
 , Screen(..)
 , upperRight
+, PointOfView
 ) where
 
 
@@ -20,6 +21,7 @@ import Data.Default (Default(..))
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Linear.Affine (Point, (.-.), (.+^))
+import Linear.Quaternion (Quaternion)
 import Linear.Util.Instances ()
 import Linear.V3 (V3)
 
@@ -83,3 +85,6 @@ upperRight :: (Num a)
            => Screen a
            -> Point V3 a
 upperRight Screen{..} = lowerRight .+^ (upperLeft .-. lowerLeft)
+
+
+type PointOfView a = (Point V3 a, Quaternion a)

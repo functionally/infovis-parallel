@@ -4,7 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 
-module Graphics.UI.Util.Projection (
+module Graphics.OpenGL.Util.Projection (
   OffAxisProjection(..)
 , projection
 , fetchProjection
@@ -12,14 +12,18 @@ module Graphics.UI.Util.Projection (
 
 
 import Data.List.Split (chunksOf)
-import Graphics.Rendering.OpenGL (GLmatrix, MatrixComponent, MatrixOrder(RowMajor), frustum, get, getMatrixComponents, matrix, multMatrix, newMatrix, translate)
-import Graphics.UI.Util.Types (Screen(..), upperRight)
+import Graphics.Rendering.OpenGL.GL (get)
+import Graphics.Rendering.OpenGL.GL.CoordTrans (GLmatrix, MatrixComponent, MatrixOrder(RowMajor), frustum, getMatrixComponents, matrix, multMatrix, newMatrix, translate)
+import Graphics.OpenGL.Util.Types (Screen(..), upperRight)
 import Linear.Affine (Point, (.-.))
 import Linear.Epsilon (Epsilon)
 import Linear.Metric (dot, normalize)
 import Linear.Util.Graphics (toVector3)
 import Linear.V3 (V3(..), cross)
 import Linear.Vector ((*^), zero)
+
+
+{-# ANN module "HLint: ignore Reduce duplication" #-}
 
 
 -- | The equations to use for off-axis projection.
