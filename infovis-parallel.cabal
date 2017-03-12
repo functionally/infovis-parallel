@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.44
+version      : 0.3.0.45
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -129,13 +129,13 @@ library
   if flag(UseKafka)
     exposed-modules: InfoVis.Parallel.Process.Track.Kafka
                      InfoVis.Parallel.Types.Input.Kafka
-    build-depends  : kafka-device
+    build-depends  : kafka-device >= 0.2.1
     cpp-options    : "-DINFOVIS_KAFKA"
 
   if flag(UseVRPN)
     exposed-modules: InfoVis.Parallel.Process.Track.VRPN
                      InfoVis.Parallel.Types.Input.VRPN
-    build-depends  : vrpn
+    build-depends  : vrpn >=  0.2.1
     cpp-options    : "-DINFOVIS_VRPN"
 
 
@@ -170,8 +170,8 @@ executable infovis-parallel
 
   if flag(SwapGroup)
     other-modules  : Graphics.OpenGL.Functions
-    build-depends  : OpenGLRaw >= 2.0
-                   , X11       >= 1.8
+    build-depends  : OpenGLRaw
+                   , X11
     cpp-options    : "-DINFOVIS_SWAP_GROUP"
     cc-options     : "-DUSE_DLSYM"
 
