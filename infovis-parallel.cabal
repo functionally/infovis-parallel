@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.40
+version      : 0.3.0.41
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -45,8 +45,8 @@ source-repository head
   location: https://bwbush@bitbucket.org/bwbush/infovis-parallel.git
 
 
-flag SyncDisplays
-  description: Synchronize multiple displays.
+flag SwapGroup
+  description: Support calling glJoinSwapGroupNV.
   default    : True
 
 flag UseKafka
@@ -108,10 +108,10 @@ library
   ghc-options      : -Wall
   default-language : Haskell2010
 
-  if flag(SyncDisplays)
+  if flag(SwapGroup)
     other-modules  : Graphics.GL.Util
     build-depends  : OpenGLRaw, X11
-    cpp-options    : "-DINFOVIS_SYNC"
+    cpp-options    : "-DINFOVIS_SWAP_GROUP"
     cc-options     : "-DUSE_DLSYM"
 
   if flag(UseKafka)
@@ -155,10 +155,10 @@ executable infovis-parallel
   ghc-options      : -threaded -Wall
   default-language : Haskell2010
 
-  if flag(SyncDisplays)
+  if flag(SwapGroup)
     other-modules  : Graphics.GL.Util
     build-depends  : OpenGLRaw, X11
-    cpp-options    : "-DINFOVIS_SYNC"
+    cpp-options    : "-DINFOVIS_SWAP_GROUP"
     cc-options     : "-DUSE_DLSYM"
 
   if flag(UseKafka)

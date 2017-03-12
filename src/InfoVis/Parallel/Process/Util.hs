@@ -1,12 +1,11 @@
 module InfoVis.Parallel.Process.Util (
   timestamp
-, collectMessages
 , collectChanMessages
 ) where
 
 
 import Control.Concurrent.MVar (MVar, isEmptyMVar, newEmptyMVar, putMVar, readMVar)
-import Control.Distributed.Process (Process, ReceivePort, expect, expectTimeout, receiveChan, receiveChanTimeout)
+import Control.Distributed.Process (Process, ReceivePort, receiveChan, receiveChanTimeout)
 import Control.Distributed.Process.Serializable (Serializable)
 import Data.Function (on)
 import Data.Function.MapReduce (groupReduceFlatten)
@@ -44,40 +43,20 @@ t0 =
       else readMVar t0Var
 
 
-collectMessages :: (Serializable a, SumTag a) => (a -> a -> Bool) -> Process [a]
-collectMessages grouper =
+collectChanMessages :: (Serializable a, SumTag a) => Int -> ReceivePort a -> (a -> a -> Bool) -> Process [a]
+collectChanMessages count chan grouper =
   do
     let
-      collectMessages' =
-        do
-          maybeMessage <- expectTimeout 1
-          case maybeMessage of
-            Nothing      -> return []
-            Just message -> (message :) <$> collectMessages'
-      collapser = fmap head . groupBy (grouper `on` snd)
-    message <- expect
-    messages <- collectMessages'
-    return
-      . map snd
-      . sortBy (compare `on` fst)
-      . groupReduceFlatten (sumTag . snd) collapser
-      . zip [(0::Int),-1..]
-      $ message : messages
-
-
-collectChanMessages :: (Serializable a, SumTag a) => ReceivePort a -> (a -> a -> Bool) -> Process [a]
-collectChanMessages chan grouper =
-  do
-    let
-      collectMessages' =
+      collectMessages' 0 = return []
+      collectMessages' count' =
         do
           maybeMessage <- receiveChanTimeout 1 chan
           case maybeMessage of
             Nothing      -> return []
-            Just message -> (message :) <$> collectMessages'
+            Just message -> (message :) <$> collectMessages' (count' - 1)
       collapser = fmap head . groupBy (grouper `on` snd)
     message <- receiveChan chan
-    messages <- collectMessages'
+    messages <- collectMessages' count
     return
       . map snd
       . sortBy (compare `on` fst)

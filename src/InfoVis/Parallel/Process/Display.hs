@@ -9,8 +9,9 @@ module InfoVis.Parallel.Process.Display (
 
 import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
 import Control.Exception (IOException, catch)
-import Control.Monad (void, when)
+import Control.Monad (unless, void, when)
 import Data.Default (Default(def))
+import Data.Maybe (fromMaybe)
 import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.Handa.Face (brickFaces, drawFaces)
@@ -23,7 +24,7 @@ import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), StrokeFont(Roman), cr
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Types.Configuration (Configuration(..), Display(..), Viewers(..))
+import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), Display(..), Viewers(..))
 import InfoVis.Parallel.Types.Display (DisplayText(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
@@ -39,7 +40,7 @@ import Linear.Vector ((^-^), (*^), zero)
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
 
-#ifdef INFOVIS_SYNC
+#ifdef INFOVIS_SWAP_GROUP
 import Graphics.GL.Util (joinSwapGroup)
 #endif
 
@@ -47,12 +48,13 @@ import Graphics.GL.Util (joinSwapGroup)
 type PointOfView a = (Point V3 a, Quaternion a)
 
 
-setup :: String
+setup :: Bool
+      -> String
       -> String
       -> Viewers Double
       -> Int
       -> IO DlpEncoding
-setup title program Viewers{..} displayIndex =
+setup debug title program Viewers{..} displayIndex =
   do
     let
       Display{..} = displays !! displayIndex
@@ -63,6 +65,7 @@ setup title program Viewers{..} displayIndex =
         Mono       -> D.LeftOnly
     void
       . initialize program
+      . (if debug then ("-gldebug" :) else id)
       . maybe id ((("-display"  :) .) .(:)) identifier
       $ case geometry of
           Nothing           -> []
@@ -137,12 +140,14 @@ toRotation (Quaternion w (V3 x y z)) = rotate (2 * acos w * degree) $ Vector3 x 
 displayer :: Configuration Double
           -> Int
           -> GridsLinks
-          -> MVar DisplayerMessage -- (Point V3 Double, Quaternion Double), MVar (V3 Double, Quaternion Double), MVar (Point V3 Double, SelectionAction))
+          -> MVar DisplayerMessage
           -> MVar ()
           -> IO ()
 displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyVar =
   do
-    dlp <- setup "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
+    let
+      AdvancedSettings{..} = fromMaybe def advanced
+    dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
     povVar <- newMVar (zero, Quaternion 1 zero)
@@ -154,29 +159,37 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
           faces = brickFaces s s s
-    idleCallback $= Just
-      (
+    let
+      messageLoop =
         do
           message <- tryTakeMVar messageVar
           case message of
             Just Track{..}        -> do
                                        void $ swapMVar povVar (eyePosition, eyeOrientation)
-                                       putMVar readyVar ()
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else when useIdleLoop idle
             Just Relocate{..}     -> do
                                        void $ swapMVar relocationVar (centerDisplacement, centerRotation)
-                                       putMVar readyVar ()
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else when useIdleLoop idle
             Just Select{..}       -> do
                                        void $ swapMVar selectionVar selectorLocation
                                        mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                       putMVar readyVar ()
-            Just DisplayDisplayer -> idle
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else when useIdleLoop idle
+            Just DisplayDisplayer -> when (synchronizeDisplays && useIdleLoop)
+                                       idle
             _                     -> return ()
-      )
+    idleCallback $= Just (if useIdleLoop then messageLoop else idle)
     h <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
     dlpViewerDisplay dlp viewers displayIndex povVar
       $ do
+        unless useIdleLoop messageLoop
         preservingMatrix
           $ do
             P location <- readMVar selectionVar  -- FIXME
@@ -227,7 +240,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               , let P (V3 xo yo zo) = realToFrac <$> textOrigin
               , let P (V3 xw yw zw) = realToFrac <$> textWidth
               , let P (V3 xh yh zh) = realToFrac <$> textHeight
-              , let s = realToFrac textSize * (realToFrac $ baseSize world) / h
+              , let s = realToFrac textSize * realToFrac (baseSize world) / h
               , let qrot = realign (V3 1 0 0) (V3 0 (-1) 0) (V3 (xw - xo) (yw - yo) (zw - zo)) (V3 (xh - xo) (yh - yo) (zh - zo))
 {-
 http://robokitchen.tumblr.com/post/67060392720/finding-a-rotation-quaternion-from-two-pairs-of
@@ -241,7 +254,7 @@ Quaternion q1 = Quaternion::fromTwoVectors(v0_proj, v1_proj);
 return (q2 * q1).normalized();
 -}
               ]
-#ifdef INFOVIS_SYNC
-    void $ joinSwapGroup 1
+#ifdef INFOVIS_SWAP_GROUP
+    maybe (return ()) (void . joinSwapGroup) useSwapGroup
 #endif
     mainLoop

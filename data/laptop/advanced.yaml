@@ -1,0 +1,9 @@
+advanced                     :
+  debugTiming                : false
+  debugMessages              : false
+  debugDisplayer             : false
+  debugOpenGL                : true
+  synchronizeDisplays        : true
+  useIdleLoop                : true
+  delaySelection             : true
+  maximumTrackingCompression : 10000

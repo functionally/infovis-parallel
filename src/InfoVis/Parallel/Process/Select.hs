@@ -12,13 +12,15 @@ import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
 import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, liftIO, receiveChan, say, sendChan)
 import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
+import Data.Default (def)
+import Data.Maybe (fromMaybe)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import Graphics.Rendering.OpenGL (Vertex3(..))
 import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Util (collectChanMessages)
 import InfoVis.Parallel.Types (Coloring(..))
-import InfoVis.Parallel.Types.Configuration (Configuration(..))
+import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Display (DisplayList(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
@@ -40,6 +42,8 @@ selecter control listener =
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
     ResetSelecter configuration <- receiveChan control
+    let
+      AdvancedSettings{..} = fromMaybe def $ advanced configuration
     AugmentSelecter gridsLinks@(_, _, links) <- receiveChan control
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
@@ -72,9 +76,9 @@ selecter control listener =
               t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
                 delay = maximum [1000000 `div` 60 - fromIntegral (t1 - t0) `div` 1000, 0]
-              when (delay > 0)
+              when (delaySelection && delay > 0)
                 . liftIO $ threadDelay delay -- FIXME: We don't want to update the selection more than once per half frame.
-        messages <- collectChanMessages control collector
+        messages <- collectChanMessages maximumTrackingCompression control collector
         sequence_
           [
             case message of

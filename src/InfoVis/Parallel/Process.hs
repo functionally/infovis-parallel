@@ -16,12 +16,14 @@ import Control.Concurrent (forkOS)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
-import Control.Monad (forever, unless, void, when)
+import Control.Monad (forever, void, when)
+import Data.Default (def)
+import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Process.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Util (collectChanMessages)
-import InfoVis.Parallel.Types.Configuration (Configuration(..), peersList)
+import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
 import InfoVis.Parallel.Types.Input (Input(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), TrackerMessage(..))
 
@@ -61,20 +63,13 @@ trackSelection InputKafka{} = Kafka.trackSelection
 trackSelection InputVRPN{} = VRPN.trackSelection
 #endif
 
-syncDisplays :: Bool
-#ifdef INFOVIS_SYNC
-syncDisplays = True
-#else
-syncDisplays = False
-#endif
-
-
-multiplexerProcess :: ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
-multiplexerProcess control content displayerPids =
+multiplexerProcess :: Configuration Double -> ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
+multiplexerProcess Configuration{..} control content displayerPids =
   do
     pid <- getSelfPid
     say $ "Starting multiplexer <" ++ show pid ++ ">."
     let
+      AdvancedSettings{..} = fromMaybe def advanced
       waitForGrid priors =
         do
           message <- receiveChan content
@@ -89,16 +84,17 @@ multiplexerProcess control content displayerPids =
           [
             do
               mapM_ (`send` message) displayerPids
-              when syncDisplays
-                . void $ receiveChan control
-              mapM_ (`send` DisplayDisplayer) displayerPids
+              when synchronizeDisplays
+                $ do
+                   void $ receiveChan control
+                   mapM_ (`send` DisplayDisplayer) displayerPids
           |
             message <- messages
           ]
     prior : priors <- waitForGrid []
     mapM_ (`send` prior) displayerPids
     sendSequence priors
-    forever (sendSequence =<< collectChanMessages content collector)
+    forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
 
 
 trackerProcesses :: Configuration Double -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
@@ -117,6 +113,8 @@ displayerProcess (configuration, masterPid, displayIndex) =
   do
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
+    let
+      AdvancedSettings{..} = fromMaybe def $ advanced configuration -- FIXME: Do this at start.
     AugmentDisplayer gridsLinks <- expect
     readyVar <- liftIO newEmptyMVar
     messageVar <- liftIO newEmptyMVar
@@ -125,11 +123,10 @@ displayerProcess (configuration, masterPid, displayIndex) =
       $ do
         message <- expect
         liftIO $ putMVar messageVar message
-        unless (message == DisplayDisplayer)
+        when (synchronizeDisplays && message /= DisplayDisplayer)
           $ do 
             liftIO $ takeMVar readyVar
-            when syncDisplays
-              $ masterPid `send` Ready
+            masterPid `send` Ready
 
 
 remotable ['displayerProcess]
@@ -167,7 +164,7 @@ commonMain configuration displayerPids =
     say $ "Starting master <" ++ show pid ++ ">."
     (contentSend, contentReceive) <- newChan
     (controlSend, controlReceive) <- newChan
-    void . spawnLocal $ multiplexerProcess controlReceive contentReceive displayerPids
+    void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids
     (selecterSend, selecterReceive) <- newChan
     void . spawnLocal $ selecter selecterReceive contentSend
     selecterSend `sendChan` ResetSelecter configuration

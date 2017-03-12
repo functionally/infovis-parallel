@@ -5,6 +5,7 @@
 
 module InfoVis.Parallel.Types.Configuration (
   Configuration(..)
+, AdvancedSettings(..)
 , Viewers(..)
 , Display(..)
 , peersList
@@ -13,6 +14,7 @@ module InfoVis.Parallel.Types.Configuration (
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
+import Data.Default (Default(..))
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Graphics.Rendering.Handa.Projection (Screen)
@@ -32,12 +34,44 @@ data Configuration a =
   , world        :: World
   , viewers      :: Viewers a
   , input        :: Input
+  , advanced     :: Maybe AdvancedSettings
   }
     deriving (Binary, Eq, Generic, Ord, Read, Show)
 
 instance (FromJSON a, Generic a) => FromJSON (Configuration a)
 
 instance (ToJSON a, Generic a) => ToJSON (Configuration a)
+
+
+data AdvancedSettings =
+  AdvancedSettings
+  {
+    debugTiming                :: Bool
+  , debugMessages              :: Bool
+  , debugDisplayer             :: Bool
+  , debugOpenGL                :: Bool
+  , useSwapGroup               :: Maybe Int
+  , synchronizeDisplays        :: Bool
+  , useIdleLoop                :: Bool
+  , delaySelection             :: Bool
+  , maximumTrackingCompression :: Int
+  }
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+
+instance Default AdvancedSettings where
+  def =
+    AdvancedSettings
+    {
+      debugTiming                = False
+    , debugMessages              = False
+    , debugDisplayer             = False
+    , debugOpenGL                = False
+    , useSwapGroup               = Just 1
+    , synchronizeDisplays        = True
+    , useIdleLoop                = True
+    , delaySelection             = True
+    , maximumTrackingCompression = maxBound
+    }   
 
 
 data Viewers a =
