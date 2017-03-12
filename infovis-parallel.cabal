@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.41
+version      : 0.3.0.42
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -26,10 +26,12 @@ data-files        : ENB2012.md
                     laptop/joystick.yaml
                     laptop/spacenav.yaml
                     laptop/world.yaml
+                    laptop/advanced.yaml
                     launch-zspace.sh
                     zspace/input-kafka.yaml
                     zspace/input-vrpn.yaml
                     zspace/world.yaml
+                    zspace/advanced.yaml
                     launch-diagnostics.sh
                     diagnostics/input.yaml
                     diagnostics/spacenav.yaml
@@ -38,6 +40,7 @@ data-files        : ENB2012.md
                     cave/input-kafka.yaml
                     cave/input-vrpn.yaml
                     cave/world.yaml
+                    cave/advanced.yaml
 
 
 source-repository head
@@ -60,19 +63,20 @@ flag UseVRPN
 library
 
   exposed-modules  : InfoVis.Parallel.IO
-                     InfoVis.Parallel.Presenting
-                     InfoVis.Parallel.Primitive
+                     InfoVis.Parallel.Presentation.Displaying
+                     InfoVis.Parallel.Presentation.Presenting
+                     InfoVis.Parallel.Presentation.Scaling
                      InfoVis.Parallel.Process
                      InfoVis.Parallel.Process.DataProvider
-                     InfoVis.Parallel.Process.Display
                      InfoVis.Parallel.Process.Select
                      InfoVis.Parallel.Process.Util
-                     InfoVis.Parallel.Rendering
-                     InfoVis.Parallel.Scaling
+                     InfoVis.Parallel.Rendering.Display
+                     InfoVis.Parallel.Rendering.Instances
+                     InfoVis.Parallel.Rendering.Shapes
+                     InfoVis.Parallel.Rendering.Types
                      InfoVis.Parallel.Types
                      InfoVis.Parallel.Types.Configuration
                      InfoVis.Parallel.Types.Dataset
-                     InfoVis.Parallel.Types.Display
                      InfoVis.Parallel.Types.Input
                      InfoVis.Parallel.Types.Instances
                      InfoVis.Parallel.Types.Message
@@ -116,11 +120,13 @@ library
 
   if flag(UseKafka)
     exposed-modules: InfoVis.Parallel.Process.Track.Kafka
+                     InfoVis.Parallel.Types.Input.Kafka
     build-depends  : kafka-device
     cpp-options    : "-DINFOVIS_KAFKA"
 
   if flag(UseVRPN)
     exposed-modules: InfoVis.Parallel.Process.Track.VRPN
+                     InfoVis.Parallel.Types.Input.VRPN
     build-depends  : vrpn
     cpp-options    : "-DINFOVIS_VRPN"
 

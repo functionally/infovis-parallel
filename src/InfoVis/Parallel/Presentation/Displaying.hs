@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module InfoVis.Parallel.Primitive (
+module InfoVis.Parallel.Presentation.Displaying (
   fromLocation
 , fromLocations
 , prepareGrids
@@ -11,11 +11,11 @@ module InfoVis.Parallel.Primitive (
 
 import Data.Function.MapReduce (groupReduceByKey)
 import Graphics.Rendering.OpenGL (GLfloat, Vertex3(..))
-import InfoVis.Parallel.Presenting (linkPresentation, presentWorld)
-import InfoVis.Parallel.Scaling (scaleToWorld)
+import InfoVis.Parallel.Presentation.Presenting (linkPresentation, presentWorld)
+import InfoVis.Parallel.Presentation.Scaling (scaleToWorld)
+import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(..))
-import InfoVis.Parallel.Types.Display (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, LinkAlias, Presentation)
 import InfoVis.Parallel.Types.World (World)
 import Linear.Affine (Point(..))

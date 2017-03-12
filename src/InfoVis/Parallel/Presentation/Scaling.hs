@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections   #-}
 
 
-module InfoVis.Parallel.Scaling (
+module InfoVis.Parallel.Presentation.Scaling (
   scaleVariable
 , scaleRecord
 , scaleToGrid

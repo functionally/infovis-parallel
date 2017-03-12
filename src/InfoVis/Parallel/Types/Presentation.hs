@@ -22,6 +22,7 @@ module InfoVis.Parallel.Types.Presentation (
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
+import InfoVis.Parallel.Rendering.Instances ()
 import InfoVis.Parallel.Types (Color, Location)
 import InfoVis.Parallel.Types.Dataset (VariableAlias)
 import InfoVis.Parallel.Types.Instances ()

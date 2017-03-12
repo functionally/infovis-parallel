@@ -1,7 +1,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module InfoVis.Parallel.Presenting (
+module InfoVis.Parallel.Presentation.Presenting (
   linkPresentation
 , presentGrid
 , presentContainer
@@ -12,10 +12,10 @@ module InfoVis.Parallel.Presenting (
 import Control.Arrow ((***))
 import Data.Maybe (fromMaybe)
 import Graphics.Rendering.OpenGL (PrimitiveMode(..))
-import InfoVis.Parallel.Scaling (scaleToExtent, scaleToWorldExtent)
+import InfoVis.Parallel.Presentation.Scaling (scaleToExtent, scaleToWorldExtent)
+import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayText(..))
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Dataset (RecordIdentifier, VariableAlias)
-import InfoVis.Parallel.Types.Display (DisplayItem(..), DisplayText(..))
 import InfoVis.Parallel.Types.Presentation (Axis(..), Characteristic, Container(..), Grid(..), GriddedLocation, GridAlias, Link(..), LinkAlias, Presentation(..))
 import InfoVis.Parallel.Types.World (World)
 import Linear.Affine (Point(..))

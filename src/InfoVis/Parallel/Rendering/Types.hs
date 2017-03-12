@@ -3,7 +3,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module InfoVis.Parallel.Types.Display (
+module InfoVis.Parallel.Rendering.Types (
   Primitive3D
 , DisplayItem(..)
 , DisplayList(..)

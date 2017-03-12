@@ -9,10 +9,10 @@ module InfoVis.Parallel.Process.DataProvider (
 
 import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
 import InfoVis.Parallel.IO (readDataset)
-import InfoVis.Parallel.Primitive (prepareGrids, prepareLinks)
+import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
+import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
-import InfoVis.Parallel.Types.Display (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..))
 
 

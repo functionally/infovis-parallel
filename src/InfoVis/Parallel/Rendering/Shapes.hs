@@ -2,7 +2,7 @@
 {-# LANGUAGE TupleSections   #-}
 
 
-module InfoVis.Parallel.Rendering (
+module InfoVis.Parallel.Rendering.Shapes (
   DisplayBuffer(bufferIdentifier)
 , makeBuffer
 , freeBuffer
@@ -25,8 +25,8 @@ import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode)
 import Graphics.Rendering.OpenGL.GL.Tensor (Vertex3)
 import Graphics.Rendering.OpenGL.GL.VertexArrays (Capability(..), ClientArrayType(..), DataType(Float), NumArrayIndices, VertexArrayDescriptor(..), arrayPointer, clientState, drawArrays)
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4)
+import InfoVis.Parallel.Rendering.Types (DisplayList(..))
 import InfoVis.Parallel.Types (Color, Coloring(..))
-import InfoVis.Parallel.Types.Display (DisplayList(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic(..))
 
 

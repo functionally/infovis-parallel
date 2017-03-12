@@ -2,7 +2,7 @@
 {-# LANGUAGE RecordWildCards #-}
 
 
-module InfoVis.Parallel.Process.Display (
+module InfoVis.Parallel.Rendering.Display (
   displayer
 ) where
 
@@ -23,9 +23,9 @@ import Graphics.Rendering.OpenGL.GL.Tensor.Instances ()
 import Graphics.UI.GLUT (DisplayCallback, DisplayMode(..), StrokeFont(Roman), createWindow, depthFunc, fontHeight, fullScreen, idleCallback, initialDisplayMode, initialize, mainLoop, renderString, reshapeCallback, stringWidth)
 import Graphics.UI.Handa.Setup (Stereo(..), idle)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
-import InfoVis.Parallel.Rendering (drawBuffer, makeBuffer, updateBuffer)
+import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
+import InfoVis.Parallel.Rendering.Types (DisplayText(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), Display(..), Viewers(..))
-import InfoVis.Parallel.Types.Display (DisplayText(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
