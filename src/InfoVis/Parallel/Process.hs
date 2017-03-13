@@ -72,8 +72,8 @@ trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
     void . spawnLocal $ trackSelection  configuration selecterSend
 
 
-displayerProcess :: (Configuration , ProcessId, Int) -> Process ()
-displayerProcess (configuration, masterPid, displayIndex) =
+displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
+displayerProcess (configuration, masterSend, displayIndex) =
   do
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
@@ -90,7 +90,7 @@ displayerProcess (configuration, masterPid, displayIndex) =
         when (synchronizeDisplays && message /= RefreshDisplay)
           $ do 
             liftIO $ takeMVar readyVar
-            masterPid `send` Ready
+            masterSend `sendChan` Ready
 
 
 remotable ['displayerProcess]
@@ -99,30 +99,30 @@ remotable ['displayerProcess]
 masterMain :: Configuration -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
-    pid <- getSelfPid
+    (masterSend, masterReceive) <- newChan
     displayerPids <-
       sequence
         [
           do
             say $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
-            spawn peer ($(mkClosure 'displayerProcess) (configuration, pid, i))
+            spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
-    commonMain configuration displayerPids
+    commonMain configuration masterReceive displayerPids
 
 
 soloMain :: Configuration -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
-    pid <- getSelfPid
-    displayerPids <- spawnLocal (displayerProcess (configuration, pid, 0))
-    commonMain configuration [displayerPids]
+    (masterSend, masterReceive) <- newChan
+    displayerPids <- spawnLocal (displayerProcess (configuration, masterSend, 0))
+    commonMain configuration masterReceive [displayerPids]
 soloMain _ (_ : _) = error "Some peers specified."
 
 
-commonMain :: Configuration -> [ProcessId] -> Process ()
-commonMain configuration displayerPids =
+commonMain :: Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Process ()
+commonMain configuration masterReceive displayerPids =
   do
     pid <- getSelfPid
     say $ "Starting master <" ++ show pid ++ ">."
@@ -136,7 +136,7 @@ commonMain configuration displayerPids =
     let
       waitForAllReady counter =
         do
-          Ready <- expect
+          Ready <- receiveChan masterReceive
           if counter >= length displayerPids
             then do
                    controlSend `sendChan` Synchronize
