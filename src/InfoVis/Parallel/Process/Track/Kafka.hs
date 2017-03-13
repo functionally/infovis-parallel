@@ -11,13 +11,13 @@ module InfoVis.Parallel.Process.Track.Kafka (
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
-import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan, spawnLocal)
+import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.Util (fromEulerd)
@@ -63,12 +63,11 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
     consumerLoopProcess topicConnection processInput
 
 
-trackPov :: SendPort DisplayerMessage -> Process ()
-trackPov listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
+trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
-    Reconfigure Configuration{..} <- expect
     let
       InputKafka Input{..} = input
       trackStatic (location, orientation) =
@@ -77,24 +76,22 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
     either trackStatic trackDynamic povInput
 
 
-trackRelocation :: SendPort SelecterMessage -> Process ()
-trackRelocation listener = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
+trackRelocation Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    Reconfigure Configuration{..} <- expect
     let
       InputKafka Input{..} = input
     trackVectorQuaternion RelocateSelection listener kafka relocationInput
 
 
-trackSelection :: SendPort SelecterMessage -> Process ()
-trackSelection listener =
+trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
+trackSelection Configuration{..} listener =
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
     locationVar <- liftIO $ newMVar zero
-    Reconfigure Configuration{..} <- expect
     let
       InputKafka Input{..} = input
       processInput' sensor (x, y, z) =

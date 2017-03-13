@@ -67,10 +67,9 @@ trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid
     say $ "Starting trackers <" ++ show pid ++ ">."
-    povTrackerPid <- spawnLocal $ trackPov input multiplexer
-    relocationTrackerPid <- spawnLocal $ trackRelocation input selecterSend
-    selectionTrackerPid <- spawnLocal $ trackSelection input selecterSend
-    mapM_ (`send` Reconfigure configuration) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
+    void . spawnLocal $ trackPov        configuration multiplexer
+    void . spawnLocal $ trackRelocation configuration selecterSend
+    void . spawnLocal $ trackSelection  configuration selecterSend
 
 
 displayerProcess :: (Configuration , ProcessId, Int) -> Process ()

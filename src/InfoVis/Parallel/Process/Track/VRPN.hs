@@ -9,13 +9,13 @@ module InfoVis.Parallel.Process.Track.VRPN (
 
 
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
-import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan)
+import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -23,15 +23,14 @@ import Linear.Vector (zero)
 import Network.VRPN (ButtonCallback, PositionCallback, Device(Button, Tracker), mainLoop, openDevice)
 
 
-trackPov :: SendPort DisplayerMessage -> Process ()
-trackPov listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
+trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
     locationVar <- liftIO $ newIORef zero
     orientationVar <- liftIO $ newIORef zero
     updatedVar <- liftIO newEmptyMVar
-    Reconfigure Configuration{..} <- expect
     let
       InputVRPN Input{..} = input
       callback :: PositionCallback Int Double
@@ -58,26 +57,21 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
     loop
 
 
-trackRelocation :: SendPort SelecterMessage -> Process ()
-trackRelocation _ = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
+trackRelocation _ _ = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    Reconfigure Configuration{..} <- expect
-    let
-      InputVRPN Input{..} = input
-    return ()
 
 
-trackSelection :: SendPort SelecterMessage -> Process ()
-trackSelection listener = -- FIXME: Support reset, termination, and faults.
+trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
+trackSelection Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
     locationVar <- liftIO $ newIORef zero
     buttonVar <- liftIO $ newIORef Highlight
     updatedVar <- liftIO newEmptyMVar
-    Reconfigure Configuration{..} <- expect
     let
       InputVRPN Input{..} = input
       callback :: PositionCallback Int Double

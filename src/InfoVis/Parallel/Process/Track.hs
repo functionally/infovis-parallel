@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP             #-}
+{-# LANGUAGE RecordWildCards #-}
 
 
 module InfoVis.Parallel.Process.Track (
@@ -9,6 +10,7 @@ module InfoVis.Parallel.Process.Track (
 
 
 import Control.Distributed.Process (Process, SendPort)
+import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage, SelecterMessage)
 
@@ -21,31 +23,37 @@ import qualified InfoVis.Parallel.Process.Track.VRPN as VRPN (trackPov, trackRel
 #endif
 
 
-trackPov :: Input ->  SendPort DisplayerMessage -> Process ()
-trackPov NoInput = error "trackPov: No input specified."
+trackPov :: Configuration ->  SendPort DisplayerMessage -> Process ()
+trackPov configuration@Configuration{..} = 
+  case input of
+    NoInput -> error "trackPov: No input specified."
 #ifdef INFOVIS_KAFKA
-trackPov InputKafka{} = Kafka.trackPov
+    InputKafka{} -> Kafka.trackPov configuration
 #endif
 #ifdef INFOVIS_VRPN
-trackPov InputVRPN{} = VRPN.trackPov
+    InputVRPN{} -> VRPN.trackPov configuration
 #endif
 
 
-trackRelocation :: Input ->  SendPort SelecterMessage -> Process ()
-trackRelocation NoInput = error "trackRelocation: No input specified."
+trackRelocation :: Configuration ->  SendPort SelecterMessage -> Process ()
+trackRelocation configuration@Configuration{..} =
+  case input of
+    NoInput -> error "trackRelocation: No input specified."
 #ifdef INFOVIS_KAFKA
-trackRelocation InputKafka{} = Kafka.trackRelocation
+    InputKafka{} -> Kafka.trackRelocation configuration
 #endif
 #ifdef INFOVIS_VRPN
-trackRelocation InputVRPN{} = VRPN.trackRelocation
+    InputVRPN{} -> VRPN.trackRelocation configuration
 #endif
 
 
-trackSelection :: Input ->  SendPort SelecterMessage -> Process ()
-trackSelection NoInput = error "trackSelection: No input specified."
+trackSelection :: Configuration ->  SendPort SelecterMessage -> Process ()
+trackSelection configuration@Configuration{..} =
+  case input of
+    NoInput -> error "trackSelection: No input specified."
 #ifdef INFOVIS_KAFKA
-trackSelection InputKafka{} = Kafka.trackSelection
+    InputKafka{} -> Kafka.trackSelection configuration
 #endif
 #ifdef INFOVIS_VRPN
-trackSelection InputVRPN{} = VRPN.trackSelection
+    InputVRPN{} -> VRPN.trackSelection configuration
 #endif
