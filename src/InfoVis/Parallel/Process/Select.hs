@@ -9,6 +9,7 @@ module InfoVis.Parallel.Process.Select (
 
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
+import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, liftIO, receiveChan, say, sendChan)
 import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
@@ -67,7 +68,7 @@ selecter configuration control listener =
                     (relocation, reorientation)
               void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
               void .liftIO $ swapMVar transientColoringsRef transientColorings'
-              listener `sendChan` Select selecterPosition' changes
+              sendChan listener $!! Select selecterPosition' changes
               t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
                 delay = maximum [1000000 `div` 60 - fromIntegral (t1 - t0) `div` 1000, 0]
@@ -79,7 +80,7 @@ selecter configuration control listener =
             case message of
               RelocateSelection{..} -> do
                                          void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
-                                         listener `sendChan` Relocate relocationDisplacement relocationRotation
+                                         sendChan listener $!! Relocate relocationDisplacement relocationRotation
                                          refresh Highlight
               UpdateSelection{..}   -> do
                                          void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)

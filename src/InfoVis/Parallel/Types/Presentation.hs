@@ -19,6 +19,7 @@ module InfoVis.Parallel.Types.Presentation (
 ) where
 
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
@@ -157,7 +158,7 @@ data Characteristic =
     , selectColor     :: Color
     , highlightColor  :: Color
     }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, NFData, Ord, Read, Show, ToJSON)
 
 
 data Presentation =

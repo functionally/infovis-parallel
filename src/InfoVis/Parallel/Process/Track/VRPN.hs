@@ -9,6 +9,7 @@ module InfoVis.Parallel.Process.Track.VRPN (
 
 
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
+import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
@@ -52,7 +53,7 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
             $ do
               location <- liftIO $ readIORef locationVar
               orientation <- liftIO $ readIORef orientationVar
-              listener `sendChan` Track location orientation
+              sendChan listener $!! Track location orientation
           loop
     loop
 
@@ -101,6 +102,6 @@ trackSelection Configuration{..} listener = -- FIXME: Support reset, termination
             $ do
               location <- liftIO $ readIORef locationVar
               button <- liftIO $ readIORef buttonVar
-              listener `sendChan` UpdateSelection location button
+              sendChan listener $!! UpdateSelection location button
           loop
     loop

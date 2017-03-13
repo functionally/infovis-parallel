@@ -14,6 +14,7 @@ module InfoVis.Parallel.Process (
 
 import Control.Concurrent (forkOS)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
+import Control.DeepSeq (($!!))
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
@@ -86,7 +87,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
     forever
       $ do
         message <- expect
-        liftIO $ putMVar messageVar message
+        liftIO . putMVar messageVar $!! message
         when (synchronizeDisplays && message /= RefreshDisplay)
           $ do 
             liftIO $ takeMVar readyVar

@@ -7,7 +7,6 @@ module InfoVis.Parallel.Types.Message (
   -- * Classes
   SumTag(..)
 -- * Types
-, Processes(..)
 , Augmentation
 , SelectionAction(..)
   -- * Messages
@@ -20,7 +19,7 @@ module InfoVis.Parallel.Types.Message (
 ) where
 
 
-import Control.Distributed.Process (ProcessId)
+import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
@@ -33,17 +32,6 @@ import Linear.V3 (V3)
 
 class SumTag a where
   sumTag :: a -> Char
-
-
-data Processes =
-  Processes
-  {
-    masterPid     :: ProcessId
-  , trackerPid    :: ProcessId
-  , selecterPid   :: ProcessId
-  , displayerPids :: [ProcessId]
-  }
-    deriving (Binary, Eq, Generic, Show)
 
 
 type Augmentation = DisplayList (DisplayType, String) Int
@@ -89,7 +77,7 @@ data SelecterMessage =
       relocationDisplacement :: V3 Double
     , relocationRotation     :: Quaternion Double
     }
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag SelecterMessage where
   sumTag AugmentSelection{}   = '0'
@@ -127,7 +115,7 @@ data DisplayerMessage =
       selectorLocation :: Point V3 Double
     , selectionChanges :: [(Int, Coloring)]
     }
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
   sumTag RefreshDisplay   = '0'
@@ -147,4 +135,4 @@ instance SumTag DisplayerMessage' where
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear
- deriving (Binary, Eq, Generic, Ord, Show)
+ deriving (Binary, Eq, Generic, NFData, Ord, Show)

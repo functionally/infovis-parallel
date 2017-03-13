@@ -9,6 +9,7 @@ module InfoVis.Parallel.Types (
 ) where
 
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary)
 import GHC.Generics (Generic)
@@ -27,4 +28,4 @@ data Coloring =
     NormalColoring
   | SelectColoring
   | HighlightColoring
-  deriving (Binary, Bounded, Enum, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+  deriving (Binary, Bounded, Enum, Eq, FromJSON, Generic, NFData, Ord, Read, Show, ToJSON)

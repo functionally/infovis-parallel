@@ -7,6 +7,7 @@ module InfoVis.Parallel.Process.DataProvider (
 ) where
 
 
+import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
 import InfoVis.Parallel.IO (readDataset)
 import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
@@ -29,5 +30,5 @@ provider Configuration{..} selecterSend multiplexer =
       (grids, texts) = prepareGrids world presentation dataset
       links = prepareLinks world presentation dataset rs
       gridsLinks = (texts, grids, links)
-    selecterSend `sendChan` AugmentSelection gridsLinks
-    multiplexer `sendChan` AugmentDisplay gridsLinks
+    sendChan selecterSend $!! AugmentSelection gridsLinks
+    sendChan multiplexer $!! AugmentDisplay gridsLinks

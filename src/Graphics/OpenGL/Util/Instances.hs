@@ -11,6 +11,7 @@ module Graphics.OpenGL.Util.Instances (
 ) where
 
 
+import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Data (Data)
@@ -30,6 +31,8 @@ deriving instance (FromJSON a, Generic a) => FromJSON (Vector3 a)
 
 deriving instance (ToJSON a, Generic a) => ToJSON (Vector3 a)
 
+deriving instance (NFData a, Generic a) => NFData (Vector3 a)
+
 
 deriving instance Data a => Data (Vertex3 a)
 
@@ -41,6 +44,8 @@ deriving instance (FromJSON a, Generic a) => FromJSON (Vertex3 a)
 
 deriving instance (ToJSON a, Generic a) => ToJSON (Vertex3 a)
 
+deriving instance (NFData a, Generic a) => NFData (Vertex3 a)
+
 
 instance Binary a => Binary (Color4 a)
 
@@ -49,6 +54,8 @@ deriving instance Generic (Color4 a)
 instance FromJSON a => FromJSON (Color4 a)
 
 instance ToJSON a => ToJSON (Color4 a)
+
+instance NFData a => NFData (Color4 a)
 
 
 instance Binary PrimitiveMode where
@@ -79,3 +86,8 @@ instance Binary PrimitiveMode where
   put QuadStrip     = putWord8 8
   put Polygon       = putWord8 9
   put Patches       = putWord8 10
+
+
+deriving instance Generic PrimitiveMode
+
+deriving instance NFData PrimitiveMode

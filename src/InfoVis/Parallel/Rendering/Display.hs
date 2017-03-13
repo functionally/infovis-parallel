@@ -7,10 +7,11 @@ module InfoVis.Parallel.Rendering.Display (
 ) where
 
 
-import Control.Concurrent.MVar (MVar, newMVar, putMVar, readMVar, swapMVar, tryTakeMVar)
+import Control.Concurrent.MVar (MVar, putMVar, tryTakeMVar)
 import Control.Exception (IOException, catch)
 import Control.Monad (unless, void, when)
 import Data.Default (Default(def))
+import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.Maybe (fromMaybe)
 import Graphics.OpenGL.Util.Faces (brickFaces, drawFaces)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
@@ -50,38 +51,56 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
-    povVar <- newMVar (zero, Quaternion 1 zero)
-    relocationVar <- newMVar (zero, Quaternion 1 zero)
-    selectionVar <- newMVar zero
+    povVarNext <- newIORef (zero, Quaternion 1 zero)
+    povVar     <- newIORef (zero, Quaternion 1 zero)
+    relocationVarNext <- newIORef (zero, Quaternion 1 zero)
+    relocationVar     <- newIORef (zero, Quaternion 1 zero)
+    selectionVarNext <- newIORef zero
+    selectionVar     <- newIORef zero
     let
       selector = color c >> drawFaces faces
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
           faces = brickFaces s s s
-    let
+      useNext =
+        do
+          readIORef povVarNext        >>= writeIORef povVar
+          readIORef relocationVarNext >>= writeIORef relocationVar
+          readIORef selectionVarNext  >>= writeIORef selectionVar
       messageLoop =
         do
           message <- tryTakeMVar messageVar
           case message of
             Just Track{..}      -> do
-                                     void $ swapMVar povVar (eyePosition, eyeOrientation)
+                                     writeIORef povVarNext (eyePosition, eyeOrientation)
                                      if synchronizeDisplays
                                        then putMVar readyVar ()
-                                       else when useIdleLoop idle
+                                       else do
+                                              useNext
+                                              when useIdleLoop
+                                                idle
             Just Relocate{..}   -> do
-                                     void $ swapMVar relocationVar (centerDisplacement, centerRotation)
+                                     writeIORef relocationVarNext (centerDisplacement, centerRotation)
                                      if synchronizeDisplays
                                        then putMVar readyVar ()
-                                       else when useIdleLoop idle
+                                       else do
+                                              useNext
+                                              when useIdleLoop
+                                                idle
             Just Select{..}     -> do
-                                     void $ swapMVar selectionVar selectorLocation
+                                     writeIORef selectionVarNext selectorLocation
                                      mapM_ (`updateBuffer` selectionChanges) linkBuffers
                                      if synchronizeDisplays
                                        then putMVar readyVar ()
-                                       else when useIdleLoop idle
-            Just RefreshDisplay -> when (synchronizeDisplays && useIdleLoop)
-                                     idle
+                                       else do
+                                              useNext
+                                              when useIdleLoop
+                                                idle
+            Just RefreshDisplay -> do
+                                     useNext
+                                     when (synchronizeDisplays && useIdleLoop)
+                                       idle
             _                   -> return ()
     idleCallback $= Just (if useIdleLoop then messageLoop else idle)
     h <-
@@ -103,17 +122,17 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
           , let s = realToFrac textSize * realToFrac (baseSize world) / h
           , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
           ]
-    dlpViewerDisplay dlp viewers displayIndex (readMVar povVar)
+    dlpViewerDisplay dlp viewers displayIndex (readIORef povVar)
       $ do
         unless useIdleLoop messageLoop
         preservingMatrix
           $ do
-            P location <- readMVar selectionVar  -- FIXME
+            P location <- readIORef selectionVar  -- FIXME
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
         preservingMatrix
           $ do
-            (location, orientation) <- readMVar relocationVar
+            (location, orientation) <- readIORef relocationVar
             toRotation orientation
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers

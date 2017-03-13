@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.0.48
+version      : 0.3.0.49
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -101,6 +101,7 @@ library
                    , clock                              >= 0.7.2
                    , containers                         >= 0.5.6
                    , data-default                       >= 0.7.1
+                   , deepseq                            >= 1.4.1
                    , distributed-process                >= 0.6.6
                    , distributed-process-simplelocalnet >= 0.2.3
                    , GLUT                               >= 2.7
@@ -154,6 +155,7 @@ executable infovis-parallel
                    , cmdargs                            >= 0.10.14
                    , containers
                    , data-default
+                   , deepseq
                    , distributed-process
                    , distributed-process-simplelocalnet
                    , GLUT

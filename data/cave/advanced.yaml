@@ -4,7 +4,7 @@ advanced                     :
   debugDisplayer             : false
   debugOpenGL                : true
   useSwapGroup               : 1
-  synchronizeDisplays        : false
+  synchronizeDisplays        : true # false
   useIdleLoop                : false
   delaySelection             : false
   maximumTrackingCompression : 0

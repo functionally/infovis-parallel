@@ -11,6 +11,7 @@ module InfoVis.Parallel.Process.Track.Kafka (
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
+import Control.DeepSeq (NFData, ($!!))
 import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
@@ -36,7 +37,7 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: Serializable a => (V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion :: (NFData a, Serializable a) => (V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     locationVar <- liftIO $ newMVar zero
@@ -49,7 +50,7 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
               location = V3 x y z
             void . liftIO $ swapMVar locationVar location
             orientation <- liftIO $ readMVar orientationVar
-            listener `sendChan` messager location orientation
+            sendChan listener $!! messager location orientation
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
           $ do
@@ -57,7 +58,7 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
             let
               orientation = Quaternion w $ V3 x y z
             void . liftIO $ swapMVar orientationVar orientation
-            listener `sendChan` messager location orientation
+            sendChan listener $!! messager location orientation
       processInput _ _ =
         return ()
     consumerLoopProcess topicConnection processInput
@@ -71,7 +72,7 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
     let
       InputKafka Input{..} = input
       trackStatic (location, orientation) =
-        listener `sendChan` Track (P location) (fromEulerd orientation)
+        sendChan listener $!! Track (P location) (fromEulerd orientation)
       trackDynamic = trackVectorQuaternion (Track . P) listener kafka
     either trackStatic trackDynamic povInput
 
@@ -100,7 +101,7 @@ trackSelection Configuration{..} listener =
             let
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
-            listener `sendChan` UpdateSelection location Highlight
+            sendChan listener $!! UpdateSelection location Highlight
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
@@ -108,7 +109,7 @@ trackSelection Configuration{..} listener =
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar
-                                    listener `sendChan` UpdateSelection location selectionAction
+                                    sendChan listener $!! UpdateSelection location selectionAction
       processInput _ _ =
         return ()
     consumerLoopProcess kafka processInput
