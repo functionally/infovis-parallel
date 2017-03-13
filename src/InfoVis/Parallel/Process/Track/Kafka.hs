@@ -14,9 +14,10 @@ import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMV
 import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
+import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.Util (fromEulerd)
@@ -67,8 +68,9 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
-    ResetTracker (InputKafka Input{..}) <- expect
+    Reconfigure Configuration{..} <- expect
     let
+      InputKafka Input{..} = input
       trackStatic (location, orientation) =
         listener `sendChan` Track (P location) (fromEulerd orientation)
       trackDynamic = trackVectorQuaternion (Track . P) listener kafka
@@ -80,8 +82,10 @@ trackRelocation listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    ResetTracker (InputKafka Input{..}) <- expect
-    trackVectorQuaternion RelocateSelecter listener kafka relocationInput
+    Reconfigure Configuration{..} <- expect
+    let
+      InputKafka Input{..} = input
+    trackVectorQuaternion RelocateSelection listener kafka relocationInput
 
 
 trackSelection :: SendPort SelecterMessage -> Process ()
@@ -89,16 +93,17 @@ trackSelection listener =
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
-    ResetTracker (InputKafka Input{..}) <- expect
     locationVar <- liftIO $ newMVar zero
+    Reconfigure Configuration{..} <- expect
     let
+      InputKafka Input{..} = input
       processInput' sensor (x, y, z) =
         when (sensor == selectorInput)
           $ do
             let
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
-            listener `sendChan` UpdateSelecter location Highlight
+            listener `sendChan` UpdateSelection location Highlight
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
@@ -106,7 +111,7 @@ trackSelection listener =
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar
-                                    listener `sendChan` UpdateSelecter location selectionAction
+                                    listener `sendChan` UpdateSelection location selectionAction
       processInput _ _ =
         return ()
     consumerLoopProcess kafka processInput

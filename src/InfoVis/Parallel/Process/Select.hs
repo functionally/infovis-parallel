@@ -12,8 +12,6 @@ import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
 import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, liftIO, receiveChan, say, sendChan)
 import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
-import Data.Default (def)
-import Data.Maybe (fromMaybe)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Util (collectChanMessages)
@@ -34,15 +32,14 @@ import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 
 
-selecter :: ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-selecter control listener =
+selecter :: Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+selecter configuration control listener =
   do
     pid <- getSelfPid
     say $ "Starting selector <" ++ show pid ++ ">."
-    ResetSelecter configuration <- receiveChan control
     let
-      AdvancedSettings{..} = fromMaybe def $ advanced configuration
-    AugmentSelecter gridsLinks@(_, _, links) <- receiveChan control
+      Just AdvancedSettings{..} = advanced configuration
+    AugmentSelection gridsLinks@(_, _, links) <- receiveChan control
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
@@ -50,8 +47,8 @@ selecter control listener =
     forever
       $ do
         let
-          collector   RelocateSelecter{} _ = True
-          collector x@UpdateSelecter{}   y = selecterState x == selecterState y
+          collector   RelocateSelection{} _ = True
+          collector x@UpdateSelection{}   y = selecterState x == selecterState y
           collector _                    _ = False
           refresh selecterState' =
             do
@@ -80,14 +77,14 @@ selecter control listener =
         sequence_
           [
             case message of
-              RelocateSelecter{..} -> do
-                                        void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
-                                        listener `sendChan` Relocate relocationDisplacement relocationRotation
-                                        refresh Highlight
-              UpdateSelecter{..}   -> do
-                                        void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)
-                                        refresh selecterState
-              _                    -> return ()
+              RelocateSelection{..} -> do
+                                         void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
+                                         listener `sendChan` Relocate relocationDisplacement relocationRotation
+                                         refresh Highlight
+              UpdateSelection{..}   -> do
+                                         void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset (world configuration)
+                                         refresh selecterState
+              _                     -> return ()
           |
             message <- messages
           ]

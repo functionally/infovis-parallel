@@ -12,9 +12,10 @@ import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
 import Control.Distributed.Process (Process, SendPort, expect, getSelfPid, liftIO, say, sendChan)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
+import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), TrackerMessage(..))
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -27,11 +28,12 @@ trackPov listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
-    ResetTracker (InputVRPN Input{..}) <- expect
     locationVar <- liftIO $ newIORef zero
     orientationVar <- liftIO $ newIORef zero
     updatedVar <- liftIO newEmptyMVar
+    Reconfigure Configuration{..} <- expect
     let
+      InputVRPN Input{..} = input
       callback :: PositionCallback Int Double
       callback _ sensor (lx, ly, lz) (ox, oy, oz, ow) =
         when (sensor == headSensor)
@@ -61,7 +63,9 @@ trackRelocation _ = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting relocation tracker <" ++ show pid ++ ">."
-    ResetTracker (InputVRPN Input{..}) <- expect
+    Reconfigure Configuration{..} <- expect
+    let
+      InputVRPN Input{..} = input
     return ()
 
 
@@ -70,11 +74,12 @@ trackSelection listener = -- FIXME: Support reset, termination, and faults.
   do
     pid <- getSelfPid
     say $ "Starting selection tracker <" ++ show pid ++ ">."
-    ResetTracker (InputVRPN Input{..}) <- expect
     locationVar <- liftIO $ newIORef zero
     buttonVar <- liftIO $ newIORef Highlight
     updatedVar <- liftIO newEmptyMVar
+    Reconfigure Configuration{..} <- expect
     let
+      InputVRPN Input{..} = input
       callback :: PositionCallback Int Double
       callback _ sensor (lx, ly, lz) _ =
         when (sensor == selectSensor)
@@ -102,6 +107,6 @@ trackSelection listener = -- FIXME: Support reset, termination, and faults.
             $ do
               location <- liftIO $ readIORef locationVar
               button <- liftIO $ readIORef buttonVar
-              listener `sendChan` UpdateSelecter location button
+              listener `sendChan` UpdateSelection location button
           loop
     loop

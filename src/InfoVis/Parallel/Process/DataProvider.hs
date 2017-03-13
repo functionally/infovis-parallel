@@ -29,5 +29,5 @@ provider Configuration{..} selecterSend multiplexer =
       (grids, texts) = prepareGrids world presentation dataset
       links = prepareLinks world presentation dataset rs
       gridsLinks = (texts, grids, links)
-    selecterSend `sendChan` AugmentSelecter gridsLinks
-    multiplexer `sendChan` AugmentDisplayer gridsLinks
+    selecterSend `sendChan` AugmentSelection gridsLinks
+    multiplexer `sendChan` AugmentDisplay gridsLinks

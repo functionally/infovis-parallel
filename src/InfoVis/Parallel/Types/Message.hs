@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveAnyClass  #-}
-{-# LANGUAGE DeriveGeneric   #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 
 module InfoVis.Parallel.Types.Message (
@@ -10,10 +11,12 @@ module InfoVis.Parallel.Types.Message (
 , Augmentation
 , SelectionAction(..)
   -- * Messages
+, CommonMessage(..)
 , MasterMessage(..)
-, TrackerMessage(..)
 , SelecterMessage(..)
+, SelecterMessage'
 , DisplayerMessage(..)
+, DisplayerMessage'
 ) where
 
 
@@ -23,7 +26,6 @@ import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
 import InfoVis.Parallel.Types.Configuration (Configuration)
-import InfoVis.Parallel.Types.Input (Input)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
@@ -47,6 +49,16 @@ data Processes =
 type Augmentation = DisplayList (DisplayType, String) Int
 
 
+data CommonMessage =
+    Reconfigure
+    {
+      configuration :: Configuration
+    }
+  | Synchronize
+  | Terminate
+    deriving (Binary, Eq, Generic, Ord, Show)
+
+
 data MasterMessage =
     Ready
   | Fault
@@ -62,35 +74,17 @@ instance SumTag MasterMessage where
   sumTag Exit    = '2'
 
 
-data TrackerMessage =
-    ResetTracker
-    {
-      trackerInput :: Input
-    }
-  | TerminateTracker
-    deriving (Binary, Eq, Generic, Ord, Show)
-
-instance SumTag TrackerMessage where
-  sumTag ResetTracker{}   = '0'
-  sumTag TerminateTracker = '1'
-
-
 data SelecterMessage =
-    ResetSelecter
-    {
-      selecterConfiguration :: Configuration
-    }
-  | TerminateSelecter
-  | AugmentSelecter
+    AugmentSelection
     {
       selecterAugmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
-  | UpdateSelecter
+  | UpdateSelection
     {
       selecterPosition :: Point V3 Double
     , selecterState    :: SelectionAction
     }
-  | RelocateSelecter
+  | RelocateSelection
     {
       relocationDisplacement :: V3 Double
     , relocationRotation     :: Quaternion Double
@@ -98,18 +92,23 @@ data SelecterMessage =
     deriving (Binary, Eq, Generic, Ord, Show)
 
 instance SumTag SelecterMessage where
-  sumTag ResetSelecter{}     = '0'
-  sumTag TerminateSelecter{} = '1'
-  sumTag AugmentSelecter{}   = '2'
-  sumTag UpdateSelecter{}    = '3'
-  sumTag RelocateSelecter{}  = '4'
+  sumTag AugmentSelection{}   = '0'
+  sumTag UpdateSelection{}    = '1'
+  sumTag RelocateSelection{}  = '2'
+
+
+type SelecterMessage' = Either CommonMessage SelecterMessage
+
+instance SumTag SelecterMessage' where
+  sumTag (Right x            ) = sumTag x
+  sumTag (Left  Reconfigure{}) = '7'
+  sumTag (Left  Terminate    ) = '8'
+  sumTag (Left  Synchronize  ) = '9'
 
 
 data DisplayerMessage =
-    ResetDisplayer
-  | TerminateDisplayer
-  | DisplayDisplayer
-  | AugmentDisplayer
+    RefreshDisplay
+  | AugmentDisplay
     {
       augmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
@@ -128,21 +127,23 @@ data DisplayerMessage =
       selectorLocation :: Point V3 Double
     , selectionChanges :: [(Int, Coloring)]
     }
-  | Debug
-    {
-      debugging :: Bool
-    }
     deriving (Binary, Eq, Generic, Ord, Show)
 
 instance SumTag DisplayerMessage where
-  sumTag ResetDisplayer     = '0'
-  sumTag TerminateDisplayer = '1'
-  sumTag DisplayDisplayer   = '2'
-  sumTag AugmentDisplayer{} = '3'
-  sumTag Track{}            = '4'
-  sumTag Relocate{}         = '5'
-  sumTag Select{}           = '6'
-  sumTag Debug{}            = '7'
+  sumTag RefreshDisplay   = '0'
+  sumTag AugmentDisplay{} = '1'
+  sumTag Track{}          = '2'
+  sumTag Relocate{}       = '3'
+  sumTag Select{}         = '4'
+
+
+type DisplayerMessage' = Either CommonMessage DisplayerMessage
+
+instance SumTag DisplayerMessage' where
+  sumTag (Right x            ) = sumTag x
+  sumTag (Left  Reconfigure{}) = '7'
+  sumTag (Left  Terminate    ) = '8'
+  sumTag (Left  Synchronize  ) = '9'
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear

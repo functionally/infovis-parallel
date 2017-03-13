@@ -64,25 +64,25 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
         do
           message <- tryTakeMVar messageVar
           case message of
-            Just Track{..}        -> do
-                                       void $ swapMVar povVar (eyePosition, eyeOrientation)
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else when useIdleLoop idle
-            Just Relocate{..}     -> do
-                                       void $ swapMVar relocationVar (centerDisplacement, centerRotation)
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else when useIdleLoop idle
-            Just Select{..}       -> do
-                                       void $ swapMVar selectionVar selectorLocation
-                                       mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else when useIdleLoop idle
-            Just DisplayDisplayer -> when (synchronizeDisplays && useIdleLoop)
-                                       idle
-            _                     -> return ()
+            Just Track{..}      -> do
+                                     void $ swapMVar povVar (eyePosition, eyeOrientation)
+                                     if synchronizeDisplays
+                                       then putMVar readyVar ()
+                                       else when useIdleLoop idle
+            Just Relocate{..}   -> do
+                                     void $ swapMVar relocationVar (centerDisplacement, centerRotation)
+                                     if synchronizeDisplays
+                                       then putMVar readyVar ()
+                                       else when useIdleLoop idle
+            Just Select{..}     -> do
+                                     void $ swapMVar selectionVar selectorLocation
+                                     mapM_ (`updateBuffer` selectionChanges) linkBuffers
+                                     if synchronizeDisplays
+                                       then putMVar readyVar ()
+                                       else when useIdleLoop idle
+            Just RefreshDisplay -> when (synchronizeDisplays && useIdleLoop)
+                                     idle
+            _                   -> return ()
     idleCallback $= Just (if useIdleLoop then messageLoop else idle)
     h <-
      catch (fontHeight Roman)

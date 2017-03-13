@@ -22,48 +22,13 @@ import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
+import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
 import InfoVis.Parallel.Process.Util (collectChanMessages)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Input (Input(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), TrackerMessage(..))
-
-#ifdef INFOVIS_KAFKA
-import qualified InfoVis.Parallel.Process.Track.Kafka as Kafka (trackPov, trackRelocation, trackSelection)
-#endif
-
-#ifdef INFOVIS_VRPN
-import qualified InfoVis.Parallel.Process.Track.VRPN as VRPN (trackPov, trackRelocation, trackSelection)
-#endif
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..))
 
 
-trackPov :: Input ->  SendPort DisplayerMessage -> Process ()
-trackPov NoInput = error "trackPov: No input specified."
-#ifdef INFOVIS_KAFKA
-trackPov InputKafka{} = Kafka.trackPov
-#endif
-#ifdef INFOVIS_VRPN
-trackPov InputVRPN{} = VRPN.trackPov
-#endif
-
-trackRelocation :: Input ->  SendPort SelecterMessage -> Process ()
-trackRelocation NoInput = error "trackRelocation: No input specified."
-#ifdef INFOVIS_KAFKA
-trackRelocation InputKafka{} = Kafka.trackRelocation
-#endif
-#ifdef INFOVIS_VRPN
-trackRelocation InputVRPN{} = VRPN.trackRelocation
-#endif
-
-trackSelection :: Input ->  SendPort SelecterMessage -> Process ()
-trackSelection NoInput = error "trackSelection: No input specified."
-#ifdef INFOVIS_KAFKA
-trackSelection InputKafka{} = Kafka.trackSelection
-#endif
-#ifdef INFOVIS_VRPN
-trackSelection InputVRPN{} = VRPN.trackSelection
-#endif
-
-multiplexerProcess :: Configuration -> ReceivePort DisplayerMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
+multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
 multiplexerProcess Configuration{..} control content displayerPids =
   do
     pid <- getSelfPid
@@ -74,8 +39,8 @@ multiplexerProcess Configuration{..} control content displayerPids =
         do
           message <- receiveChan content
           case message of
-            AugmentDisplayer{..} -> return $ message : reverse priors
-            _                    -> waitForGrid $ message : priors
+            AugmentDisplay{..} -> return $ message : reverse priors
+            _                  -> waitForGrid $ message : priors
       collector Track{}    _ = True
       collector Relocate{} _ = True
       collector _          _ = False
@@ -87,7 +52,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
               when synchronizeDisplays
                 $ do
                    void $ receiveChan control
-                   mapM_ (`send` DisplayDisplayer) displayerPids
+                   mapM_ (`send` RefreshDisplay) displayerPids
           |
             message <- messages
           ]
@@ -98,14 +63,14 @@ multiplexerProcess Configuration{..} control content displayerPids =
 
 
 trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-trackerProcesses Configuration{..} selecterSend multiplexer =
+trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid
     say $ "Starting trackers <" ++ show pid ++ ">."
     povTrackerPid <- spawnLocal $ trackPov input multiplexer
     relocationTrackerPid <- spawnLocal $ trackRelocation input selecterSend
     selectionTrackerPid <- spawnLocal $ trackSelection input selecterSend
-    mapM_ (`send` ResetTracker input) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
+    mapM_ (`send` Reconfigure configuration) [povTrackerPid, relocationTrackerPid, selectionTrackerPid]
 
 
 displayerProcess :: (Configuration , ProcessId, Int) -> Process ()
@@ -115,7 +80,7 @@ displayerProcess (configuration, masterPid, displayIndex) =
     say $ "Starting displayer <" ++ show pid ++ ">."
     let
       AdvancedSettings{..} = fromMaybe def $ advanced configuration -- FIXME: Do this at start.
-    AugmentDisplayer gridsLinks <- expect
+    AugmentDisplay gridsLinks <- expect
     readyVar <- liftIO newEmptyMVar
     messageVar <- liftIO newEmptyMVar
     void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar readyVar
@@ -123,7 +88,7 @@ displayerProcess (configuration, masterPid, displayIndex) =
       $ do
         message <- expect
         liftIO $ putMVar messageVar message
-        when (synchronizeDisplays && message /= DisplayDisplayer)
+        when (synchronizeDisplays && message /= RefreshDisplay)
           $ do 
             liftIO $ takeMVar readyVar
             masterPid `send` Ready
@@ -166,17 +131,16 @@ commonMain configuration displayerPids =
     (controlSend, controlReceive) <- newChan
     void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids
     (selecterSend, selecterReceive) <- newChan
-    void . spawnLocal $ selecter selecterReceive contentSend
-    selecterSend `sendChan` ResetSelecter configuration
-    void . spawnLocal $ trackerProcesses configuration selecterSend contentSend
-    void . spawnLocal $ provider configuration selecterSend contentSend
+    void . spawnLocal $ selecter         configuration selecterReceive contentSend
+    void . spawnLocal $ trackerProcesses configuration selecterSend    contentSend
+    void . spawnLocal $ provider         configuration selecterSend    contentSend
     let
       waitForAllReady counter =
         do
           Ready <- expect
           if counter >= length displayerPids
             then do
-                   controlSend `sendChan` DisplayDisplayer
+                   controlSend `sendChan` Synchronize
                    waitForAllReady 1
             else waitForAllReady $ counter + 1
     waitForAllReady 1 :: Process ()
