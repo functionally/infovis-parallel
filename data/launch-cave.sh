@@ -12,7 +12,7 @@ do
   sleep 1s
 done
 
-sleep 5s
+sleep 1s
 
 echo Starting master on port 44444 . . .
 $EXE +RTS -N6 -RTS master $CFG

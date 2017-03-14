@@ -88,6 +88,7 @@ dlpViewerDisplay dlp Viewers{..} displayIndex pov displayAction =
            loadIdentity
            projection VTKOffAxis screen (realToFrac <$> P eyePosition) nearPlane farPlane
            matrixMode $=! Modelview 0
+           postRedisplay Nothing
       )
     dlpDisplayCallback $=!
       def
