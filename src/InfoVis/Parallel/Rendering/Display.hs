@@ -9,10 +9,8 @@ module InfoVis.Parallel.Rendering.Display (
 
 import Control.Concurrent.MVar (MVar, putMVar, tryTakeMVar)
 import Control.Exception (IOException, catch)
-import Control.Monad (unless, void, when)
-import Data.Default (Default(def))
+import Control.Monad (unless, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Data.Maybe (fromMaybe)
 import Graphics.OpenGL.Util.Faces (brickFaces, drawFaces)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
 import Graphics.Rendering.OpenGL (GLfloat, Vector3(..), ($=), color, preservingMatrix, scale, translate)
@@ -47,7 +45,7 @@ displayer :: Configuration
 displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyVar =
   do
     let
-      AdvancedSettings{..} = fromMaybe def advanced
+      Just AdvancedSettings{..} = advanced
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
@@ -139,6 +137,6 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
             mapM_ drawBuffer gridBuffers
             drawText
 #ifdef INFOVIS_SWAP_GROUP
-    maybe (return ()) (void . joinSwapGroup) useSwapGroup
+    _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif
     mainLoop

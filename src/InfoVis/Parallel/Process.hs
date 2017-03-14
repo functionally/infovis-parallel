@@ -18,8 +18,6 @@ import Control.DeepSeq (($!!))
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
-import Data.Default (def)
-import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
@@ -35,7 +33,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
     pid <- getSelfPid
     say $ "Starting multiplexer <" ++ show pid ++ ">."
     let
-      AdvancedSettings{..} = fromMaybe def advanced
+      Just AdvancedSettings{..} = advanced
       waitForGrid priors =
         do
           message <- receiveChan content
@@ -79,7 +77,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
     pid <- getSelfPid
     say $ "Starting displayer <" ++ show pid ++ ">."
     let
-      AdvancedSettings{..} = fromMaybe def $ advanced configuration -- FIXME: Do this at start.
+      Just AdvancedSettings{..} = advanced configuration
     AugmentDisplay gridsLinks <- expect
     readyVar <- liftIO newEmptyMVar
     messageVar <- liftIO newEmptyMVar

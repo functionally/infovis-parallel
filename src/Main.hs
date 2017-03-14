@@ -15,7 +15,7 @@ import Data.Default (def)
 import Data.Typeable (Typeable)
 import Data.Version (showVersion)
 import Data.Yaml.Config (loadYamlSettings, ignoreEnv)
-import InfoVis.Parallel.Types.Configuration (peersList)
+import InfoVis.Parallel.Types.Configuration (Configuration(advanced), peersList)
 import Paths_infovis_parallel (version)
 import System.Console.CmdArgs ((&=), args, cmdArgs, details, help, modes, name, program, summary, typ, typFile)
 
@@ -105,13 +105,14 @@ main = dispatch =<< cmdArgs infoVisParallel
 dispatch :: InfoVisParallel -> IO ()
 dispatch Master{..} =
   do
+    configuration <- loadYamlSettings configs [] ignoreEnv
     let
       host' = if null host then "localhost" else host
       port' = if null port then "44444"     else port
       rtable = P.__remoteTable initRemoteTable
-    configuration <- loadYamlSettings configs [] ignoreEnv
+      configuration' = maybe (configuration {advanced = Just def}) (const configuration) $ advanced configuration
     backend <- W.initializeBackend (peersList configuration) host' port' rtable
-    (`W.startMaster` P.masterMain configuration) backend
+    (`W.startMaster` P.masterMain configuration') backend
 dispatch Slave{..} =
   do
     let
@@ -122,8 +123,10 @@ dispatch Slave{..} =
     W.startSlave backend
 dispatch Solo{..} =
   do
+    configuration <- loadYamlSettings configs [] ignoreEnv
     let
       rtable = P.__remoteTable initRemoteTable
-    configuration <- loadYamlSettings configs [] ignoreEnv
+      configuration' = maybe (configuration {advanced = Just def}) (const configuration) $ advanced configuration
+    print $ advanced $ configuration'
     backend <- L.initializeBackend "localhost" "44444" rtable
-    (`L.startMaster` P.soloMain configuration) backend
+    (`L.startMaster` P.soloMain configuration') backend
