@@ -127,6 +127,5 @@ dispatch Solo{..} =
     let
       rtable = P.__remoteTable initRemoteTable
       configuration' = maybe (configuration {advanced = Just def}) (const configuration) $ advanced configuration
-    print $ advanced $ configuration'
     backend <- L.initializeBackend "localhost" "44444" rtable
     (`L.startMaster` P.soloMain configuration') backend
