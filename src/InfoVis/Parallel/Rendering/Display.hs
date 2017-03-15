@@ -28,7 +28,6 @@ import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..), WorldExtent(..))
 import Linear.Affine (Point(..), (.-.))
-import Linear.Metric (dot)
 import Linear.Quaternion (Quaternion(..))
 import Linear.Util (rotationFromPlane)
 import Linear.Util.Graphics (toRotation, toVector3)
@@ -116,15 +115,14 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               color textColor
               translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
               toRotation qrot
-              scale s (if flipped then -s else s) s -- FIXME: This should be done via a series of rotations.
+              scale s s s
               translate $ Vector3 0 (- h) 0
               renderString Roman textContent
           |
             DisplayText{..} <- texts
           , let WorldExtent{..} = worldExtent world
-          , let flipped = (worldCornerX .-. worldOrigin) `dot` V3 1 0 0 < 0
           , let s = realToFrac textSize * realToFrac (baseSize world) / h :: GLfloat
-          , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (if flipped then 1 else -1) 0) textOrigin textWidth textHeight
+          , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
           ]
     dlpViewerDisplay dlp viewers displayIndex (readIORef povVar)
       $ do

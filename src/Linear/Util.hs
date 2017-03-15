@@ -1,5 +1,6 @@
 module Linear.Util (
-  rotationFromVectorPair
+  orthogonal
+, rotationFromVectorPair
 , projectPlane
 , rotationFromVectorPairs
 , rotationFromPlane
@@ -11,20 +12,34 @@ module Linear.Util (
 import Data.Math.Util (fromDegrees)
 import Linear.Affine (Point(..), (.-.))
 import Linear.Conjugate (Conjugate, conjugate)
-import Linear.Epsilon (Epsilon)
+import Linear.Epsilon (Epsilon(nearZero))
 import Linear.Metric (dot, normalize)
 import Linear.Quaternion (Quaternion(..), axisAngle, rotate)
 import Linear.V3 (V3(..), cross)
-import Linear.Vector ((^-^), (*^), basis)
+import Linear.Vector ((^+^), (^-^), (*^), basis)
 
 
-rotationFromVectorPair :: (Epsilon a, Floating a) => V3 a -> V3 a -> Quaternion a
+-- http://stackoverflow.com/questions/1171849/finding-quaternion-representing-the-rotation-from-one-vector-to-another
+rotationFromVectorPair :: (Epsilon a, Eq a, RealFloat a) => V3 a -> V3 a -> Quaternion a
 rotationFromVectorPair v1 v2 =
   let v1n = normalize v1
       v2n = normalize v2
-      v12n = normalize $ v1n + v2n
+      v12 = v1n ^+^ v2n
+      v12n = normalize v12
+      q = Quaternion (v12n `dot` v2n) $ v12n `cross` v2n
   in
-    Quaternion (v12n `dot` v2n) $ v12n `cross` v2n
+    if nearZero v12
+      then Quaternion 0 $ orthogonal v1n
+      else q
+
+
+orthogonal :: (Epsilon a, Eq a, Floating a) => V3 a -> V3 a
+orthogonal =
+  normalize
+    . head
+    . filter (not . nearZero)
+    . (`map` basis)
+    . cross
 
 
 projectPlane :: (Epsilon a, Floating a) => V3 a -> V3 a -> V3 a
@@ -40,9 +55,12 @@ rotationFromVectorPairs u0 v0 u2 v2 =
   let
     q2 = rotationFromVectorPair u0 u2
     v1 = conjugate q2 `rotate` v2
-    v0p = v0 `projectPlane` u0
-    v1p = v1 `projectPlane` u0
-    q1 = rotationFromVectorPair v0p v1p
+    v0p = normalize $ v0 `projectPlane` u0
+    v1p = normalize $ v1 `projectPlane` u0
+    q1 =
+      if nearZero $ v0p ^+^ v1p
+        then Quaternion 0 $ normalize u0
+        else rotationFromVectorPair v0p v1p
   in
     normalize $ q2 * q1
 
