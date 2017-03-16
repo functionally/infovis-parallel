@@ -11,7 +11,6 @@ import Control.Concurrent.MVar (MVar, putMVar, tryTakeMVar)
 import Control.Exception (IOException, catch)
 import Control.Monad (unless, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import Graphics.OpenGL.Util.Faces (brickFaces, drawFaces)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
 import Graphics.Rendering.OpenGL (GLfloat, ($=))
 import Graphics.Rendering.OpenGL.GL.CoordTrans (preservingMatrix, scale, translate)
@@ -20,6 +19,7 @@ import Graphics.Rendering.OpenGL.GL.VertexSpec (color)
 import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
+import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
@@ -59,11 +59,10 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     selectionVarNext <- newIORef zero
     selectionVar     <- newIORef zero
     let
-      selector = color c >> drawFaces faces
+      selector = color c >> renderObject Solid (Sphere' s 20 20)
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
-          faces = brickFaces s s s
       useNext =
         do
           readIORef povVarNext        >>= writeIORef povVar

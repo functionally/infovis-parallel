@@ -8,7 +8,7 @@ input               :
     povInput        :
       Left          : [[0, 150, 500], [0, 0, 0]]
     relocationInput : joystick
-    selectorInput   : leap
+    selectorInput   : spacenav
     selectButton    : [spacenav, 0]
     deselectButton  : [spacenav, 1]
     clearButton     : [joystick, 3]
