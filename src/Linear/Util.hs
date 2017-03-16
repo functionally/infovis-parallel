@@ -6,6 +6,10 @@ module Linear.Util (
 , rotationFromPlane
 , fromEuler
 , fromEulerd
+, distanceToPoint
+, distanceToSegment
+, distanceToRectangle
+, distanceToBox
 ) where
 
 
@@ -13,7 +17,8 @@ import Data.Math.Util (fromDegrees)
 import Linear.Affine (Point(..), (.-.))
 import Linear.Conjugate (Conjugate, conjugate)
 import Linear.Epsilon (Epsilon(nearZero))
-import Linear.Metric (dot, normalize)
+import Linear.Matrix ((!*), inv33)
+import Linear.Metric (dot, norm, normalize)
 import Linear.Quaternion (Quaternion(..), axisAngle, rotate)
 import Linear.V3 (V3(..), cross)
 import Linear.Vector ((^+^), (^-^), (*^), basis)
@@ -97,3 +102,66 @@ fromEuler (V3 phi theta psi) =
 
 fromEulerd :: (Epsilon a, Num a, RealFloat a) => V3 a -> Quaternion a
 fromEulerd = fromEuler . fmap fromDegrees
+
+
+distanceToPoint :: (Epsilon a, Floating a) => Point V3 a -> Point V3 a -> a
+distanceToPoint po ps = norm $ ps .-. po
+
+
+distanceToSegment  :: (Epsilon a, Floating a, Ord a) => Point V3 a -> Point V3 a -> Point V3 a -> a
+distanceToSegment po pu ps =
+  let
+    (abg, uvw) = boxCoordinates po pu Nothing Nothing ps
+  in
+    norm $ distanceOnSegment <$> uvw <*> abg
+
+
+distanceToRectangle :: (Epsilon a, Floating a, Ord a) => Point V3 a -> Point V3 a -> Point V3 a -> Point V3 a -> a
+distanceToRectangle po pu pv ps =
+  let
+    (abg, uvw) = boxCoordinates po pu (Just pv) Nothing ps
+  in
+    norm $ distanceOnSegment <$> uvw <*> abg
+
+
+distanceToBox :: (Epsilon a, Floating a, Ord a) => Point V3 a -> Point V3 a -> Point V3 a -> Point V3 a -> Point V3 a -> a
+distanceToBox po pu pv pw ps =
+  let
+    (abg, uvw) = boxCoordinates po pu (Just pv) (Just pw) ps
+  in
+    norm $ distanceOnSegment <$> uvw <*> abg
+
+
+distanceOnSegment :: (Num a, Ord a) => a -> a -> a
+distanceOnSegment un alpha
+  | alpha <= 0  = - alpha
+  | alpha >= un = alpha - un
+  | otherwise   = 0
+
+
+boxCoordinates :: (Epsilon a, Floating a, Ord a)
+               => Point V3 a
+               -> Point V3 a
+               -> Maybe (Point V3 a)
+               -> Maybe (Point V3 a)
+               -> Point V3 a
+               -> (V3 a, V3 a)
+boxCoordinates po pu pv pw ps =
+  let
+    s = ps .-. po
+    u = pu .-. po
+    e = head $ filter (not . nearZero . dot u) basis
+    v = maybe (u `cross` e) (.-. po) pv
+    w = maybe (u `cross` v) (.-. po) pw
+    uh = normalize u
+    vh = normalize v
+    wh = normalize w
+    uv = uh `dot` vh
+    wu = wh `dot` uh
+    vw = vh `dot` wh
+    mi = inv33 $ V3 (V3 1 uv wu) (V3 uv 1 vw) (V3 wu vw 1)
+  in
+    (
+      mi !* (dot s <$> V3 uh vh wh)
+    , V3 (norm u) (maybe 0 (const $ norm v) pv) (maybe 0 (const $ norm w) pw)
+    )

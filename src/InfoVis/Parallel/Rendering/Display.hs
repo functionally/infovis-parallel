@@ -59,7 +59,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     selectionVarNext <- newIORef zero
     selectionVar     <- newIORef zero
     let
-      selector = color c >> renderObject Solid (Sphere' s 20 20)
+      selector = color c >> renderObject Solid (Sphere' s 12 8)
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
