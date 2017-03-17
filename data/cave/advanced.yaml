@@ -1,10 +1,10 @@
 advanced                     :
   debugTiming                : false
-  debugMessages              : false
+  debugMessages              : true
   debugDisplayer             : false
-  debugOpenGL                : true
+  debugOpenGL                : false
   useSwapGroup               : 1
-  synchronizeDisplays        : true # false
+  synchronizeDisplays        : false
   useIdleLoop                : false
   delaySelection             : false
   maximumTrackingCompression : 0
