@@ -18,7 +18,7 @@ readDataset Dataset{..} =
     (header : contents) <- fmap (splitOn "\t") . lines <$> readFile datasetIdentifier
     let
       reordering =
-        fromMaybe (error "readDataset: Cannot missing variables.")
+        fromMaybe (error "readDataset: Missing variables.")
           . elemPermutation header
           $ variableName
           <$> variables

@@ -12,7 +12,7 @@ import InfoVis.Parallel.Presentation.Presenting (linkPresentation, presentWorld)
 import InfoVis.Parallel.Presentation.Scaling (scaleToWorld)
 import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..), fromLocations)
 import InfoVis.Parallel.Types (Location)
-import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(..))
+import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier)
 import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, LinkAlias, Presentation)
 import InfoVis.Parallel.Types.World (World)
 
@@ -25,10 +25,9 @@ prepareGrids world presentation Dataset{..} =
     (
       prepare GridType grids
     , [
-        text {textContent = n}
+        text {textContent = textContent}
       |
         text@DisplayText{..} <- texts
-      , let Just n = textContent `lookup` [(variableAlias, variableName) | ContinuousVariable{..} <- variables]
       ]
     )
 
