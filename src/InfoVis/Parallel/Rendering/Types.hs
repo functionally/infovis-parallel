@@ -89,6 +89,6 @@ instance Functor (DisplayText a) where
 {-# INLINE inBox #-}
 inBox :: (Num a, Ord a) => a -> Vertex3 a -> Vertex3 a -> Bool
 inBox d (Vertex3 x y z) (Vertex3 x' y' z') =
-  h x x' && h y y' && h z z'
+  h x x' + h y y' + h z z' <= d^(2::Int)
     where
-      h w w' = abs (w - w' + d) <= d
+      h w w' = (w - w')^(2::Int)
