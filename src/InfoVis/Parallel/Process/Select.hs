@@ -15,7 +15,7 @@ import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
-import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, currentHalfFrame, frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), inBox)
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
@@ -30,6 +30,7 @@ import Linear.Util.Graphics (toVertex3)
 import Linear.Vector (zero)
 import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 
+import qualified Data.HashMap.Strict as H -- FIXME
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 
 
@@ -54,6 +55,7 @@ selecter configuration control listener =
           refresh selecterState' =
             do
               t0 <- liftIO $ toNanoSecs <$> getTime Monotonic
+              f0 <- currentHalfFrame
               selecterPosition' <- liftIO $ readMVar  selecterVar
               (relocation, reorientation) <- liftIO $ readMVar relocationVar
               persistentColorings <- liftIO $ readMVar persistentColoringsRef
@@ -71,6 +73,8 @@ selecter configuration control listener =
               mid2 <- nextMessageIdentifier
               frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 selecterPosition' changes)
               sendChan listener $!! Select mid2 selecterPosition' changes
+              f1 <- currentHalfFrame
+              frameDebug DebugTiming $ "SELECT\t" ++ show (f1 - f0)
               t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
                 delay = maximum [1000000 `div` 60 - fromIntegral (t1 - t0) `div` 1000, 0]

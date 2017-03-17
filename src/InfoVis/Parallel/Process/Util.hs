@@ -5,6 +5,7 @@ module InfoVis.Parallel.Process.Util (
   asHalfFrames
 , initialTime
 , currentHalfFrame
+, currentHalfFrameIO
 , Debug(..)
 , initializeDebug
 , frameDebug
@@ -39,9 +40,14 @@ initialTime :: IO TimeSpec
 initialTime = readIORef initialTimeVar
 
 
-currentHalfFrame :: IO Double
+currentHalfFrame :: Process Double
 {-# INLINE currentHalfFrame #-}
-currentHalfFrame =
+currentHalfFrame = liftIO currentHalfFrameIO
+
+
+currentHalfFrameIO :: IO Double
+{-# INLINE currentHalfFrameIO #-}
+currentHalfFrameIO =
   do
     f0 <- initialTime
     f1 <- getTime Monotonic
@@ -106,7 +112,7 @@ frameDebugString debug message =
     debuggings <- readIORef debuggingVar
     if debug `elem` debuggings
       then do
-           df <- currentHalfFrame
+           df <- currentHalfFrameIO
            return . Just $ printf "%.3f" df ++ "\t" ++ show debug ++ "\t" ++ message
       else return Nothing
 

@@ -1,6 +1,6 @@
 advanced                     :
-  debugTiming                : false
-  debugMessages              : true
+  debugTiming                : true
+  debugMessages              : false
   debugDisplayer             : false
   debugOpenGL                : false
   synchronizeDisplays        : false
