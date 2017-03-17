@@ -10,7 +10,7 @@ module InfoVis.Parallel.Process.Select (
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
 import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, liftIO, receiveChan, say, sendChan)
+import Control.Distributed.Process (Process, ReceivePort, SendPort, liftIO, receiveChan, sendChan)
 import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
@@ -36,8 +36,7 @@ import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 selecter :: Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 selecter configuration control listener =
   do
-    pid <- getSelfPid
-    say $ "Starting selector <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting selector."
     let
       Just AdvancedSettings{..} = advanced configuration
     AugmentSelection gridsLinks@(_, _, links) <- receiveChan control

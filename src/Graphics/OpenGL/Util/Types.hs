@@ -18,6 +18,7 @@ import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary(..))
 import Data.Data (Data)
 import Data.Default (Default(..))
+import Data.Hashable (Hashable)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import Linear.Affine (Point, (.-.), (.+^))
@@ -31,7 +32,7 @@ data Stereo =
   | QuadBuffer -- ^ Quad buffer stereo.
   | Cardboard  -- ^ Google Cardboard stereo.
   | Mono       -- ^ No stereo.
-  deriving (Binary, Bounded, Data, Enum, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON, Typeable)
+  deriving (Binary, Bounded, Data, Enum, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON, Typeable)
 
 instance Default Stereo where
   def = Mono
@@ -46,7 +47,7 @@ data Viewers a =
   , eyeSeparation :: V3 a
   , displays      :: [Display a]
   }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
 
 
 data Display a =
@@ -58,7 +59,7 @@ data Display a =
   , geometry   :: Maybe String
   , screen     :: Screen a
   }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
 
 
 -- | Description of a physical screen geometry.
@@ -69,7 +70,7 @@ data Screen a =
   , lowerRight :: Point V3 a -- ^ The lower right corner.
   , upperLeft  :: Point V3 a -- ^ The upper left corner.
   }
-    deriving (Binary, Data, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Data, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
 
 instance Functor Screen where
   fmap f Screen{..} =

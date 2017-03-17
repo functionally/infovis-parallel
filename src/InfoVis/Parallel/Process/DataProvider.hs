@@ -8,7 +8,7 @@ module InfoVis.Parallel.Process.DataProvider (
 
 
 import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
+import Control.Distributed.Process (Process, SendPort, liftIO, sendChan)
 import InfoVis.Parallel.IO (readDataset)
 import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
 import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
@@ -24,8 +24,7 @@ type GridsLinks = ([DisplayText String Location], [DisplayList (DisplayType, Str
 provider :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 provider Configuration{..} selecterSend multiplexer =
   do
-    pid <- getSelfPid
-    say $ "Starting data provider <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting data provider."
     rs <- liftIO $ readDataset dataset
     let
       (grids, texts) = prepareGrids world presentation dataset

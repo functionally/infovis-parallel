@@ -12,7 +12,7 @@ module InfoVis.Parallel.Process.Track.Kafka (
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
 import Control.DeepSeq (NFData, ($!!))
-import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan, spawnLocal)
+import Control.Distributed.Process (Process, SendPort, liftIO, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
 import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
@@ -70,8 +70,7 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
 trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
 trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
-    pid <- getSelfPid
-    say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
+    frameDebug DebugInfo "Starting point-of-view tracker."
     let
       InputKafka Input{..} = input
       trackStatic (location, orientation) =
@@ -83,8 +82,7 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
 trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
 trackRelocation Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
-    pid <- getSelfPid
-    say $ "Starting relocation tracker <" ++ show pid ++ ">."
+    frameDebug DebugInfo "Starting relocation tracker."
     let
       InputKafka Input{..} = input
     trackVectorQuaternion RelocateSelection listener kafka relocationInput
@@ -93,8 +91,7 @@ trackRelocation Configuration{..} listener = -- FIXME: Support reset, terminatio
 trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
 trackSelection Configuration{..} listener =
   do
-    pid <- getSelfPid
-    say $ "Starting selection tracker <" ++ show pid ++ ">."
+    frameDebug DebugInfo "Starting selection tracker."
     locationVar <- liftIO $ newMVar zero
     let
       InputKafka Input{..} = input

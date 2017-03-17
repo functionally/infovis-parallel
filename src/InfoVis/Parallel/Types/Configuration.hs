@@ -15,6 +15,7 @@ module InfoVis.Parallel.Types.Configuration (
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
 import Data.Default (Default(..))
+import Data.Hashable (Hashable)
 import Data.Maybe (fromMaybe)
 import GHC.Generics (Generic)
 import Graphics.OpenGL.Util.Types (Display(..), Viewers(..))
@@ -34,7 +35,7 @@ data Configuration =
   , input        :: Input
   , advanced     :: Maybe AdvancedSettings
   }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
 
 
 data AdvancedSettings =
@@ -50,7 +51,7 @@ data AdvancedSettings =
   , delaySelection             :: Bool
   , maximumTrackingCompression :: Int
   }
-    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
 
 instance Default AdvancedSettings where
   def =

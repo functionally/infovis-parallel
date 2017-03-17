@@ -1,8 +1,8 @@
 advanced                     :
-  debugTiming                : true
+  debugTiming                : false
   debugMessages              : true
-  debugDisplayer             : true
-  debugOpenGL                : true
+  debugDisplayer             : false
+  debugOpenGL                : false
   synchronizeDisplays        : false
   useIdleLoop                : true
   delaySelection             : true

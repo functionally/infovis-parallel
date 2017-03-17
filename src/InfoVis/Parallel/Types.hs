@@ -12,6 +12,7 @@ module InfoVis.Parallel.Types (
 import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat)
 import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4(..))
@@ -28,4 +29,4 @@ data Coloring =
     NormalColoring
   | SelectColoring
   | HighlightColoring
-  deriving (Binary, Bounded, Enum, Eq, FromJSON, Generic, NFData, Ord, Read, Show, ToJSON)
+  deriving (Binary, Bounded, Enum, Eq, FromJSON, Generic, Hashable, NFData, Ord, Read, Show, ToJSON)

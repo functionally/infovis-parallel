@@ -15,7 +15,7 @@ module InfoVis.Parallel.Process (
 import Control.Concurrent (forkOS)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Control.DeepSeq (($!!))
-import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, send, sendChan, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Maybe (fromJust)
@@ -31,8 +31,7 @@ import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), 
 multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
 multiplexerProcess Configuration{..} control content displayerPids =
   do
-    pid <- getSelfPid
-    frameDebug Debug $ "Starting multiplexer <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting multiplexer."
     let
       Just AdvancedSettings{..} = advanced
       waitForGrid priors =
@@ -69,8 +68,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
 trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
   do
-    pid <- getSelfPid
-    frameDebug Debug $ "Starting trackers <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting trackers."
     void . spawnLocal $ trackPov        configuration multiplexer
     void . spawnLocal $ trackRelocation configuration selecterSend
     void . spawnLocal $ trackSelection  configuration selecterSend
@@ -80,8 +78,7 @@ displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
 displayerProcess (configuration, masterSend, displayIndex) =
   do
     initializeDebug . fromJust $ advanced configuration
-    pid <- getSelfPid
-    frameDebug Debug $ "Starting displayer <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting displayer."
     let
       Just AdvancedSettings{..} = advanced configuration
     message'@(AugmentDisplay gridsLinks) <- expect
@@ -92,7 +89,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
     forever
       $ do
         message <- expect
-        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag Ready
+        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag message
         liftIO . putMVar messageVar $!! message
         when (synchronizeDisplays && message /= RefreshDisplay)
           $ do 
@@ -113,7 +110,7 @@ masterMain configuration peers =
       sequence
         [
           do
-            frameDebug Debug $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
+            frameDebug DebugInfo $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
             spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
@@ -134,8 +131,7 @@ soloMain _ (_ : _) = error "Some peers specified."
 commonMain :: Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Process ()
 commonMain configuration masterReceive displayerPids =
   do
-    pid <- getSelfPid
-    frameDebug Debug $ "Starting master <" ++ show pid ++ ">."
+    frameDebug DebugInfo  "Starting master."
     (contentSend, contentReceive) <- newChan
     (controlSend, controlReceive) <- newChan
     void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids

@@ -10,7 +10,7 @@ module InfoVis.Parallel.Process.Track.VRPN (
 
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
 import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan)
+import Control.Distributed.Process (Process, SendPort, liftIO, sendChan)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
 import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
@@ -28,8 +28,7 @@ import Network.VRPN (ButtonCallback, PositionCallback, Device(Button, Tracker), 
 trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
 trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
-    pid <- getSelfPid
-    say $ "Starting point-of-view tracker <" ++ show pid ++ ">."
+    frameDebug DebugInfo "Starting point-of-view tracker."
     locationVar <- liftIO $ newIORef zero
     orientationVar <- liftIO $ newIORef zero
     updatedVar <- liftIO newEmptyMVar
@@ -62,16 +61,13 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
 
 trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
 trackRelocation _ _ = -- FIXME: Support reset, termination, and faults.
-  do
-    pid <- getSelfPid
-    say $ "Starting relocation tracker <" ++ show pid ++ ">."
+  frameDebug DebugInfo "Starting relocation tracker."
 
 
 trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
 trackSelection Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
-    pid <- getSelfPid
-    say $ "Starting selection tracker <" ++ show pid ++ ">."
+    frameDebug DebugInfo "Starting selection tracker."
     locationVar <- liftIO $ newIORef zero
     buttonVar <- liftIO $ newIORef Highlight
     updatedVar <- liftIO newEmptyMVar

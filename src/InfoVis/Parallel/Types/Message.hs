@@ -23,6 +23,7 @@ module InfoVis.Parallel.Types.Message (
 
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
+import Data.Hashable (Hashable(hash))
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -30,6 +31,7 @@ import InfoVis.Parallel.Types.Configuration (Configuration)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
+import Numeric (showHex)
 
 
 class SumTag a where
@@ -50,7 +52,7 @@ data CommonMessage =
     }
   | Synchronize
   | Terminate
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, Hashable, Ord, Show)
 
 
 data MasterMessage =
@@ -60,7 +62,7 @@ data MasterMessage =
       fault :: String
     }
   | Exit
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, Hashable, Ord, Show)
 
 instance SumTag MasterMessage where
   sumTag Ready   = '0'
@@ -68,9 +70,9 @@ instance SumTag MasterMessage where
   sumTag Exit    = '2'
 
 instance MessageTag MasterMessage where
-  messageTag Ready   = "Master\tReady"
-  messageTag Fault{} = "Master\tFault"
-  messageTag Exit    = "Master\tExit"
+  messageTag m@Ready   = "Master\tReady\t" ++ showHash m
+  messageTag m@Fault{} = "Master\tFault\t" ++ showHash m
+  messageTag m@Exit    = "Master\tExit\t"  ++ showHash m
 
 
 data SelecterMessage =
@@ -88,7 +90,7 @@ data SelecterMessage =
       relocationDisplacement :: V3 Double
     , relocationRotation     :: Quaternion Double
     }
-    deriving (Binary, Eq, Generic, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
 instance SumTag SelecterMessage where
   sumTag AugmentSelection{}   = '0'
@@ -96,9 +98,9 @@ instance SumTag SelecterMessage where
   sumTag RelocateSelection{}  = '2'
 
 instance MessageTag SelecterMessage where
-  messageTag AugmentSelection{}   = "Select\tAugment"
-  messageTag UpdateSelection{}    = "Select\tUpdate"
-  messageTag RelocateSelection{}  = "Select\tRelocate"
+  messageTag m@AugmentSelection{}   = "Select\tAugment\t"  -- ++ showHash m
+  messageTag m@UpdateSelection{}    = "Select\tUpdate\t"   -- ++ showHash m
+  messageTag m@RelocateSelection{}  = "Select\tRelocate\t" -- ++ showHash m
 
 
 type SelecterMessage' = Either CommonMessage SelecterMessage
@@ -131,7 +133,7 @@ data DisplayerMessage =
       selectorLocation :: Point V3 Double
     , selectionChanges :: [(Int, Coloring)]
     }
-    deriving (Binary, Eq, Generic, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
   sumTag RefreshDisplay   = '0'
@@ -141,11 +143,11 @@ instance SumTag DisplayerMessage where
   sumTag Select{}         = '4'
 
 instance MessageTag DisplayerMessage where
-  messageTag RefreshDisplay   = "Display\tRefresh"
-  messageTag AugmentDisplay{} = "Display\tAugment"
-  messageTag Track{}          = "Display\tTrack"
-  messageTag Relocate{}       = "Display\tRelocate"
-  messageTag Select{..}       = "Display\tSelect\t" ++ show (length selectionChanges)
+  messageTag m@RefreshDisplay   = "Display\tRefresh\t"  ++ showHash m
+  messageTag m@AugmentDisplay{} = "Display\tAugment\t"  -- ++ showHash m
+  messageTag m@Track{}          = "Display\tTrack\t"    -- ++ "--" -- ++ showHash m
+  messageTag m@Relocate{}       = "Display\tRelocate\t" -- ++ showHash m
+  messageTag m@Select{..}       = "Display\tSelect\t"   -- ++ showHash m ++ "\t"  ++ show (length selectionChanges)
 
 
 type DisplayerMessage' = Either CommonMessage DisplayerMessage
@@ -158,4 +160,8 @@ instance SumTag DisplayerMessage' where
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear
- deriving (Binary, Eq, Generic, NFData, Ord, Show)
+ deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+
+
+showHash :: Hashable a => a -> String
+showHash = (`showHex` "") . hash

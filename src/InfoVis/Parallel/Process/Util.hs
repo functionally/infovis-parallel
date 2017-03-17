@@ -12,9 +12,8 @@ module InfoVis.Parallel.Process.Util (
 ) where
 
 
-import Control.Distributed.Process (Process, ReceivePort, liftIO, receiveChan, receiveChanTimeout)
+import Control.Distributed.Process (Process, ReceivePort, liftIO, receiveChan, receiveChanTimeout, say)
 import Control.Distributed.Process.Serializable (Serializable)
-import Control.Monad ( when)
 import Data.Function (on)
 import Data.Function.MapReduce (groupReduceFlatten)
 import Data.IORef (IORef, newIORef, readIORef, writeIORef)
@@ -40,6 +39,7 @@ initialHalfFrame = readIORef initialHalfFrameVar
 
 
 currentHalfFrame :: IO Double
+{-# INLINE currentHalfFrame #-}
 currentHalfFrame =
   do
     f0 <- initialHalfFrame
@@ -48,16 +48,22 @@ currentHalfFrame =
 
 
 data Debug =
-    Debug
+    DebugInfo
   | DebugTiming
   | DebugMessage
   | DebugDisplay
-    deriving (Bounded, Enum, Eq, Ord, Read, Show)
+    deriving (Bounded, Enum, Eq, Ord)
+
+instance Show Debug where
+  show DebugInfo    = "Info"
+  show DebugTiming  = "Time"
+  show DebugMessage = "Mess"
+  show DebugDisplay = "Disp"
 
 
 debuggingVar  :: IORef [Debug]
 {-# NOINLINE debuggingVar #-}
-debuggingVar  = unsafePerformIO $ newIORef [Debug]
+debuggingVar  = unsafePerformIO $ newIORef [DebugInfo]
 
 
 initializeDebug :: AdvancedSettings -> Process ()
@@ -67,7 +73,7 @@ initializeDebug AdvancedSettings{..} =
     . fmap snd
     . filter fst
     $ [
-        (True          , Debug       )
+        (True          , DebugInfo   )
       , (debugTiming   , DebugTiming )
       , (debugMessages , DebugMessage)
       , (debugDisplayer, DebugDisplay)
@@ -75,17 +81,30 @@ initializeDebug AdvancedSettings{..} =
 
 
 frameDebug :: Debug -> String -> Process ()
-frameDebug = (liftIO .) . frameDebugIO
+{-# INLINE frameDebug #-}
+frameDebug debug message =
+  do
+    s <- liftIO $ frameDebugString debug message
+    maybe (return ()) say s
 
 
 frameDebugIO :: Debug -> String -> IO ()
+{-# INLINE frameDebugIO #-}
 frameDebugIO debug message =
   do
+    s <- frameDebugString debug message
+    maybe (return ()) putStrLn s
+
+
+frameDebugString :: Debug -> String -> IO (Maybe String)
+frameDebugString debug message =
+  do
     debuggings <- readIORef debuggingVar
-    when (debug `elem` debuggings)
-      $ do
-        df <- currentHalfFrame
-        putStrLn $ printf "%.2f" df ++ "\t" ++ show debug ++ "\t" ++ message
+    if debug `elem` debuggings
+      then do
+           df <- currentHalfFrame
+           return . Just $ printf "%.2f" df ++ "\t" ++ show debug ++ "\t" ++ message
+      else return Nothing
 
 
 collectChanMessages :: (MessageTag a, Serializable a, SumTag a) => Int -> ReceivePort a -> (a -> a -> Bool) -> Process [a]
