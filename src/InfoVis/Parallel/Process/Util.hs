@@ -2,7 +2,8 @@
 
 
 module InfoVis.Parallel.Process.Util (
-  initialHalfFrame
+  asHalfFrames
+, initialTime
 , currentHalfFrame
 , Debug(..)
 , initializeDebug
@@ -20,31 +21,31 @@ import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (groupBy, sortBy)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..))
 import InfoVis.Parallel.Types.Message (MessageTag(..), SumTag(..))
-import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
+import System.Clock (Clock(Monotonic), TimeSpec(..), getTime, toNanoSecs)
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Printf (printf)
 
 
-timeAsHalfFrame :: IO Double
-timeAsHalfFrame = (* 120) . (/ 1e9) . fromIntegral . toNanoSecs <$> getTime Monotonic
+asHalfFrames :: TimeSpec -> Double
+asHalfFrames = (* 120) . (/ 1e9) . fromIntegral . toNanoSecs
 
 
-initialHalfFrameVar :: IORef Double
-{-# NOINLINE initialHalfFrameVar #-}
-initialHalfFrameVar = unsafePerformIO $ newIORef =<< timeAsHalfFrame
+initialTimeVar :: IORef TimeSpec
+{-# NOINLINE initialTimeVar #-}
+initialTimeVar = unsafePerformIO $ newIORef =<< getTime Monotonic
 
 
-initialHalfFrame :: IO Double
-initialHalfFrame = readIORef initialHalfFrameVar
+initialTime :: IO TimeSpec
+initialTime = readIORef initialTimeVar
 
 
 currentHalfFrame :: IO Double
 {-# INLINE currentHalfFrame #-}
 currentHalfFrame =
   do
-    f0 <- initialHalfFrame
-    f1 <- timeAsHalfFrame
-    return $ f1 - f0
+    f0 <- initialTime
+    f1 <- getTime Monotonic
+    return . asHalfFrames $ f1 - f0
 
 
 data Debug =
@@ -68,16 +69,19 @@ debuggingVar  = unsafePerformIO $ newIORef [DebugInfo]
 
 initializeDebug :: AdvancedSettings -> Process ()
 initializeDebug AdvancedSettings{..} =
-  liftIO
-    . writeIORef debuggingVar
-    . fmap snd
-    . filter fst
-    $ [
-        (True          , DebugInfo   )
-      , (debugTiming   , DebugTiming )
-      , (debugMessages , DebugMessage)
-      , (debugDisplayer, DebugDisplay)
-      ]
+  do
+    t0 <- liftIO initialTime
+    say $ "0.000\tInfo\tInitial time offset = " ++ printf "%.3f" (asHalfFrames $ t0 - TimeSpec 5200000 0)
+    liftIO
+      . writeIORef debuggingVar
+      . fmap snd
+      . filter fst
+      $ [
+          (True          , DebugInfo   )
+        , (debugTiming   , DebugTiming )
+        , (debugMessages , DebugMessage)
+        , (debugDisplayer, DebugDisplay)
+        ]
 
 
 frameDebug :: Debug -> String -> Process ()
@@ -103,7 +107,7 @@ frameDebugString debug message =
     if debug `elem` debuggings
       then do
            df <- currentHalfFrame
-           return . Just $ printf "%.2f" df ++ "\t" ++ show debug ++ "\t" ++ message
+           return . Just $ printf "%.3f" df ++ "\t" ++ show debug ++ "\t" ++ message
       else return Nothing
 
 
