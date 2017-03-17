@@ -1,48 +1,94 @@
+{-# LANGUAGE RecordWildCards #-}
+
+
 module InfoVis.Parallel.Process.Util (
-  timestamp
+  initialHalfFrame
+, currentHalfFrame
+, Debug(..)
+, initializeDebug
+, frameDebug
+, frameDebugIO
 , collectChanMessages
 ) where
 
 
-import Control.Concurrent.MVar (MVar, isEmptyMVar, newEmptyMVar, putMVar, readMVar)
-import Control.Distributed.Process (Process, ReceivePort, receiveChan, receiveChanTimeout)
+import Control.Distributed.Process (Process, ReceivePort, liftIO, receiveChan, receiveChanTimeout)
 import Control.Distributed.Process.Serializable (Serializable)
+import Control.Monad ( when)
 import Data.Function (on)
 import Data.Function.MapReduce (groupReduceFlatten)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import Data.List (groupBy, sortBy)
-import InfoVis.Parallel.Types.Message (SumTag(..))
+import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..))
+import InfoVis.Parallel.Types.Message (MessageTag(..), SumTag(..))
 import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 import System.IO.Unsafe (unsafePerformIO)
+import Text.Printf (printf)
 
 
+timeAsHalfFrame :: IO Double
+timeAsHalfFrame = (* 120) . (/ 1e9) . fromIntegral . toNanoSecs <$> getTime Monotonic
 
-timestamp :: String -> IO Double
-timestamp s =
+
+initialHalfFrameVar :: IORef Double
+{-# NOINLINE initialHalfFrameVar #-}
+initialHalfFrameVar = unsafePerformIO $ newIORef =<< timeAsHalfFrame
+
+
+initialHalfFrame :: IO Double
+initialHalfFrame = readIORef initialHalfFrameVar
+
+
+currentHalfFrame :: IO Double
+currentHalfFrame =
   do
-    t0' <- t0
-    t <- toNanoSecs <$> getTime Monotonic
-    putStrLn $ show (fromIntegral (t - t0') * 120 / 1e9 :: Double) ++ "\t" ++ s
-    return $ fromIntegral t * 120 / 1e9
+    f0 <- initialHalfFrame
+    f1 <- timeAsHalfFrame
+    return $ f1 - f0
 
 
-t0Var :: MVar Integer
-{-# NOINLINE t0Var #-}
-t0Var = unsafePerformIO newEmptyMVar
+data Debug =
+    Debug
+  | DebugTiming
+  | DebugMessage
+  | DebugDisplay
+    deriving (Bounded, Enum, Eq, Ord, Read, Show)
 
 
-t0 :: IO Integer
-t0 =
+debuggingVar  :: IORef [Debug]
+{-# NOINLINE debuggingVar #-}
+debuggingVar  = unsafePerformIO $ newIORef [Debug]
+
+
+initializeDebug :: AdvancedSettings -> Process ()
+initializeDebug AdvancedSettings{..} =
+  liftIO
+    . writeIORef debuggingVar
+    . fmap snd
+    . filter fst
+    $ [
+        (True          , Debug       )
+      , (debugTiming   , DebugTiming )
+      , (debugMessages , DebugMessage)
+      , (debugDisplayer, DebugDisplay)
+      ]
+
+
+frameDebug :: Debug -> String -> Process ()
+frameDebug = (liftIO .) . frameDebugIO
+
+
+frameDebugIO :: Debug -> String -> IO ()
+frameDebugIO debug message =
   do
-    e <- isEmptyMVar t0Var
-    if e
-      then do
-                 t0' <- toNanoSecs <$> getTime Monotonic
-                 putMVar t0Var t0'
-                 return t0'
-      else readMVar t0Var
+    debuggings <- readIORef debuggingVar
+    when (debug `elem` debuggings)
+      $ do
+        df <- currentHalfFrame
+        putStrLn $ printf "%.2f" df ++ "\t" ++ show debug ++ "\t" ++ message
 
 
-collectChanMessages :: (Serializable a, SumTag a) => Int -> ReceivePort a -> (a -> a -> Bool) -> Process [a]
+collectChanMessages :: (MessageTag a, Serializable a, SumTag a) => Int -> ReceivePort a -> (a -> a -> Bool) -> Process [a]
 collectChanMessages count chan grouper =
   do
     let
@@ -52,9 +98,12 @@ collectChanMessages count chan grouper =
           maybeMessage <- receiveChanTimeout 1 chan
           case maybeMessage of
             Nothing      -> return []
-            Just message -> (message :) <$> collectMessages' (count' - 1)
+            Just message -> do
+                              frameDebug DebugMessage $ "CM RC 1\t" ++ messageTag message
+                              (message :) <$> collectMessages' (count' - 1)
       collapser = fmap head . groupBy (grouper `on` snd)
     message <- receiveChan chan
+    frameDebug DebugMessage $ "CM RC 2\t" ++ messageTag message
     messages <- collectMessages' count
     return
       . map snd

@@ -15,11 +15,11 @@ import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
-import InfoVis.Parallel.Process.Util (collectChanMessages)
+import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), inBox)
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag)
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
 import Linear.Affine (Point(..), (.+^), (.-^))
@@ -41,6 +41,7 @@ selecter configuration control listener =
     let
       Just AdvancedSettings{..} = advanced configuration
     AugmentSelection gridsLinks@(_, _, links) <- receiveChan control
+    frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag (AugmentSelection gridsLinks)
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
@@ -68,6 +69,7 @@ selecter configuration control listener =
                     (relocation, reorientation)
               void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
               void .liftIO $ swapMVar transientColoringsRef transientColorings'
+              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select selecterPosition' changes)
               sendChan listener $!! Select selecterPosition' changes
               t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
@@ -80,6 +82,7 @@ selecter configuration control listener =
             case message of
               RelocateSelection{..} -> do
                                          void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
+                                         frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Relocate relocationDisplacement relocationRotation)
                                          sendChan listener $!! Relocate relocationDisplacement relocationRotation
                                          refresh Highlight
               UpdateSelection{..}   -> do

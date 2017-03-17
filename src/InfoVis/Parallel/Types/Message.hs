@@ -1,11 +1,13 @@
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE RecordWildCards   #-}
 
 
 module InfoVis.Parallel.Types.Message (
   -- * Classes
   SumTag(..)
+, MessageTag(..)
 -- * Types
 , Augmentation
 , SelectionAction(..)
@@ -32,6 +34,10 @@ import Linear.V3 (V3)
 
 class SumTag a where
   sumTag :: a -> Char
+
+
+class MessageTag a where
+  messageTag :: a -> String
 
 
 type Augmentation = DisplayList (DisplayType, String) Int
@@ -61,6 +67,11 @@ instance SumTag MasterMessage where
   sumTag Fault{} = '1'
   sumTag Exit    = '2'
 
+instance MessageTag MasterMessage where
+  messageTag Ready   = "Master\tReady"
+  messageTag Fault{} = "Master\tFault"
+  messageTag Exit    = "Master\tExit"
+
 
 data SelecterMessage =
     AugmentSelection
@@ -83,6 +94,11 @@ instance SumTag SelecterMessage where
   sumTag AugmentSelection{}   = '0'
   sumTag UpdateSelection{}    = '1'
   sumTag RelocateSelection{}  = '2'
+
+instance MessageTag SelecterMessage where
+  messageTag AugmentSelection{}   = "Select\tAugment"
+  messageTag UpdateSelection{}    = "Select\tUpdate"
+  messageTag RelocateSelection{}  = "Select\tRelocate"
 
 
 type SelecterMessage' = Either CommonMessage SelecterMessage
@@ -123,6 +139,13 @@ instance SumTag DisplayerMessage where
   sumTag Track{}          = '2'
   sumTag Relocate{}       = '3'
   sumTag Select{}         = '4'
+
+instance MessageTag DisplayerMessage where
+  messageTag RefreshDisplay   = "Display\tRefresh"
+  messageTag AugmentDisplay{} = "Display\tAugment"
+  messageTag Track{}          = "Display\tTrack"
+  messageTag Relocate{}       = "Display\tRelocate"
+  messageTag Select{..}       = "Display\tSelect\t" ++ show (length selectionChanges)
 
 
 type DisplayerMessage' = Either CommonMessage DisplayerMessage

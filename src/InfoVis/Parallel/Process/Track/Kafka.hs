@@ -15,10 +15,11 @@ import Control.DeepSeq (NFData, ($!!))
 import Control.Distributed.Process (Process, SendPort, getSelfPid, liftIO, say, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
+import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.Util (fromEulerd)
@@ -37,7 +38,7 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: (NFData a, Serializable a) => (V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => (V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     locationVar <- liftIO $ newMVar zero
@@ -50,6 +51,7 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
               location = V3 x y z
             void . liftIO $ swapMVar locationVar location
             orientation <- liftIO $ readMVar orientationVar
+            frameDebug DebugMessage $ "TV SC 1\t" ++ messageTag (messager location orientation)
             sendChan listener $!! messager location orientation
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
@@ -58,6 +60,7 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
             let
               orientation = Quaternion w $ V3 x y z
             void . liftIO $ swapMVar orientationVar orientation
+            frameDebug DebugMessage $ "TV SC 2\t" ++ messageTag (messager location orientation)
             sendChan listener $!! messager location orientation
       processInput _ _ =
         return ()
@@ -101,6 +104,7 @@ trackSelection Configuration{..} listener =
             let
               location = P $ V3 x y z
             void . liftIO $ swapMVar locationVar location
+            frameDebug DebugMessage $ "TS SC 1\t" ++ messageTag (UpdateSelection location Highlight)
             sendChan listener $!! UpdateSelection location Highlight
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
@@ -109,6 +113,7 @@ trackSelection Configuration{..} listener =
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar
+                                    frameDebug DebugMessage $ "TS SC 2\t" ++ messageTag (UpdateSelection location selectionAction)
                                     sendChan listener $!! UpdateSelection location selectionAction
       processInput _ _ =
         return ()

@@ -15,28 +15,30 @@ module InfoVis.Parallel.Process (
 import Control.Concurrent (forkOS)
 import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
 import Control.DeepSeq (($!!))
-import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, say, send, sendChan, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, getSelfPid, liftIO, newChan, receiveChan, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
+import Data.Maybe (fromJust)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (collectChanMessages)
+import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..))
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag)
 
 
 multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
 multiplexerProcess Configuration{..} control content displayerPids =
   do
     pid <- getSelfPid
-    say $ "Starting multiplexer <" ++ show pid ++ ">."
+    frameDebug Debug $ "Starting multiplexer <" ++ show pid ++ ">."
     let
       Just AdvancedSettings{..} = advanced
       waitForGrid priors =
         do
           message <- receiveChan content
+          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag RefreshDisplay
           case message of
             AugmentDisplay{..} -> return $ message : reverse priors
             _                  -> waitForGrid $ message : priors
@@ -47,15 +49,18 @@ multiplexerProcess Configuration{..} control content displayerPids =
         sequence_
           [
             do
+              frameDebug DebugMessage $ "MX SE 1\t" ++ messageTag message
               mapM_ (`send` message) displayerPids
               when synchronizeDisplays
                 $ do
                    void $ receiveChan control
+                   frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag RefreshDisplay
                    mapM_ (`send` RefreshDisplay) displayerPids
           |
             message <- messages
           ]
     prior : priors <- waitForGrid []
+    frameDebug DebugMessage $ "MX SE 3\t" ++ messageTag prior
     mapM_ (`send` prior) displayerPids
     sendSequence priors
     forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
@@ -65,7 +70,7 @@ trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort Displa
 trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
   do
     pid <- getSelfPid
-    say $ "Starting trackers <" ++ show pid ++ ">."
+    frameDebug Debug $ "Starting trackers <" ++ show pid ++ ">."
     void . spawnLocal $ trackPov        configuration multiplexer
     void . spawnLocal $ trackRelocation configuration selecterSend
     void . spawnLocal $ trackSelection  configuration selecterSend
@@ -74,21 +79,25 @@ trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
 displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
 displayerProcess (configuration, masterSend, displayIndex) =
   do
+    initializeDebug . fromJust $ advanced configuration
     pid <- getSelfPid
-    say $ "Starting displayer <" ++ show pid ++ ">."
+    frameDebug Debug $ "Starting displayer <" ++ show pid ++ ">."
     let
       Just AdvancedSettings{..} = advanced configuration
-    AugmentDisplay gridsLinks <- expect
+    message'@(AugmentDisplay gridsLinks) <- expect
+    frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag message'
     readyVar <- liftIO newEmptyMVar
     messageVar <- liftIO newEmptyMVar
     void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar readyVar
     forever
       $ do
         message <- expect
+        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag Ready
         liftIO . putMVar messageVar $!! message
         when (synchronizeDisplays && message /= RefreshDisplay)
           $ do 
             liftIO $ takeMVar readyVar
+            frameDebug DebugMessage $ "DI SC 3\t" ++ messageTag Ready
             masterSend `sendChan` Ready
 
 
@@ -98,12 +107,13 @@ remotable ['displayerProcess]
 masterMain :: Configuration -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
+    initializeDebug . fromJust $ advanced configuration
     (masterSend, masterReceive) <- newChan
     displayerPids <-
       sequence
         [
           do
-            say $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
+            frameDebug Debug $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
             spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
@@ -114,6 +124,7 @@ masterMain configuration peers =
 soloMain :: Configuration -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
+    initializeDebug . fromJust $ advanced configuration
     (masterSend, masterReceive) <- newChan
     displayerPids <- spawnLocal (displayerProcess (configuration, masterSend, 0))
     commonMain configuration masterReceive [displayerPids]
@@ -124,7 +135,7 @@ commonMain :: Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Proce
 commonMain configuration masterReceive displayerPids =
   do
     pid <- getSelfPid
-    say $ "Starting master <" ++ show pid ++ ">."
+    frameDebug Debug $ "Starting master <" ++ show pid ++ ">."
     (contentSend, contentReceive) <- newChan
     (controlSend, controlReceive) <- newChan
     void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids
@@ -136,8 +147,10 @@ commonMain configuration masterReceive displayerPids =
       waitForAllReady counter =
         do
           Ready <- receiveChan masterReceive
+          frameDebug DebugMessage $ "CM RC 1\t" ++ messageTag Ready
           if counter >= length displayerPids
             then do
+                   frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag Ready
                    controlSend `sendChan` Synchronize
                    waitForAllReady 1
             else waitForAllReady $ counter + 1
