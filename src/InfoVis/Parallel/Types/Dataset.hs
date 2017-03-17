@@ -13,7 +13,6 @@ module InfoVis.Parallel.Types.Dataset (
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 
 
@@ -23,7 +22,7 @@ data Dataset =
     datasetIdentifier :: String
   , variables         :: [Variable]
   }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Variable =
@@ -36,7 +35,7 @@ data Variable =
   , upperBound    :: Maybe Double
   , jitter        :: Maybe Double -- FIXME: Needs implementation.
   }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type VariableAlias = String

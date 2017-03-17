@@ -100,7 +100,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
             liftIO $ takeMVar readyVar
             mid3 <- nextMessageIdentifier
             frameDebug DebugMessage $ "DI SC 3\t" ++ messageTag (Ready mid3)
-            masterSend `sendChan` (Ready mid3)
+            masterSend `sendChan` Ready mid3
 
 
 remotable ['displayerProcess]

@@ -27,7 +27,6 @@ import Control.Concurrent.MVar (MVar, modifyMVar, newMVar)
 import Control.Distributed.Process (Process, liftIO)
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -56,7 +55,7 @@ data CommonMessage =
     }
   | Synchronize
   | Terminate
-    deriving (Binary, Eq, Generic, Hashable, Ord, Show)
+    deriving (Binary, Eq, Generic, Ord, Show)
 
 
 data MasterMessage =
@@ -73,7 +72,7 @@ data MasterMessage =
     {
       masterMessageIdentifier :: Int
     }
-    deriving (Binary, Eq, Generic, Hashable, Ord, Show)
+    deriving (Binary, Eq, Generic, Ord, Show)
 
 instance SumTag MasterMessage where
   sumTag Ready{} = '0'
@@ -104,7 +103,7 @@ data SelecterMessage =
     , relocationDisplacement    :: V3 Double
     , relocationRotation        :: Quaternion Double
     }
-    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag SelecterMessage where
   sumTag AugmentSelection{}   = '0'
@@ -154,7 +153,7 @@ data DisplayerMessage =
     , selectorLocation           :: Point V3 Double
     , selectionChanges           :: [(Int, Coloring)]
     }
-    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
   sumTag RefreshDisplay{} = '0'
@@ -181,7 +180,7 @@ instance SumTag DisplayerMessage' where
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear
- deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+ deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 
 counterVar :: MVar Int

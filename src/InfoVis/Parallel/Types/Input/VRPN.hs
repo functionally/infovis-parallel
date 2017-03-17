@@ -9,7 +9,6 @@ module InfoVis.Parallel.Types.Input.VRPN (
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 
 
@@ -25,5 +24,5 @@ data InputVRPN =
   , deselectButton :: Int
   , clearButton    :: Int
   }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 

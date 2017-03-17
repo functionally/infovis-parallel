@@ -18,7 +18,6 @@ module InfoVis.Parallel.Rendering.Types (
 
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat)
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
@@ -47,7 +46,7 @@ data DisplayItem a b =
   , itemPrimitive  :: PrimitiveMode
   , itemVertices   :: [b]
   }
-    deriving (Eq, Generic, Hashable, Ord, Show)
+    deriving (Eq, Generic, Ord, Show)
 
 instance Functor (DisplayItem a) where
   fmap f x@DisplayItem{..} = x {itemVertices = f <$> itemVertices}
@@ -62,13 +61,13 @@ data DisplayList a b =
   , listPrimitive         :: PrimitiveMode
   , listVertices          :: [Primitive3D]
   }
-    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 
 data DisplayType =
     GridType
   | LinkType
-    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 
 data DisplayText a b =
@@ -81,7 +80,7 @@ data DisplayText a b =
   , textSize    :: Double
   , textColor   :: Color
   }
-    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance Functor (DisplayText a) where
   fmap f x@DisplayText{..} = x {textOrigin = f textOrigin, textWidth = f textWidth, textHeight = f textHeight}

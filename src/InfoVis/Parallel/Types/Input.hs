@@ -10,7 +10,6 @@ module InfoVis.Parallel.Types.Input (
 
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 
 #ifdef INFOVIS_KAFKA
@@ -30,4 +29,4 @@ data Input =
 #ifdef INFOVIS_VRPN
   | InputVRPN InputVRPN
 #endif
-  deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+  deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

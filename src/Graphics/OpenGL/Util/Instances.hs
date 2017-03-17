@@ -15,7 +15,6 @@ import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON, ToJSON)
 import Data.Binary (Binary(..), getWord8, putWord8)
 import Data.Data (Data)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
 import Graphics.Rendering.OpenGL.GL.Tensor (Vector3(..), Vertex3(..))
@@ -27,8 +26,6 @@ deriving instance Data a => Data (Vector3 a)
 deriving instance Generic a => Generic (Vector3 a)
 
 deriving instance (Binary a, Generic a) => Binary (Vector3 a)
-
-deriving instance (Hashable a, Generic a) => Hashable (Vector3 a)
 
 deriving instance (FromJSON a, Generic a) => FromJSON (Vector3 a)
 
@@ -43,8 +40,6 @@ deriving instance Generic a => Generic (Vertex3 a)
 
 deriving instance (Binary a, Generic a) => Binary (Vertex3 a)
 
-deriving instance (Hashable a, Generic a) => Hashable (Vertex3 a)
-
 deriving instance (FromJSON a, Generic a) => FromJSON (Vertex3 a)
 
 deriving instance (ToJSON a, Generic a) => ToJSON (Vertex3 a)
@@ -55,8 +50,6 @@ deriving instance (NFData a, Generic a) => NFData (Vertex3 a)
 instance Binary a => Binary (Color4 a)
 
 deriving instance Generic (Color4 a)
-
-deriving instance Hashable a => Hashable (Color4 a)
 
 instance FromJSON a => FromJSON (Color4 a)
 
@@ -96,7 +89,5 @@ instance Binary PrimitiveMode where
 
 
 deriving instance Generic PrimitiveMode
-
-deriving instance Hashable PrimitiveMode
 
 deriving instance NFData PrimitiveMode

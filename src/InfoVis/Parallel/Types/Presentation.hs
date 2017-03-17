@@ -22,7 +22,6 @@ module InfoVis.Parallel.Types.Presentation (
 import Control.DeepSeq (NFData)
 import Data.Aeson.Types (FromJSON(..), ToJSON(..))
 import Data.Binary (Binary)
-import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Graphics.OpenGL.Util.Instances ()
 import InfoVis.Parallel.Types (Color, Location)
@@ -44,7 +43,7 @@ data Axis =
   {
     axisVariable :: VariableAlias
   }
-  deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+  deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type Axes1D = V1 Axis
@@ -86,7 +85,7 @@ data Grid =
     , labelColor          :: Color
     , labelSize           :: Double
     }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 type GriddedLocation = (GridAlias, Location)
@@ -111,7 +110,7 @@ data Extent =
     , cornerY :: Location
     , cornerZ :: Location
     }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Container = -- FIXME: The dimensionality between extents and grids is not enforced to be consistent.  Can this be easily done at the type level?
@@ -130,7 +129,7 @@ data Container = -- FIXME: The dimensionality between extents and grids is not e
       extents    :: [Extent]
     , containeds :: [Container]
     }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
     
 
 type LinkAlias = String
@@ -149,7 +148,7 @@ data Link =
     , linkedGrids     :: [GridAlias]
     , characteristics :: [Characteristic]
     }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
 data Characteristic =
@@ -159,7 +158,7 @@ data Characteristic =
     , selectColor     :: Color
     , highlightColor  :: Color
     }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, NFData, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, NFData, Ord, Read, Show, ToJSON)
 
 
 data Presentation =
@@ -171,4 +170,4 @@ data Presentation =
   , selectorColor :: Color               -- FIXME: Needs implementation.
   , selectorSize  :: Double              -- FIXME: Needs implementation.
   }
-    deriving (Binary, Eq, FromJSON, Generic, Hashable, Ord, Read, Show, ToJSON)
+    deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
