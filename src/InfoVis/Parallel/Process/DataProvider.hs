@@ -15,7 +15,7 @@ import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
 
 
 type GridsLinks = ([DisplayText String Location], [DisplayList (DisplayType, String) Int], [DisplayList (DisplayType, String) Int])
@@ -30,7 +30,9 @@ provider Configuration{..} selecterSend multiplexer =
       (grids, texts) = prepareGrids world presentation dataset
       links = prepareLinks world presentation dataset rs
       gridsLinks = (texts, grids, links)
-    frameDebug DebugMessage $ "DP SC 1\t" ++ messageTag (AugmentSelection gridsLinks)
-    sendChan selecterSend $!! AugmentSelection gridsLinks
-    frameDebug DebugMessage $ "DP SC 2\t" ++ messageTag (AugmentDisplay gridsLinks)
-    sendChan multiplexer $!! AugmentDisplay gridsLinks
+    mid1 <- nextMessageIdentifier
+    frameDebug DebugMessage $ "DP SC 1\t" ++ messageTag (AugmentSelection mid1 gridsLinks)
+    sendChan selecterSend $!! AugmentSelection mid1 gridsLinks
+    mid2 <- nextMessageIdentifier
+    frameDebug DebugMessage $ "DP SC 2\t" ++ messageTag (AugmentDisplay mid2 gridsLinks)
+    sendChan multiplexer $!! AugmentDisplay mid2 gridsLinks

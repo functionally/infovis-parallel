@@ -24,7 +24,7 @@ import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), nextMessageIdentifier)
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..), WorldExtent(..))
 import Linear.Affine (Point(..), (.-.))
@@ -72,36 +72,36 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
         do
           message <- tryTakeMVar messageVar
           case message of
-            Just Track{..}      -> do
-                                     writeIORef povVarNext (eyePosition, eyeOrientation)
-                                     if synchronizeDisplays
-                                       then putMVar readyVar ()
-                                       else do
-                                              useNext
-                                              when useIdleLoop
-                                                idle
-            Just Relocate{..}   -> do
-                                     writeIORef relocationVarNext (centerDisplacement, centerRotation)
-                                     if synchronizeDisplays
-                                       then putMVar readyVar ()
-                                       else do
-                                              useNext
-                                              when useIdleLoop
-                                                idle
-            Just Select{..}     -> do
-                                     writeIORef selectionVarNext selectorLocation
-                                     mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                     if synchronizeDisplays
-                                       then putMVar readyVar ()
-                                       else do
-                                              useNext
-                                              when useIdleLoop
-                                                idle
-            Just RefreshDisplay -> do
-                                     useNext
-                                     when (synchronizeDisplays && useIdleLoop)
-                                       idle
-            _                   -> return ()
+            Just Track{..}        -> do
+                                       writeIORef povVarNext (eyePosition, eyeOrientation)
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else do
+                                                useNext
+                                                when useIdleLoop
+                                                  idle
+            Just Relocate{..}     -> do
+                                       writeIORef relocationVarNext (centerDisplacement, centerRotation)
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else do
+                                                useNext
+                                                when useIdleLoop
+                                                  idle
+            Just Select{..}       -> do
+                                       writeIORef selectionVarNext selectorLocation
+                                       mapM_ (`updateBuffer` selectionChanges) linkBuffers
+                                       if synchronizeDisplays
+                                         then putMVar readyVar ()
+                                         else do
+                                                useNext
+                                                when useIdleLoop
+                                                  idle
+            Just RefreshDisplay{} -> do
+                                       useNext
+                                       when (synchronizeDisplays && useIdleLoop)
+                                         idle
+            _                     -> return ()
     idleCallback $= Just (if useIdleLoop then messageLoop else idle)
     h <-
      catch (fontHeight Roman)

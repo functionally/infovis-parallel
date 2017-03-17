@@ -25,7 +25,7 @@ import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
 import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag)
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
 
 
 multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
@@ -37,7 +37,8 @@ multiplexerProcess Configuration{..} control content displayerPids =
       waitForGrid priors =
         do
           message <- receiveChan content
-          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag RefreshDisplay
+          mid1 <- nextMessageIdentifier
+          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag (RefreshDisplay mid1)
           case message of
             AugmentDisplay{..} -> return $ message : reverse priors
             _                  -> waitForGrid $ message : priors
@@ -48,18 +49,19 @@ multiplexerProcess Configuration{..} control content displayerPids =
         sequence_
           [
             do
-              frameDebug DebugMessage $ "MX SE 1\t" ++ messageTag message
+              frameDebug DebugMessage $ "MX SE 2\t" ++ messageTag message
               mapM_ (`send` message) displayerPids
               when synchronizeDisplays
                 $ do
                    void $ receiveChan control
-                   frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag RefreshDisplay
-                   mapM_ (`send` RefreshDisplay) displayerPids
+                   mid3 <- nextMessageIdentifier
+                   frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag (RefreshDisplay mid3)
+                   mapM_ (`send` RefreshDisplay mid3) displayerPids
           |
             message <- messages
           ]
     prior : priors <- waitForGrid []
-    frameDebug DebugMessage $ "MX SE 3\t" ++ messageTag prior
+    frameDebug DebugMessage $ "MX SE 4\t" ++ messageTag prior
     mapM_ (`send` prior) displayerPids
     sendSequence priors
     forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
@@ -81,8 +83,10 @@ displayerProcess (configuration, masterSend, displayIndex) =
     frameDebug DebugInfo  "Starting displayer."
     let
       Just AdvancedSettings{..} = advanced configuration
-    message'@(AugmentDisplay gridsLinks) <- expect
-    frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag message'
+      isNotRefresh RefreshDisplay{} = False
+      isNotRefresh _                = True
+    AugmentDisplay mid1 gridsLinks <- expect
+    frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag (AugmentDisplay mid1 gridsLinks)
     readyVar <- liftIO newEmptyMVar
     messageVar <- liftIO newEmptyMVar
     void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar readyVar
@@ -91,11 +95,12 @@ displayerProcess (configuration, masterSend, displayIndex) =
         message <- expect
         frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag message
         liftIO . putMVar messageVar $!! message
-        when (synchronizeDisplays && message /= RefreshDisplay)
+        when (synchronizeDisplays && isNotRefresh message)
           $ do 
             liftIO $ takeMVar readyVar
-            frameDebug DebugMessage $ "DI SC 3\t" ++ messageTag Ready
-            masterSend `sendChan` Ready
+            mid3 <- nextMessageIdentifier
+            frameDebug DebugMessage $ "DI SC 3\t" ++ messageTag (Ready mid3)
+            masterSend `sendChan` (Ready mid3)
 
 
 remotable ['displayerProcess]
@@ -142,11 +147,12 @@ commonMain configuration masterReceive displayerPids =
     let
       waitForAllReady counter =
         do
-          Ready <- receiveChan masterReceive
-          frameDebug DebugMessage $ "CM RC 1\t" ++ messageTag Ready
+          Ready mid1 <- receiveChan masterReceive
+          frameDebug DebugMessage $ "CM RC 1\t" ++ messageTag (Ready mid1)
           if counter >= length displayerPids
             then do
-                   frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag Ready
+                   mid2 <- nextMessageIdentifier
+                   frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag (Ready mid2)
                    controlSend `sendChan` Synchronize
                    waitForAllReady 1
             else waitForAllReady $ counter + 1

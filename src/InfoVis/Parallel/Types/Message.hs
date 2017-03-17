@@ -18,12 +18,16 @@ module InfoVis.Parallel.Types.Message (
 , SelecterMessage'
 , DisplayerMessage(..)
 , DisplayerMessage'
+, nextMessageIdentifier
 ) where
 
 
+import Control.Arrow ((&&&))
+import Control.Concurrent.MVar (MVar, modifyMVar, newMVar)
+import Control.Distributed.Process (Process, liftIO)
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
-import Data.Hashable (Hashable(hash))
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -31,7 +35,7 @@ import InfoVis.Parallel.Types.Configuration (Configuration)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
-import Numeric (showHex)
+import System.IO.Unsafe (unsafePerformIO)
 
 
 class SumTag a where
@@ -57,38 +61,48 @@ data CommonMessage =
 
 data MasterMessage =
     Ready
+    {
+      masterMessageIdentifier :: Int
+    }
   | Fault
     {
-      fault :: String
+      masterMessageIdentifier :: Int
+    , fault                   :: String
     }
   | Exit
+    {
+      masterMessageIdentifier :: Int
+    }
     deriving (Binary, Eq, Generic, Hashable, Ord, Show)
 
 instance SumTag MasterMessage where
-  sumTag Ready   = '0'
+  sumTag Ready{} = '0'
   sumTag Fault{} = '1'
-  sumTag Exit    = '2'
+  sumTag Exit{}  = '2'
 
 instance MessageTag MasterMessage where
-  messageTag m@Ready   = "Master\tReady\t" ++ showHash m
-  messageTag m@Fault{} = "Master\tFault\t" ++ showHash m
-  messageTag m@Exit    = "Master\tExit\t"  ++ showHash m
+  messageTag Ready{..} = "Master\tReady\t" ++ show masterMessageIdentifier
+  messageTag Fault{..} = "Master\tFault\t" ++ show masterMessageIdentifier
+  messageTag Exit{..}  = "Master\tExit\t"  ++ show masterMessageIdentifier
 
 
 data SelecterMessage =
     AugmentSelection
     {
-      selecterAugmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
+      selecterMessageIdentifier :: Int
+    , selecterAugmentations     :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
   | UpdateSelection
     {
-      selecterPosition :: Point V3 Double
-    , selecterState    :: SelectionAction
+      selecterMessageIdentifier :: Int
+    , selecterPosition          :: Point V3 Double
+    , selecterState             :: SelectionAction
     }
   | RelocateSelection
     {
-      relocationDisplacement :: V3 Double
-    , relocationRotation     :: Quaternion Double
+      selecterMessageIdentifier :: Int
+    , relocationDisplacement    :: V3 Double
+    , relocationRotation        :: Quaternion Double
     }
     deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
@@ -98,9 +112,9 @@ instance SumTag SelecterMessage where
   sumTag RelocateSelection{}  = '2'
 
 instance MessageTag SelecterMessage where
-  messageTag m@AugmentSelection{}   = "Select\tAugment\t"  -- ++ showHash m
-  messageTag m@UpdateSelection{}    = "Select\tUpdate\t"   -- ++ showHash m
-  messageTag m@RelocateSelection{}  = "Select\tRelocate\t" -- ++ showHash m
+  messageTag AugmentSelection{..}   = "Select\tAugment\t"  ++ show selecterMessageIdentifier
+  messageTag UpdateSelection{..}    = "Select\tUpdate\t"   ++ show selecterMessageIdentifier
+  messageTag RelocateSelection{..}  = "Select\tRelocate\t" ++ show selecterMessageIdentifier
 
 
 type SelecterMessage' = Either CommonMessage SelecterMessage
@@ -114,40 +128,47 @@ instance SumTag SelecterMessage' where
 
 data DisplayerMessage =
     RefreshDisplay
+    {
+      displayerMessageIdentifier :: Int
+    }
   | AugmentDisplay
     {
-      augmentations :: ([DisplayText String Location], [Augmentation], [Augmentation])
+      displayerMessageIdentifier :: Int
+    , augmentations              :: ([DisplayText String Location], [Augmentation], [Augmentation])
     }
   | Track
     {
-      eyePosition    :: Point V3 Double
-    , eyeOrientation :: Quaternion Double
+      displayerMessageIdentifier :: Int
+    , eyePosition                :: Point V3 Double
+    , eyeOrientation             :: Quaternion Double
     }
   | Relocate
     {
-      centerDisplacement :: V3 Double
-    , centerRotation     :: Quaternion Double
+      displayerMessageIdentifier :: Int
+    , centerDisplacement         :: V3 Double
+    , centerRotation             :: Quaternion Double
     }
   | Select
     {
-      selectorLocation :: Point V3 Double
-    , selectionChanges :: [(Int, Coloring)]
+      displayerMessageIdentifier :: Int
+    , selectorLocation           :: Point V3 Double
+    , selectionChanges           :: [(Int, Coloring)]
     }
     deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
-  sumTag RefreshDisplay   = '0'
+  sumTag RefreshDisplay{} = '0'
   sumTag AugmentDisplay{} = '1'
   sumTag Track{}          = '2'
   sumTag Relocate{}       = '3'
   sumTag Select{}         = '4'
 
 instance MessageTag DisplayerMessage where
-  messageTag m@RefreshDisplay   = "Display\tRefresh\t"  ++ showHash m
-  messageTag m@AugmentDisplay{} = "Display\tAugment\t"  -- ++ showHash m
-  messageTag m@Track{}          = "Display\tTrack\t"    -- ++ "--" -- ++ showHash m
-  messageTag m@Relocate{}       = "Display\tRelocate\t" -- ++ showHash m
-  messageTag m@Select{..}       = "Display\tSelect\t"   -- ++ showHash m ++ "\t"  ++ show (length selectionChanges)
+  messageTag RefreshDisplay{..} = "Display\tRefresh\t"  ++ show displayerMessageIdentifier
+  messageTag AugmentDisplay{..} = "Display\tAugment\t"  ++ show displayerMessageIdentifier
+  messageTag Track{..}          = "Display\tTrack\t"    ++ show displayerMessageIdentifier
+  messageTag Relocate{..}       = "Display\tRelocate\t" ++ show displayerMessageIdentifier
+  messageTag Select{..}         = "Display\tSelect\t"   ++ show displayerMessageIdentifier
 
 
 type DisplayerMessage' = Either CommonMessage DisplayerMessage
@@ -163,5 +184,10 @@ data SelectionAction = Highlight | Selection | Deselection | Clear
  deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
 
-showHash :: Hashable a => a -> String
-showHash = (`showHex` "") . hash
+counterVar :: MVar Int
+{-# NOINLINE counterVar #-}
+counterVar = unsafePerformIO $ newMVar 0
+
+
+nextMessageIdentifier :: Process Int
+nextMessageIdentifier = liftIO . modifyMVar counterVar $ return . (id &&& id) . (+1)
