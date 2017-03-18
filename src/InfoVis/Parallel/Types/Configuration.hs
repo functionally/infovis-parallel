@@ -42,7 +42,7 @@ data AdvancedSettings =
   {
     debugTiming                :: Bool
   , debugMessages              :: Bool
-  , debugDisplayer             :: Bool
+  , debugDisplay               :: Bool
   , debugOpenGL                :: Bool
   , useSwapGroup               :: Maybe Int
   , synchronizeDisplays        :: Bool
@@ -58,7 +58,7 @@ instance Default AdvancedSettings where
     {
       debugTiming                = False
     , debugMessages              = False
-    , debugDisplayer             = False
+    , debugDisplay               = False
     , debugOpenGL                = False
     , useSwapGroup               = Just 1
     , synchronizeDisplays        = True

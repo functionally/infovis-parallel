@@ -1,7 +1,7 @@
 advanced                     :
   debugTiming                : false
   debugMessages              : true
-  debugDisplayer             : false
+  debugDisplay               : false
   debugOpenGL                : false
   useSwapGroup               : 1
   synchronizeDisplays        : false

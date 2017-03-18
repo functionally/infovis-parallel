@@ -83,10 +83,10 @@ initializeDebug AdvancedSettings{..} =
       . fmap snd
       . filter fst
       $ [
-          (True          , DebugInfo   )
-        , (debugTiming   , DebugTiming )
-        , (debugMessages , DebugMessage)
-        , (debugDisplayer, DebugDisplay)
+          (True         , DebugInfo   )
+        , (debugTiming  , DebugTiming )
+        , (debugMessages, DebugMessage)
+        , (debugDisplay , DebugDisplay)
         ]
 
 

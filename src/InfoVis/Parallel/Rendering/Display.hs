@@ -21,6 +21,7 @@ import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
 import InfoVis.Parallel.Process.DataProvider (GridsLinks)
+import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrameIO, frameDebugIO)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
@@ -33,6 +34,7 @@ import Linear.Util (rotationFromPlane)
 import Linear.Util.Graphics (toRotation, toVector3)
 import Linear.V3 (V3(..))
 import Linear.Vector (zero)
+import Text.Printf (printf)
 
 #ifdef INFOVIS_SWAP_GROUP
 import Graphics.OpenGL.Functions (joinSwapGroup)
@@ -73,6 +75,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
           message <- tryTakeMVar messageVar
           case message of
             Just Track{..}        -> do
+                                       f0 <- currentHalfFrameIO
                                        writeIORef povVarNext (eyePosition, eyeOrientation)
                                        if synchronizeDisplays
                                          then putMVar readyVar ()
@@ -80,7 +83,10 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
                                                 useNext
                                                 when useIdleLoop
                                                   idle
+                                       f1 <- currentHalfFrameIO
+                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tTRACK\t" ++ printf "%.3f" (f1 - f0)
             Just Relocate{..}     -> do
+                                       f0 <- currentHalfFrameIO
                                        writeIORef relocationVarNext (centerDisplacement, centerRotation)
                                        if synchronizeDisplays
                                          then putMVar readyVar ()
@@ -88,7 +94,10 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
                                                 useNext
                                                 when useIdleLoop
                                                   idle
+                                       f1 <- currentHalfFrameIO
+                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tRELOC\t" ++ printf "%.3f" (f1 - f0)
             Just Select{..}       -> do
+                                       f0 <- currentHalfFrameIO
                                        writeIORef selectionVarNext selectorLocation
                                        mapM_ (`updateBuffer` selectionChanges) linkBuffers
                                        if synchronizeDisplays
@@ -97,10 +106,15 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
                                                 useNext
                                                 when useIdleLoop
                                                   idle
+                                       f1 <- currentHalfFrameIO
+                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tSELECT\t" ++ printf "%.3f" (f1 - f0)
             Just RefreshDisplay{} -> do
+                                       f0 <- currentHalfFrameIO
                                        useNext
                                        when (synchronizeDisplays && useIdleLoop)
                                          idle
+                                       f1 <- currentHalfFrameIO
+                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tREFRESH\t" ++ printf "%.3f" (f1 - f0)
             _                     -> return ()
     idleCallback $= Just (if useIdleLoop then messageLoop else idle)
     h <-
@@ -126,6 +140,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
     dlpViewerDisplay dlp viewers displayIndex (readIORef povVar)
       $ do
         unless useIdleLoop messageLoop
+        f0 <- currentHalfFrameIO
         preservingMatrix
           $ do
             P location <- readIORef selectionVar  -- FIXME
@@ -139,6 +154,8 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
             mapM_ drawBuffer linkBuffers
             mapM_ drawBuffer gridBuffers
             drawText
+        f1 <- currentHalfFrameIO
+        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\t" ++ printf "%.3f" (f1 - f0)
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif

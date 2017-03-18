@@ -30,11 +30,10 @@ import Linear.Quaternion (Quaternion(..), rotate)
 import Linear.V3 (V3(..))
 import Linear.Util.Graphics (fromVertex3)
 import Linear.Vector (zero)
-import System.Clock (Clock(Monotonic), getTime, toNanoSecs)
 import Text.Printf (printf)
 
-import qualified Data.HashMap.Strict as H -- FIXME
-import qualified Data.HashSet as S -- FIXME
+import qualified Data.HashMap.Strict as H (HashMap, fromListWith, lookupDefault, map)
+import qualified Data.HashSet as S (fromList, toList)
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 
 
@@ -100,7 +99,6 @@ selecter configuration@Configuration{..} control listener =
           collector _                    _ = False
           refresh selecterState' =
             do
-              t0 <- liftIO $ toNanoSecs <$> getTime Monotonic
               f0 <- currentHalfFrame
               selecterPosition' <- liftIO $ readMVar  selecterVar
               (relocation, reorientation) <- liftIO $ readMVar relocationVar
@@ -121,11 +119,12 @@ selecter configuration@Configuration{..} control listener =
               sendChan listener $!! Select mid2 selecterPosition' changes
               f1 <- currentHalfFrame
               frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
-              t1 <- liftIO $ toNanoSecs <$> getTime Monotonic
               let
-                delay = maximum [1000000 `div` 60 - fromIntegral (t1 - t0) `div` 1000, 0]
+                delay = maximum [floor $ 1000 * (1 - f1 + f0) / 120, 0]
               when (delaySelection && delay > 0)
-                . liftIO $ threadDelay delay -- FIXME: We don't want to update the selection more than once per half frame.
+                $ do
+                  frameDebug DebugTiming $ "DELAY\t" ++ printf "%.3f" (120 * fromIntegral delay / 1000 :: Double)
+                  liftIO $ threadDelay delay -- FIXME: We don't want to update the selection more than once per half frame.
         messages <- collectChanMessages maximumTrackingCompression control collector
         sequence_
           [
