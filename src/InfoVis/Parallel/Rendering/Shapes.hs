@@ -12,10 +12,9 @@ module InfoVis.Parallel.Rendering.Shapes (
 
 
 
-import Control.Arrow ((&&&))
+import Control.Arrow ((&&&), second)
 import Data.Array.Storable (newListArray, withStorableArray)
-import Data.Map.Strict as M (Map, (!), fromList, lookup)
-import Data.Maybe (catMaybes)
+import Data.Hashable (Hashable)
 import Data.Word (Word8)
 import Foreign.Ptr (nullPtr, plusPtr)
 import Foreign.Storable (Storable, poke, sizeOf)
@@ -28,6 +27,9 @@ import Graphics.Rendering.OpenGL.GL.VertexSpec (Color4)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..))
 import InfoVis.Parallel.Types (Color, Coloring(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic(..))
+
+import qualified Data.HashMap.Strict as H (HashMap, fromListWith, lookupDefault)
+import qualified Data.Map.Strict as M (Map, (!), fromList)
 
 
 data Shape =
@@ -124,18 +126,18 @@ data DisplayBuffer a b =
   DisplayBuffer
   {
     bufferIdentifier        :: a
-  , bufferVertexIdentifiers :: [b]
+  , bufferVertexIdentifiers :: H.HashMap b [Int]
   , bufferShape             :: Shape
-  , bufferColorings         :: Map Coloring Color
+  , bufferColorings         :: M.Map Coloring Color
   }
 
 
-makeBuffer :: DisplayList a b -> IO (DisplayBuffer a b)
+makeBuffer :: (Eq b, Hashable b) => DisplayList a b -> IO (DisplayBuffer a b)
 makeBuffer DisplayList{..} =
   do
     let
       bufferIdentifier = listIdentifier
-      bufferVertexIdentifiers = listVertexIdentifiers
+      bufferVertexIdentifiers = H.fromListWith (++) $ zipWith (curry $ second (: [])) listVertexIdentifiers [0..]
       ColorSet{..} = head listCharacteristics
       bufferColorings =
         M.fromList
@@ -155,14 +157,15 @@ freeBuffer :: DisplayBuffer a b -> IO ()
 freeBuffer DisplayBuffer{..} = freeShape bufferShape
 
 
-updateBuffer :: Ord b => DisplayBuffer a b -> [(b, Coloring)] -> IO ()
+updateBuffer :: (Eq b, Hashable b) => DisplayBuffer a b -> [(b, Coloring)] -> IO ()
 updateBuffer DisplayBuffer{..} updates =
-  let
-    updates' = (bufferColorings !) <$> M.fromList updates
-  in
-    updateColors bufferShape
-      . catMaybes
-      $ zipWith (\i v -> (i, ) <$> v `M.lookup` updates') [0..] bufferVertexIdentifiers
+  updateColors bufferShape
+    [
+      (i, bufferColorings M.! c)
+    |
+      (v, c) <- updates
+    , i <- H.lookupDefault [] v bufferVertexIdentifiers
+    ]
 
 
 drawBuffer :: DisplayBuffer a b -> IO ()
