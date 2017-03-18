@@ -15,7 +15,7 @@ module InfoVis.Parallel.Process (
 
 import Control.Concurrent (forkOS)
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (newTMVarIO, putTMVar, takeTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, swapTMVar, readTMVar, takeTMVar)
 import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar')
 import Control.DeepSeq (force)
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, receiveChanTimeout, send, sendChan, spawn, spawnLocal)
@@ -95,26 +95,26 @@ displayerProcess (configuration, masterSend, displayIndex) =
       Just AdvancedSettings{..} = advanced configuration
     AugmentDisplay mid1 gridsLinks <- expect
     frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag (AugmentDisplay mid1 gridsLinks)
-    readyVar <- liftIO . newTMVarIO $ not synchronizeDisplays
+    readyVar <- liftIO newEmptyTMVarIO
     changesVar <- liftIO $ newTVarIO def
     void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks changesVar readyVar
     forever
       $ do
         when synchronizeDisplays
           $ do
-            ready <- liftIO . atomically $ (== Just False) <$> tryReadTMVar readyVar
+            ready <- liftIO . atomically $ readTMVar readyVar
             when ready
               $ do
                 mid3 <- nextMessageIdentifier
                 frameDebug DebugMessage $ "DI SC 2\t" ++ messageTag (Ready mid3)
                 masterSend `sendChan` Ready mid3
-                liftIO . void . atomically $ takeTMVar readyVar
+                liftIO . void . atomically $ swapTMVar readyVar False
         message <- expect
         frameDebug DebugMessage $ "DI EX 3\t" ++ messageTag message
         liftIO
           . atomically
           $ case message of
-            RefreshDisplay{} -> putTMVar readyVar True
+            RefreshDisplay{} -> void $ takeTMVar readyVar
             AugmentDisplay{} -> return ()
             Track{..}        -> modifyTVar' changesVar
                                   $ \c ->

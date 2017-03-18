@@ -10,7 +10,7 @@ module InfoVis.Parallel.Rendering.Display (
 
 import Control.Arrow ((&&&))
 import Control.Concurrent.STM (atomically)
-import Control.Concurrent.STM.TMVar (TMVar, swapTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.Exception (IOException, catch)
 import Control.Monad (unless, void, when)
@@ -96,7 +96,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyV
       eraseSelection c = c {selectChanges = []}
       changeLoop =
         do
-          ready <- atomically $ (== Just True) <$> tryReadTMVar readyVar
+          ready <- atomically $ isEmptyTMVar readyVar
           when ready
             $ do
               f0 <- currentHalfFrameIO
@@ -104,7 +104,7 @@ displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyV
                 atomically
                   $ do
                     when synchronizeDisplays
-                      . void $ swapTMVar readyVar False
+                      . void $ putTMVar readyVar True
                     current' <- readTVar changesVar
                     modifyTVar' changesVar eraseSelection
                     return current'

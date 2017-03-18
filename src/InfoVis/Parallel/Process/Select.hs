@@ -124,7 +124,7 @@ selecter configuration@Configuration{..} control listener =
               when (delaySelection && delay > 0)
                 $ do
                   frameDebug DebugTiming $ "DELAY\t" ++ printf "%.3f" (120 * fromIntegral delay / 1000 :: Double)
-                  liftIO $ threadDelay delay -- FIXME: We don't want to update the selection more than once per half frame.
+                  liftIO $ threadDelay delay
         messages <- collectChanMessages maximumTrackingCompression control collector
         sequence_
           [

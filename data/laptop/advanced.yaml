@@ -3,7 +3,7 @@ advanced                     :
   debugMessages              : false
   debugDisplay               : false
   debugOpenGL                : false
-  synchronizeDisplays        : false
+  synchronizeDisplays        : true
   useIdleLoop                : true
-  delaySelection             : true
-  maximumTrackingCompression : 0
+  delaySelection             : false
+  maximumTrackingCompression : 12

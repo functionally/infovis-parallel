@@ -60,8 +60,8 @@ instance Default AdvancedSettings where
     , debugMessages              = False
     , debugDisplay               = False
     , debugOpenGL                = False
-    , useSwapGroup               = Just 1
-    , synchronizeDisplays        = True
+    , useSwapGroup               = Nothing
+    , synchronizeDisplays        = False
     , useIdleLoop                = True
     , delaySelection             = True
     , maximumTrackingCompression = maxBound
