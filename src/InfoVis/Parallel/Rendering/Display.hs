@@ -13,7 +13,7 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.Exception (IOException, catch)
-import Control.Monad (unless, void, when)
+import Control.Monad (join, unless, void, when)
 import Data.Default (Default(..))
 import Data.IORef (newIORef, modifyIORef', readIORef, writeIORef)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
@@ -25,11 +25,10 @@ import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
-import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrameIO, frameDebugIO)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Rendering.Types (DisplayText(..))
-import InfoVis.Parallel.Types (Coloring)
+import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(LinkType))
+import InfoVis.Parallel.Types (Coloring, Location)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..), WorldExtent(..))
@@ -49,12 +48,15 @@ import Graphics.OpenGL.Functions (joinSwapGroup)
 data Changes =
   Changes
   {
-    eyeLocation       :: Point V3 Double
+    dirty             :: Bool
+  , eyeLocation       :: Point V3 Double
   , eyeOrientation    :: Quaternion Double
   , centerOffset      :: V3 Double
   , centerOrientation :: Quaternion Double
   , selectLocation    :: Point V3 Double
-  , selectChanges     :: [(Int, Coloring)]
+  , selectChanges     :: [((DisplayType, String), [(Int, Coloring)])]
+  , newText           :: [DisplayText String Location]
+  , newDisplay        :: [DisplayList (DisplayType, String) Int]
   }
     deriving (Eq, Show)
 
@@ -62,22 +64,24 @@ instance Default Changes where
   def =
     Changes
     {
-      eyeLocation       = zero
+      dirty             = True
+    , eyeLocation       = zero
     , eyeOrientation    = Quaternion 1 zero
     , centerOffset      = zero
     , centerOrientation = Quaternion 1 zero
     , selectLocation    = zero
     , selectChanges     = []
+    , newText           = []
+    , newDisplay        = []
     }
 
 
 displayer :: Configuration
           -> Int
-          -> GridsLinks
           -> TVar Changes
           -> TMVar Bool
           -> IO ()
-displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyVar =
+displayer Configuration{..} displayIndex changesVar readyVar =
   do
     let
       Just AdvancedSettings{..} = advanced
@@ -85,15 +89,15 @@ displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyV
     fontHeight' <-
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
-    gridBuffers <- mapM makeBuffer grids
-    linkBuffers <- mapM makeBuffer links
+    drawTextVar <- newIORef $ return ()
+    buffersVar <- newIORef []
     currentVar <- newIORef def
     let
       selector = color c >> renderObject Solid (Sphere' (s / 2) 12 8)
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
-      eraseSelection c = c {selectChanges = []}
+      erase c = c {dirty = False, selectChanges = [], newText = [], newDisplay = []}
       changeLoop =
         do
           ready <- atomically $ isEmptyTMVar readyVar
@@ -106,39 +110,57 @@ displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyV
                     when synchronizeDisplays
                       . void $ putTMVar readyVar True
                     current' <- readTVar changesVar
-                    modifyTVar' changesVar eraseSelection
+                    modifyTVar' changesVar erase
                     return current'
               writeIORef currentVar current
-              when useIdleLoop
+              when (dirty current && useIdleLoop)
                 idle
               f1 <- currentHalfFrameIO
-              frameDebugIO DebugDisplay $ show displayIndex ++ "\tCHANGE\tLOCS\t" ++ printf "%.3f" (f1 - f0)
+              when (dirty current)
+                $ frameDebugIO DebugDisplay $ show displayIndex ++ "\tCHANGE\tLOCS\t" ++ printf "%.3f" (f1 - f0)
           Changes{..} <- readIORef currentVar
           unless (null selectChanges)
             $ do
                 f0 <- currentHalfFrameIO
-                mapM_ (`updateBuffer` selectChanges) linkBuffers -- FIXME: This could be split among frames.
-                modifyIORef' currentVar eraseSelection
-                when useIdleLoop
-                  idle
+                buffers <- readIORef buffersVar
+                mapM_ (`updateBuffer` selectChanges) buffers -- FIXME: This could be split among frames.
+                modifyIORef' currentVar $ \c -> c {selectChanges = []}
                 f1 <- currentHalfFrameIO
                 frameDebugIO DebugDisplay $ show displayIndex ++ "\tSELECT\tSELECT\t" ++ printf "%.3f" (f1 - f0)
-      drawText =
-        sequence_
-          [
-            preservingMatrix $ do
-              color textColor
-              translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
-              toRotation qrot
-              scale s s s
-              translate $ Vector3 0 (- fontHeight') 0
-              renderString Roman textContent
-          |
-            DisplayText{..} <- texts
-          , let WorldExtent{..} = worldExtent world
-          , let s = realToFrac textSize * realToFrac (baseSize world) / fontHeight' :: GLfloat
-          , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
-          ]
+          unless (null newText)
+            $ do
+              f0 <- currentHalfFrameIO
+              writeIORef drawTextVar
+                $ sequence_
+                [
+                  preservingMatrix $ do
+                    color textColor
+                    translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
+                    toRotation qrot
+                    scale s s s
+                    translate $ Vector3 0 (- fontHeight') 0
+                    renderString Roman textContent
+                |
+                  DisplayText{..} <- newText
+                , let WorldExtent{..} = worldExtent world
+                , let s = realToFrac textSize * realToFrac (baseSize world) / fontHeight' :: GLfloat
+                , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
+                ]
+              modifyIORef' currentVar $ \c -> c {newText = []}
+              f1 <- currentHalfFrameIO
+              frameDebugIO DebugDisplay $ show displayIndex ++ "\tSET\tTEXT\t" ++ printf "%.3f" (f1 - f0)
+          unless (null newDisplay)
+            $ do
+              f0 <- currentHalfFrameIO
+              let
+                -- FIXME: Use the actual link alias.
+                unalias d@(DisplayList (LinkType, _) _ _ _ _) = d {listIdentifier = (LinkType, "")}
+                unalias d                                     = d
+              newBuffers <- mapM makeBuffer $ unalias <$> newDisplay
+              modifyIORef' buffersVar (newBuffers ++)
+              modifyIORef' currentVar $ \c -> c {newDisplay = []}
+              f1 <- currentHalfFrameIO
+              frameDebugIO DebugDisplay $ show displayIndex ++ "\tADD\tDISPLAY\t" ++ printf "%.3f" (f1 - f0)
     idleCallback $= Just (if useIdleLoop then changeLoop else idle)
     dlpViewerDisplay dlp viewers displayIndex ((eyeLocation &&& eyeOrientation) <$> readIORef currentVar)
       $ do
@@ -156,17 +178,15 @@ displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyV
             (location, orientation) <- (centerOffset &&& centerOrientation) <$> readIORef currentVar
             toRotation orientation
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
-            mapM_ drawBuffer linkBuffers
+            buffers <- readIORef buffersVar
+            mapM_ drawBuffer buffers
             f2 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tLINKS\t" ++ printf "%.3f" (f2 - f1)
-            mapM_ drawBuffer gridBuffers
+            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tDISPLAY\t" ++ printf "%.3f" (f2 - f1)
+            join $ readIORef drawTextVar
             f3 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tGRIDS\t" ++ printf "%.3f" (f3 - f2)
-            drawText
-            f4 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f4 - f3)
-        f5 <- currentHalfFrameIO
-        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTEXT\t" ++ printf "%.3f" (f5 - f0)
+            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f3 - f2)
+        f4 <- currentHalfFrameIO
+        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTEXT\t" ++ printf "%.3f" (f4 - f0)
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif

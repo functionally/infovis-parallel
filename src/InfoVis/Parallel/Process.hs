@@ -41,13 +41,6 @@ multiplexerProcess Configuration{..} control content displayerPids =
     frameDebug DebugInfo  "Starting multiplexer."
     let
       Just AdvancedSettings{..} = advanced
-      waitForGrid priors =
-        do
-          message <- receiveChan content
-          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag message
-          case message of
-            AugmentDisplay{..} -> return $ message : reverse priors
-            _                  -> waitForGrid $ message : priors
       collector Track{}    _ = True
       collector Relocate{} _ = True
       collector _          _ = False
@@ -55,25 +48,21 @@ multiplexerProcess Configuration{..} control content displayerPids =
         sequence_
           [
             do
-              frameDebug DebugMessage $ "MX SE 2\t" ++ messageTag message
+              frameDebug DebugMessage $ "MX SE 1\t" ++ messageTag message
               mapM_ (`send` message) displayerPids
               when synchronizeDisplays
                 $ do
                    maybeMessage <- receiveChanTimeout 0 control
                    case maybeMessage of
-                     Just Synchronize -> do
-                                           frameDebug DebugMessage "MX RC 3\tCommon\tSynchronize\tn/a"
-                                           mid3 <- nextMessageIdentifier
-                                           frameDebug DebugMessage $ "MX SE 4\t" ++ messageTag (RefreshDisplay mid3)
-                                           mapM_ (`send` RefreshDisplay mid3) displayerPids
+                     Just (Synchronize mid3)-> do
+                                           frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag (Synchronize mid3)
+                                           mid4 <- nextMessageIdentifier
+                                           frameDebug DebugMessage $ "MX SE 3\t" ++ messageTag (RefreshDisplay mid4)
+                                           mapM_ (`send` RefreshDisplay mid4) displayerPids
                      _                -> return ()
           |
             message <- messages
           ]
-    prior : priors <- waitForGrid []
-    frameDebug DebugMessage $ "MX SE 5\t" ++ messageTag prior
-    mapM_ (`send` prior) displayerPids
-    sendSequence priors
     forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
 
 
@@ -93,11 +82,9 @@ displayerProcess (configuration, masterSend, displayIndex) =
     frameDebug DebugInfo  "Starting displayer."
     let
       Just AdvancedSettings{..} = advanced configuration
-    AugmentDisplay mid1 gridsLinks <- expect
-    frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag (AugmentDisplay mid1 gridsLinks)
     readyVar <- liftIO newEmptyTMVarIO
     changesVar <- liftIO $ newTVarIO def
-    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks changesVar readyVar
+    void . liftIO . forkOS $ displayer configuration displayIndex changesVar readyVar
     forever
       $ do
         when synchronizeDisplays
@@ -106,37 +93,53 @@ displayerProcess (configuration, masterSend, displayIndex) =
             when ready
               $ do
                 mid3 <- nextMessageIdentifier
-                frameDebug DebugMessage $ "DI SC 2\t" ++ messageTag (Ready mid3)
+                frameDebug DebugMessage $ "DI SC 1\t" ++ messageTag (Ready mid3)
                 masterSend `sendChan` Ready mid3
                 liftIO . void . atomically $ swapTMVar readyVar False
         message <- expect
-        frameDebug DebugMessage $ "DI EX 3\t" ++ messageTag message
+        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag message
         liftIO
           . atomically
           $ case message of
-            RefreshDisplay{} -> void $ takeTMVar readyVar
-            AugmentDisplay{} -> return ()
-            Track{..}        -> modifyTVar' changesVar
-                                  $ \c ->
-                                    c
-                                    {
-                                      C.eyeLocation    = force eyePosition
-                                    , C.eyeOrientation = force eyeOrientation
-                                    }
-            Relocate{..}     -> modifyTVar' changesVar
-                                  $ \c ->
-                                    c
-                                    {
-                                      C.centerOffset      = force centerDisplacement
-                                    , C.centerOrientation = force centerRotation
-                                    }
-            Select{..}       -> modifyTVar' changesVar
-                                  $ \c ->
-                                    c
-                                    {
-                                      C.selectLocation = force   selectorLocation
-                                    , C.selectChanges  = force $ selectionChanges `union` C.selectChanges c
-                                    }
+            RefreshDisplay{}   -> void $ takeTMVar readyVar
+            SetText{..}        -> modifyTVar' changesVar
+                                    $ \c ->
+                                      c
+                                      {
+                                        C.dirty     = True
+                                      , C.newText = text
+                                      }
+            AugmentDisplay{..} -> modifyTVar' changesVar
+                                    $ \c ->
+                                      c
+                                      {
+                                        C.dirty        = True
+                                      , C.newDisplay = augmentations ++ C.newDisplay c
+                                      }
+            Track{..}          -> modifyTVar' changesVar
+                                    $ \c ->
+                                      c
+                                      {
+                                        C.dirty          = True
+                                      , C.eyeLocation    = force eyePosition
+                                      , C.eyeOrientation = force eyeOrientation
+                                      }
+            Relocate{..}       -> modifyTVar' changesVar
+                                    $ \c ->
+                                      c
+                                      {
+                                        C.dirty             = True
+                                      , C.centerOffset      = force centerDisplacement
+                                      , C.centerOrientation = force centerRotation
+                                      }
+            Select{..}         -> modifyTVar' changesVar
+                                    $ \c ->
+                                      c
+                                      {
+                                        C.dirty          = True
+                                      , C.selectLocation = force   selectorLocation
+                                      , C.selectChanges  = force $ selectionChanges `union` C.selectChanges c
+                                      }
 
 
 remotable ['displayerProcess]
@@ -188,8 +191,8 @@ commonMain configuration masterReceive displayerPids =
           if counter >= length displayerPids
             then do
                    mid2 <- nextMessageIdentifier
-                   frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag (Ready mid2)
-                   controlSend `sendChan` Synchronize
+                   frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag (Synchronize mid2)
+                   controlSend `sendChan` Synchronize mid2
                    waitForAllReady 1
             else waitForAllReady $ counter + 1
     waitForAllReady 1 :: Process ()

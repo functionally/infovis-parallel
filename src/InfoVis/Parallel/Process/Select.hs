@@ -17,7 +17,7 @@ import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, currentHalfFrame, frameDebug)
-import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType)
+import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag, nextMessageIdentifier)
@@ -82,11 +82,11 @@ selecter configuration@Configuration{..} control listener =
     frameDebug DebugInfo  "Starting selector."
     let
       Just AdvancedSettings{..} = advanced
-    AugmentSelection mid1 gridsLinks@(_, _, links) <- receiveChan control
+    AugmentSelection mid1 links <- receiveChan control
     let
       delta = selectorSize presentation * baseSize world / 2
       spatial = newSpatial delta links
-    frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag (AugmentSelection mid1 gridsLinks)
+    frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag (AugmentSelection mid1 links)
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
@@ -115,8 +115,10 @@ selecter configuration@Configuration{..} control listener =
               void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
               void .liftIO $ swapMVar transientColoringsRef transientColorings'
               mid2 <- nextMessageIdentifier
-              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 selecterPosition' changes)
-              sendChan listener $!! Select mid2 selecterPosition' changes
+              let
+                changes' = if null changes then [] else [((LinkType, ""), changes)]
+              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 selecterPosition' changes')
+              sendChan listener $!! Select mid2 selecterPosition' changes'
               f1 <- currentHalfFrame
               frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
               let

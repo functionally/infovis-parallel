@@ -9,6 +9,7 @@ module InfoVis.Parallel.Types.Message (
   SumTag(..)
 , MessageTag(..)
 -- * Types
+, AugmentationType
 , Augmentation
 , SelectionAction(..)
   -- * Messages
@@ -45,17 +46,32 @@ class MessageTag a where
   messageTag :: a -> String
 
 
-type Augmentation = DisplayList (DisplayType, String) Int
+type AugmentationType = (DisplayType, String)
+
+
+type Augmentation = DisplayList AugmentationType Int
 
 
 data CommonMessage =
     Reconfigure
     {
-      configuration :: Configuration
+      commonMessageIdentifier :: Int
+    , configuration           :: Configuration
     }
   | Synchronize
+    {
+      commonMessageIdentifier :: Int
+    }
   | Terminate
+    {
+      commonMessageIdentifier :: Int
+    }
     deriving (Binary, Eq, Generic, Ord, Show)
+
+instance MessageTag CommonMessage where
+  messageTag Reconfigure{..} = "Common\tReconf\t" ++ show commonMessageIdentifier
+  messageTag Synchronize{..} = "Common\tSynch\t"  ++ show commonMessageIdentifier
+  messageTag Terminate{..}   = "Common\tTerm\t"   ++ show commonMessageIdentifier
 
 
 data MasterMessage =
@@ -89,7 +105,7 @@ data SelecterMessage =
     AugmentSelection
     {
       selecterMessageIdentifier :: Int
-    , selecterAugmentations     :: ([DisplayText String Location], [Augmentation], [Augmentation])
+    , selecterAugmentations     :: [Augmentation]
     }
   | UpdateSelection
     {
@@ -121,8 +137,8 @@ type SelecterMessage' = Either CommonMessage SelecterMessage
 instance SumTag SelecterMessage' where
   sumTag (Right x            ) = sumTag x
   sumTag (Left  Reconfigure{}) = '7'
-  sumTag (Left  Terminate    ) = '8'
-  sumTag (Left  Synchronize  ) = '9'
+  sumTag (Left  Terminate{}  ) = '8'
+  sumTag (Left  Synchronize{}) = '9'
 
 
 data DisplayerMessage =
@@ -130,10 +146,15 @@ data DisplayerMessage =
     {
       displayerMessageIdentifier :: Int
     }
+  | SetText
+    {
+      displayerMessageIdentifier :: Int
+    , text                       :: [DisplayText String Location]
+    }
   | AugmentDisplay
     {
       displayerMessageIdentifier :: Int
-    , augmentations              :: ([DisplayText String Location], [Augmentation], [Augmentation])
+    , augmentations              :: [Augmentation]
     }
   | Track
     {
@@ -151,22 +172,24 @@ data DisplayerMessage =
     {
       displayerMessageIdentifier :: Int
     , selectorLocation           :: Point V3 Double
-    , selectionChanges           :: [(Int, Coloring)]
+    , selectionChanges           :: [((DisplayType, String), [(Int, Coloring)])]
     }
     deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
   sumTag RefreshDisplay{} = '0'
-  sumTag AugmentDisplay{} = '1'
-  sumTag Track{}          = '2'
-  sumTag Relocate{}       = '3'
-  sumTag Select{}         = '4'
+  sumTag SetText{}        = '1'
+  sumTag AugmentDisplay{} = '2'
+  sumTag Track{}          = '3'
+  sumTag Relocate{}       = '4'
+  sumTag Select{}         = '5'
 
 instance MessageTag DisplayerMessage where
   messageTag RefreshDisplay{..} = "Display\tRefresh\t"  ++ show displayerMessageIdentifier
+  messageTag SetText{..}        = "Display\tText\t"     ++ show displayerMessageIdentifier
   messageTag AugmentDisplay{..} = "Display\tAugment\t"  ++ show displayerMessageIdentifier
   messageTag Track{..}          = "Display\tTrack\t"    ++ show displayerMessageIdentifier
-  messageTag Relocate{..}       = "Display\tRelocat\t" ++ show displayerMessageIdentifier
+  messageTag Relocate{..}       = "Display\tRelocat\t"  ++ show displayerMessageIdentifier
   messageTag Select{..}         = "Display\tSelect\t"   ++ show displayerMessageIdentifier
 
 
@@ -175,8 +198,8 @@ type DisplayerMessage' = Either CommonMessage DisplayerMessage
 instance SumTag DisplayerMessage' where
   sumTag (Right x            ) = sumTag x
   sumTag (Left  Reconfigure{}) = '7'
-  sumTag (Left  Terminate    ) = '8'
-  sumTag (Left  Synchronize  ) = '9'
+  sumTag (Left  Terminate{}  ) = '8'
+  sumTag (Left  Synchronize{}) = '9'
 
 
 data SelectionAction = Highlight | Selection | Deselection | Clear

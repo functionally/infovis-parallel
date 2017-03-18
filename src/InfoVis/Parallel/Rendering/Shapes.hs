@@ -28,7 +28,7 @@ import InfoVis.Parallel.Rendering.Types (DisplayList(..))
 import InfoVis.Parallel.Types (Color, Coloring(..))
 import InfoVis.Parallel.Types.Presentation (Characteristic(..))
 
-import qualified Data.HashMap.Strict as H (HashMap, fromListWith, lookupDefault)
+import qualified Data.HashMap.Strict as H (HashMap, fromListWith, size, lookupDefault)
 import qualified Data.Map.Strict as M (Map, (!), fromList)
 
 
@@ -131,6 +131,9 @@ data DisplayBuffer a b =
   , bufferColorings         :: M.Map Coloring Color
   }
 
+instance Show a => Show (DisplayBuffer a b) where
+  show DisplayBuffer{..} = "BUFFER " ++ show bufferIdentifier ++ " SIZE " ++ show (H.size bufferVertexIdentifiers, foldl ((. length) . (+)) 0 bufferVertexIdentifiers)
+
 
 makeBuffer :: (Eq b, Hashable b) => DisplayList a b -> IO (DisplayBuffer a b)
 makeBuffer DisplayList{..} =
@@ -157,13 +160,14 @@ freeBuffer :: DisplayBuffer a b -> IO ()
 freeBuffer DisplayBuffer{..} = freeShape bufferShape
 
 
-updateBuffer :: (Eq b, Hashable b) => DisplayBuffer a b -> [(b, Coloring)] -> IO ()
+updateBuffer :: (Eq a, Eq b, Hashable b) => DisplayBuffer a b -> [(a, [(b, Coloring)])] -> IO ()
 updateBuffer DisplayBuffer{..} updates =
   updateColors bufferShape
     [
       (i, bufferColorings M.! c)
     |
-      (v, c) <- updates
+      update <- snd <$> filter ((== bufferIdentifier) . fst) updates
+    , (v, c) <- update
     , i <- H.lookupDefault [] v bufferVertexIdentifiers
     ]
 
