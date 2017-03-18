@@ -1,6 +1,8 @@
 module Linear.Util.Graphics (
   toVector3
+, fromVector3
 , toVertex3
+, fromVertex3
 , toRotation
 ) where
 
@@ -18,9 +20,19 @@ toVector3 :: V3 a -> Vector3 a
 toVector3 (V3 x y z) = Vector3 x y z
 
 
+{-# INLINE fromVector3 #-}
+fromVector3 :: Vector3 a -> V3 a
+fromVector3 (Vector3 x y z) = V3 x y z
+
+
 {-# INLINE toVertex3 #-}
 toVertex3 :: Point V3 a -> Vertex3 a
 toVertex3 (P (V3 x y z)) = Vertex3 x y z
+
+
+{-# INLINE fromVertex3 #-}
+fromVertex3 :: Vertex3 a -> Point V3 a
+fromVertex3 (Vertex3 x y z) = P $ V3 x y z
 
 
 toRotation :: (Floating a, MatrixComponent a) => Quaternion a -> IO ()

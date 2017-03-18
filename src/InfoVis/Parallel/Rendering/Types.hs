@@ -18,6 +18,7 @@ module InfoVis.Parallel.Rendering.Types (
 
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
+import Data.Hashable (Hashable)
 import GHC.Generics (Generic)
 import Graphics.Rendering.OpenGL (GLfloat)
 import Graphics.Rendering.OpenGL.GL.PrimitiveMode (PrimitiveMode(..))
@@ -67,7 +68,7 @@ data DisplayList a b =
 data DisplayType =
     GridType
   | LinkType
-    deriving (Binary, Eq, Generic, NFData, Ord, Show)
+    deriving (Binary, Eq, Generic, Hashable, NFData, Ord, Show)
 
 
 data DisplayText a b =
