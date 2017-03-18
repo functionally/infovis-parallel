@@ -3,14 +3,19 @@
 
 
 module InfoVis.Parallel.Rendering.Display (
-  displayer
+  Changes(..)
+, displayer
 ) where
 
 
-import Control.Concurrent.MVar (MVar, putMVar, tryTakeMVar)
+import Control.Arrow ((&&&))
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar (TMVar, swapTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.Exception (IOException, catch)
-import Control.Monad (unless, when)
-import Data.IORef (newIORef, readIORef, writeIORef)
+import Control.Monad (unless, void, when)
+import Data.Default (Default(..))
+import Data.IORef (newIORef, modifyIORef', readIORef, writeIORef)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
 import Graphics.Rendering.OpenGL (GLfloat, ($=))
 import Graphics.Rendering.OpenGL.GL.CoordTrans (preservingMatrix, scale, translate)
@@ -24,8 +29,8 @@ import InfoVis.Parallel.Process.DataProvider (GridsLinks)
 import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrameIO, frameDebugIO)
 import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayText(..))
+import InfoVis.Parallel.Types (Coloring)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..), WorldExtent(..))
 import Linear.Affine (Point(..), (.-.))
@@ -41,87 +46,83 @@ import Graphics.OpenGL.Functions (joinSwapGroup)
 #endif
 
 
+data Changes =
+  Changes
+  {
+    eyeLocation       :: Point V3 Double
+  , eyeOrientation    :: Quaternion Double
+  , centerOffset      :: V3 Double
+  , centerOrientation :: Quaternion Double
+  , selectLocation    :: Point V3 Double
+  , selectChanges     :: [(Int, Coloring)]
+  }
+    deriving (Eq, Show)
+
+instance Default Changes where
+  def =
+    Changes
+    {
+      eyeLocation       = zero
+    , eyeOrientation    = Quaternion 1 zero
+    , centerOffset      = zero
+    , centerOrientation = Quaternion 1 zero
+    , selectLocation    = zero
+    , selectChanges     = []
+    }
+
+
 displayer :: Configuration
           -> Int
           -> GridsLinks
-          -> MVar DisplayerMessage
-          -> MVar ()
+          -> TVar Changes
+          -> TMVar Bool
           -> IO ()
-displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyVar =
+displayer Configuration{..} displayIndex (texts, grids, links) changesVar readyVar =
   do
     let
       Just AdvancedSettings{..} = advanced
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
+    fontHeight' <-
+     catch (fontHeight Roman)
+       ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
     gridBuffers <- mapM makeBuffer grids
     linkBuffers <- mapM makeBuffer links
-    povVarNext <- newIORef (zero, Quaternion 1 zero)
-    povVar     <- newIORef (zero, Quaternion 1 zero)
-    relocationVarNext <- newIORef (zero, Quaternion 1 zero)
-    relocationVar     <- newIORef (zero, Quaternion 1 zero)
-    selectionVarNext <- newIORef zero
-    selectionVar     <- newIORef zero
+    currentVar <- newIORef def
     let
       selector = color c >> renderObject Solid (Sphere' (s / 2) 12 8)
         where
           s = selectorSize presentation * baseSize world
           c = selectorColor presentation
-      useNext =
+      eraseSelection c = c {selectChanges = []}
+      changeLoop =
         do
-          readIORef povVarNext        >>= writeIORef povVar
-          readIORef relocationVarNext >>= writeIORef relocationVar
-          readIORef selectionVarNext  >>= writeIORef selectionVar
-      messageLoop =
-        do
-          message <- tryTakeMVar messageVar
-          case message of
-            Just Track{..}        -> do
-                                       f0 <- currentHalfFrameIO
-                                       writeIORef povVarNext (eyePosition, eyeOrientation)
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else do
-                                                useNext
-                                                when useIdleLoop
-                                                  idle
-                                       f1 <- currentHalfFrameIO
-                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tIDLE\tTRACK\t" ++ printf "%.3f" (f1 - f0)
-            Just Relocate{..}     -> do
-                                       f0 <- currentHalfFrameIO
-                                       writeIORef relocationVarNext (centerDisplacement, centerRotation)
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else do
-                                                useNext
-                                                when useIdleLoop
-                                                  idle
-                                       f1 <- currentHalfFrameIO
-                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tIDLE\tRELOC\t" ++ printf "%.3f" (f1 - f0)
-            Just Select{..}       -> do
-                                       f0 <- currentHalfFrameIO
-                                       writeIORef selectionVarNext selectorLocation
-                                       unless (null selectionChanges)
-                                         $ mapM_ (`updateBuffer` selectionChanges) linkBuffers
-                                       if synchronizeDisplays
-                                         then putMVar readyVar ()
-                                         else do
-                                                useNext
-                                                when useIdleLoop
-                                                  idle
-                                       f1 <- currentHalfFrameIO
-                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tIDLE\tSELECT\t" ++ printf "%.3f" (f1 - f0)
-            Just RefreshDisplay{} -> do
-                                       f0 <- currentHalfFrameIO
-                                       useNext
-                                       when (synchronizeDisplays && useIdleLoop)
-                                         idle
-                                       f1 <- currentHalfFrameIO
-                                       frameDebugIO DebugDisplay $ show displayIndex ++ "\tIDLE\tREFRESH\t" ++ printf "%.3f" (f1 - f0)
-            _                     -> return ()
-    idleCallback $= Just (if useIdleLoop then messageLoop else idle)
-    h <-
-     catch (fontHeight Roman)
-       ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
-    let
+          ready <- atomically $ (== Just True) <$> tryReadTMVar readyVar
+          when ready
+            $ do
+              f0 <- currentHalfFrameIO
+              current <-
+                atomically
+                  $ do
+                    when synchronizeDisplays
+                      . void $ swapTMVar readyVar False
+                    current' <- readTVar changesVar
+                    modifyTVar' changesVar eraseSelection
+                    return current'
+              writeIORef currentVar current
+              when useIdleLoop
+                idle
+              f1 <- currentHalfFrameIO
+              frameDebugIO DebugDisplay $ show displayIndex ++ "\tCHANGE\tLOCS\t" ++ printf "%.3f" (f1 - f0)
+          Changes{..} <- readIORef currentVar
+          unless (null selectChanges)
+            $ do
+                f0 <- currentHalfFrameIO
+                mapM_ (`updateBuffer` selectChanges) linkBuffers -- FIXME: This could be split among frames.
+                modifyIORef' currentVar eraseSelection
+                when useIdleLoop
+                  idle
+                f1 <- currentHalfFrameIO
+                frameDebugIO DebugDisplay $ show displayIndex ++ "\tSELECT\tSELECT\t" ++ printf "%.3f" (f1 - f0)
       drawText =
         sequence_
           [
@@ -130,28 +131,29 @@ displayer Configuration{..} displayIndex (texts, grids, links) messageVar readyV
               translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
               toRotation qrot
               scale s s s
-              translate $ Vector3 0 (- h) 0
+              translate $ Vector3 0 (- fontHeight') 0
               renderString Roman textContent
           |
             DisplayText{..} <- texts
           , let WorldExtent{..} = worldExtent world
-          , let s = realToFrac textSize * realToFrac (baseSize world) / h :: GLfloat
+          , let s = realToFrac textSize * realToFrac (baseSize world) / fontHeight' :: GLfloat
           , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
           ]
-    dlpViewerDisplay dlp viewers displayIndex (readIORef povVar)
+    idleCallback $= Just (if useIdleLoop then changeLoop else idle)
+    dlpViewerDisplay dlp viewers displayIndex ((eyeLocation &&& eyeOrientation) <$> readIORef currentVar)
       $ do
-        unless useIdleLoop messageLoop
+        unless useIdleLoop changeLoop
         f0 <- currentHalfFrameIO
         preservingMatrix
           $ do
-            P location <- readIORef selectionVar  -- FIXME
+            P location <- selectLocation <$> readIORef currentVar
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
         f1 <- currentHalfFrameIO
         frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tSELECT\t" ++ printf "%.3f" (f1 - f0)
         preservingMatrix
           $ do
-            (location, orientation) <- readIORef relocationVar
+            (location, orientation) <- (centerOffset &&& centerOrientation) <$> readIORef currentVar
             toRotation orientation
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             mapM_ drawBuffer linkBuffers

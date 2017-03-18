@@ -77,7 +77,7 @@ initializeDebug :: AdvancedSettings -> Process ()
 initializeDebug AdvancedSettings{..} =
   do
     t0 <- liftIO initialTime
-    say $ "0.000\tInfo\tInitial time offset = " ++ printf "%.3f" (asHalfFrames $ t0 - TimeSpec 5200000 0)
+    say $ "0.000\tInfo\tInitial time offset = " ++ printf "%.3f" (asHalfFrames t0)
     liftIO
       . writeIORef debuggingVar
       . fmap snd

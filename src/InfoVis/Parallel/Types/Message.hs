@@ -113,7 +113,7 @@ instance SumTag SelecterMessage where
 instance MessageTag SelecterMessage where
   messageTag AugmentSelection{..}   = "Select\tAugment\t"  ++ show selecterMessageIdentifier
   messageTag UpdateSelection{..}    = "Select\tUpdate\t"   ++ show selecterMessageIdentifier
-  messageTag RelocateSelection{..}  = "Select\tRelocate\t" ++ show selecterMessageIdentifier
+  messageTag RelocateSelection{..}  = "Select\tRelocat\t" ++ show selecterMessageIdentifier
 
 
 type SelecterMessage' = Either CommonMessage SelecterMessage
@@ -166,7 +166,7 @@ instance MessageTag DisplayerMessage where
   messageTag RefreshDisplay{..} = "Display\tRefresh\t"  ++ show displayerMessageIdentifier
   messageTag AugmentDisplay{..} = "Display\tAugment\t"  ++ show displayerMessageIdentifier
   messageTag Track{..}          = "Display\tTrack\t"    ++ show displayerMessageIdentifier
-  messageTag Relocate{..}       = "Display\tRelocate\t" ++ show displayerMessageIdentifier
+  messageTag Relocate{..}       = "Display\tRelocat\t" ++ show displayerMessageIdentifier
   messageTag Select{..}         = "Display\tSelect\t"   ++ show displayerMessageIdentifier
 
 

@@ -6,4 +6,4 @@ advanced                     :
   synchronizeDisplays        : false
   useIdleLoop                : true
   delaySelection             : true
-  maximumTrackingCompression : 120
+  maximumTrackingCompression : 0

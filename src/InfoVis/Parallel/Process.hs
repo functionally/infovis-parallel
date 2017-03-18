@@ -1,7 +1,8 @@
-{-# LANGUAGE CPP             #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections   #-}
+{-# LANGUAGE CPP              #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE RecordWildCards  #-}
+{-# LANGUAGE TemplateHaskell  #-}
+{-# LANGUAGE TupleSections    #-}
 
 
 module InfoVis.Parallel.Process (
@@ -13,11 +14,15 @@ module InfoVis.Parallel.Process (
 
 
 import Control.Concurrent (forkOS)
-import Control.Concurrent.MVar (newEmptyMVar, putMVar, takeMVar)
-import Control.DeepSeq (($!!))
-import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, send, sendChan, spawn, spawnLocal)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar (newTMVarIO, putTMVar, takeTMVar, tryReadTMVar)
+import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar')
+import Control.DeepSeq (force)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, receiveChanTimeout, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
+import Data.Default (def)
+import Data.List (union)
 import Data.Maybe (fromJust)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
@@ -26,6 +31,8 @@ import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection
 import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
 import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
+
+import qualified InfoVis.Parallel.Rendering.Display as C (Changes(..))
 
 
 multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
@@ -37,8 +44,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
       waitForGrid priors =
         do
           message <- receiveChan content
-          mid1 <- nextMessageIdentifier
-          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag (RefreshDisplay mid1)
+          frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag message
           case message of
             AugmentDisplay{..} -> return $ message : reverse priors
             _                  -> waitForGrid $ message : priors
@@ -53,15 +59,19 @@ multiplexerProcess Configuration{..} control content displayerPids =
               mapM_ (`send` message) displayerPids
               when synchronizeDisplays
                 $ do
-                   void $ receiveChan control
-                   mid3 <- nextMessageIdentifier
-                   frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag (RefreshDisplay mid3)
-                   mapM_ (`send` RefreshDisplay mid3) displayerPids
+                   maybeMessage <- receiveChanTimeout 0 control
+                   case maybeMessage of
+                     Just Synchronize -> do
+                                           frameDebug DebugMessage "MX RC 3\tCommon\tSynchronize\tn/a"
+                                           mid3 <- nextMessageIdentifier
+                                           frameDebug DebugMessage $ "MX SE 4\t" ++ messageTag (RefreshDisplay mid3)
+                                           mapM_ (`send` RefreshDisplay mid3) displayerPids
+                     _                -> return ()
           |
             message <- messages
           ]
     prior : priors <- waitForGrid []
-    frameDebug DebugMessage $ "MX SE 4\t" ++ messageTag prior
+    frameDebug DebugMessage $ "MX SE 5\t" ++ messageTag prior
     mapM_ (`send` prior) displayerPids
     sendSequence priors
     forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
@@ -83,24 +93,50 @@ displayerProcess (configuration, masterSend, displayIndex) =
     frameDebug DebugInfo  "Starting displayer."
     let
       Just AdvancedSettings{..} = advanced configuration
-      isNotRefresh RefreshDisplay{} = False
-      isNotRefresh _                = True
     AugmentDisplay mid1 gridsLinks <- expect
     frameDebug DebugMessage $ "DI EX 1\t" ++ messageTag (AugmentDisplay mid1 gridsLinks)
-    readyVar <- liftIO newEmptyMVar
-    messageVar <- liftIO newEmptyMVar
-    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks messageVar readyVar
+    readyVar <- liftIO . newTMVarIO $ not synchronizeDisplays
+    changesVar <- liftIO $ newTVarIO def
+    void . liftIO . forkOS $ displayer configuration displayIndex gridsLinks changesVar readyVar
     forever
       $ do
+        when synchronizeDisplays
+          $ do
+            ready <- liftIO . atomically $ (== Just False) <$> tryReadTMVar readyVar
+            when ready
+              $ do
+                mid3 <- nextMessageIdentifier
+                frameDebug DebugMessage $ "DI SC 2\t" ++ messageTag (Ready mid3)
+                masterSend `sendChan` Ready mid3
+                liftIO . void . atomically $ takeTMVar readyVar
         message <- expect
-        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag message
-        liftIO . putMVar messageVar $!! message
-        when (synchronizeDisplays && isNotRefresh message)
-          $ do 
-            liftIO $ takeMVar readyVar
-            mid3 <- nextMessageIdentifier
-            frameDebug DebugMessage $ "DI SC 3\t" ++ messageTag (Ready mid3)
-            masterSend `sendChan` Ready mid3
+        frameDebug DebugMessage $ "DI EX 3\t" ++ messageTag message
+        liftIO
+          . atomically
+          $ case message of
+            RefreshDisplay{} -> putTMVar readyVar True
+            AugmentDisplay{} -> return ()
+            Track{..}        -> modifyTVar' changesVar
+                                  $ \c ->
+                                    c
+                                    {
+                                      C.eyeLocation    = force eyePosition
+                                    , C.eyeOrientation = force eyeOrientation
+                                    }
+            Relocate{..}     -> modifyTVar' changesVar
+                                  $ \c ->
+                                    c
+                                    {
+                                      C.centerOffset      = force centerDisplacement
+                                    , C.centerOrientation = force centerRotation
+                                    }
+            Select{..}       -> modifyTVar' changesVar
+                                  $ \c ->
+                                    c
+                                    {
+                                      C.selectLocation = force   selectorLocation
+                                    , C.selectChanges  = force $ selectionChanges `union` C.selectChanges c
+                                    }
 
 
 remotable ['displayerProcess]
