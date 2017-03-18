@@ -17,7 +17,7 @@ import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..), nextMessageIdentifier)
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -53,8 +53,9 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
             $ do
               location <- liftIO $ readIORef locationVar
               orientation <- liftIO $ readIORef orientationVar
-              frameDebug DebugMessage $ "TP SC 1\t" ++ messageTag (Track location orientation)
-              sendChan listener $!! Track location orientation
+              mid1 <- nextMessageIdentifier
+              frameDebug DebugMessage $ "TP SC 1\t" ++ messageTag (Track mid1 location orientation)
+              sendChan listener $!! Track mid1 location orientation
           loop
     loop
 
@@ -100,7 +101,8 @@ trackSelection Configuration{..} listener = -- FIXME: Support reset, termination
             $ do
               location <- liftIO $ readIORef locationVar
               button <- liftIO $ readIORef buttonVar
-              frameDebug DebugMessage $ "TS SC 1\t" ++ messageTag (UpdateSelection location button)
-              sendChan listener $!! UpdateSelection location button
+              mid1 <- nextMessageIdentifier
+              frameDebug DebugMessage $ "TS SC 1\t" ++ messageTag (UpdateSelection mid1 location button)
+              sendChan listener $!! UpdateSelection mid1 location button
           loop
     loop
