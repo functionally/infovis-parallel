@@ -144,7 +144,7 @@ selecter configuration@Configuration{..} control listener =
                                        . liftIO
                                        . modifyMVar_ relocationVar
                                        . (return .)
-                                       $ (average relocationDisplacement *** average relocationRotation)
+                                       $ (const relocationDisplacement *** const relocationRotation) -- FIXME: Should this be averaged, too?
                                      mid3 <- nextMessageIdentifier
                                      frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Relocate mid3 relocationDisplacement relocationRotation)
                                      sendChan listener $!! Relocate mid3 relocationDisplacement relocationRotation

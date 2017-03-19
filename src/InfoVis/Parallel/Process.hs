@@ -22,6 +22,7 @@ import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, Sen
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
+import Data.Default.Util (nan)
 import Data.List (union)
 import Data.Maybe (fromJust, fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
@@ -31,6 +32,8 @@ import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection
 import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
 import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
+import Linear.Affine (Point(..))
+import Linear.V3 (V3(..))
 
 import qualified InfoVis.Parallel.Rendering.Display as C (Changes(..))
 
@@ -47,18 +50,10 @@ multiplexerProcess Configuration{..} control content displayerPids =
       loop changes remaining =
         do
           f0 <- currentHalfFrame
-          when synchronizeDisplays
-            $ do
-               maybeControl <- receiveChanTimeout 0 control
-               case maybeControl of
-                 Just (Synchronize mid1)-> do
-                                       frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag (Synchronize mid1)
-                                       frameDebug DebugMessage "MX SE 2\tSYNC"
-                                       mapM_ (`send` changes {C.sync = True}) displayerPids
-                 _                -> return ()
-          maybeContent <- receiveChanTimeout 100 content
+          maybeContent <- receiveChanTimeout 90 content
           maybe (return ()) (\m -> frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag m) maybeContent
           let
+            first = isNaN x where P (V3 x _ _) = C.eyeLocation changes
             changes' = 
               case maybeContent of
                 Just SetText{..}        -> changes
@@ -74,8 +69,12 @@ multiplexerProcess Configuration{..} control content displayerPids =
                 Just Track{..}          -> changes
                                            {
                                              C.dirty          = True
-                                           , C.eyeLocation    = force $ average (C.eyeLocation    changes) eyePosition
-                                           , C.eyeOrientation = force $ average (C.eyeOrientation changes) eyeOrientation
+                                           , C.eyeLocation    = force $ if first
+                                                                          then eyePosition   
+                                                                          else average (C.eyeLocation    changes) eyePosition
+                                           , C.eyeOrientation = force $ if first
+                                                                          then eyeOrientation
+                                                                          else average (C.eyeOrientation changes) eyeOrientation
                                            }
                 Just Relocate{..}       -> changes
                                            {
@@ -96,9 +95,18 @@ multiplexerProcess Configuration{..} control content displayerPids =
             then do
                    frameDebug DebugMessage "MX SE 1\tDISPLAY"
                    mapM_ (`send` changes') displayerPids
+                   when synchronizeDisplays
+                     $ do
+                        maybeControl <- receiveChanTimeout 10 control
+                        case maybeControl of
+                          Just (Synchronize mid2) -> do
+                                                       frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag (Synchronize mid2)
+                                                       frameDebug DebugMessage "MX SE 3\tSYNC"
+                                                       mapM_ (`send` changes {C.sync = True}) displayerPids
+                          _                       -> return ()
                    loop (reset changes') updateDelay'
             else   loop changes' $ remaining - elapsed
-    loop def updateDelay'
+    loop (def {C.eyeLocation = P $ V3 nan nan nan}) updateDelay'
 
 
 trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
