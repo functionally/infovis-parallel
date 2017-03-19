@@ -16,19 +16,19 @@ module InfoVis.Parallel.Process (
 import Control.Concurrent (forkOS)
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, swapTMVar, readTMVar, takeTMVar)
-import Control.Concurrent.STM.TVar (newTVarIO, modifyTVar')
+import Control.Concurrent.STM.TVar (newTVarIO, writeTVar)
 import Control.DeepSeq (force)
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, receiveChanTimeout, send, sendChan, spawn, spawnLocal)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
 import Data.List (union)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, initializeDebug, frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
 import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
 
@@ -41,29 +41,63 @@ multiplexerProcess Configuration{..} control content displayerPids =
     frameDebug DebugInfo  "Starting multiplexer."
     let
       Just AdvancedSettings{..} = advanced
-      collector Track{}    _ = True
-      collector Relocate{} _ = True
-      collector _          _ = False
-      sendSequence messages =
-        sequence_
-          [
-            do
-              frameDebug DebugMessage $ "MX SE 1\t" ++ messageTag message
-              mapM_ (`send` message) displayerPids
-              when synchronizeDisplays
-                $ do
-                   maybeMessage <- receiveChanTimeout 0 control
-                   case maybeMessage of
-                     Just (Synchronize mid3)-> do
-                                           frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag (Synchronize mid3)
-                                           mid4 <- nextMessageIdentifier
-                                           frameDebug DebugMessage $ "MX SE 3\t" ++ messageTag (RefreshDisplay mid4)
-                                           mapM_ (`send` RefreshDisplay mid4) displayerPids
-                     _                -> return ()
-          |
-            message <- messages
-          ]
-    forever (sendSequence =<< collectChanMessages maximumTrackingCompression content collector)
+      updateDelay' = fromMaybe 0 updateDelay
+      reset c = c {C.sync = False, C.dirty = False, C.newText = [], C.newDisplay = [], C.selectChanges = []}
+      loop changes remaining =
+        do
+          f0 <- currentHalfFrame
+          when synchronizeDisplays
+            $ do
+               maybeControl <- receiveChanTimeout 0 control
+               case maybeControl of
+                 Just (Synchronize mid1)-> do
+                                       frameDebug DebugMessage $ "MX RC 1\t" ++ messageTag (Synchronize mid1)
+                                       frameDebug DebugMessage "MX SE 2\tSYNC"
+                                       mapM_ (`send` changes {C.sync = True}) displayerPids
+                 _                -> return ()
+          maybeContent <- receiveChanTimeout 100 content
+          maybe (return ()) (\m -> frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag m) maybeContent
+          let
+            changes' = 
+              case maybeContent of
+                Just SetText{..}        -> changes
+                                           {
+                                             C.dirty   = True
+                                           , C.newText = text
+                                           }
+                Just AugmentDisplay{..} -> changes
+                                           {
+                                             C.dirty      = True
+                                           , C.newDisplay = augmentations ++ C.newDisplay changes
+                                           }
+                Just Track{..}          -> changes
+                                           {
+                                             C.dirty          = True
+                                           , C.eyeLocation    = force eyePosition
+                                           , C.eyeOrientation = force eyeOrientation
+                                           }
+                Just Relocate{..}       -> changes
+                                           {
+                                             C.dirty             = True
+                                           , C.centerOffset      = force centerDisplacement
+                                           , C.centerOrientation = force centerRotation
+                                           }
+                Just Select{..}         -> changes
+                                           {
+                                             C.dirty          = True
+                                           , C.currentTime    = force   currentTime
+                                           , C.selectLocation = force   selectorLocation
+                                           , C.selectChanges  = force $ selectionChanges `union` C.selectChanges changes
+                                           }
+                _                       -> changes
+          elapsed <- (+ negate f0) <$> currentHalfFrame
+          if C.dirty changes' && elapsed > remaining
+            then do
+                   frameDebug DebugMessage "MX SE 1\tDISPLAY"
+                   mapM_ (`send` changes') displayerPids
+                   loop (reset changes') updateDelay'
+            else   loop changes' $ remaining - elapsed
+    loop def updateDelay'
 
 
 trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
@@ -96,51 +130,11 @@ displayerProcess (configuration, masterSend, displayIndex) =
                 frameDebug DebugMessage $ "DI SC 1\t" ++ messageTag (Ready mid3)
                 masterSend `sendChan` Ready mid3
                 liftIO . void . atomically $ swapTMVar readyVar False
-        message <- expect
-        frameDebug DebugMessage $ "DI EX 2\t" ++ messageTag message
-        liftIO
-          . atomically
-          $ case message of
-            RefreshDisplay{}   -> void $ takeTMVar readyVar
-            SetText{..}        -> modifyTVar' changesVar
-                                    $ \c ->
-                                      c
-                                      {
-                                        C.dirty     = True
-                                      , C.newText = text
-                                      }
-            AugmentDisplay{..} -> modifyTVar' changesVar
-                                    $ \c ->
-                                      c
-                                      {
-                                        C.dirty        = True
-                                      , C.newDisplay = augmentations ++ C.newDisplay c
-                                      }
-            Track{..}          -> modifyTVar' changesVar
-                                    $ \c ->
-                                      c
-                                      {
-                                        C.dirty          = True
-                                      , C.eyeLocation    = force eyePosition
-                                      , C.eyeOrientation = force eyeOrientation
-                                      }
-            Relocate{..}       -> modifyTVar' changesVar
-                                    $ \c ->
-                                      c
-                                      {
-                                        C.dirty             = True
-                                      , C.centerOffset      = force centerDisplacement
-                                      , C.centerOrientation = force centerRotation
-                                      }
-            Select{..}         -> modifyTVar' changesVar
-                                    $ \c ->
-                                      c
-                                      {
-                                        C.dirty          = True
-                                      , C.currentTime    = force   currentTime
-                                      , C.selectLocation = force   selectorLocation
-                                      , C.selectChanges  = force $ selectionChanges `union` C.selectChanges c
-                                      }
+        changes <- expect
+        frameDebug DebugMessage "DI EX 2\tCHANGE"
+        liftIO . atomically $ writeTVar changesVar changes
+        when (C.sync changes)
+          . liftIO . void . atomically $ takeTMVar readyVar
 
 
 remotable ['displayerProcess]

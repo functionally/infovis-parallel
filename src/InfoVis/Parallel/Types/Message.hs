@@ -143,11 +143,7 @@ instance SumTag SelecterMessage' where
 
 
 data DisplayerMessage =
-    RefreshDisplay
-    {
-      displayerMessageIdentifier :: Int
-    }
-  | SetText
+    SetText
     {
       displayerMessageIdentifier :: Int
     , text                       :: [DisplayText String Location]
@@ -179,15 +175,13 @@ data DisplayerMessage =
     deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag DisplayerMessage where
-  sumTag RefreshDisplay{} = '0'
-  sumTag SetText{}        = '1'
-  sumTag AugmentDisplay{} = '2'
-  sumTag Track{}          = '3'
-  sumTag Relocate{}       = '4'
-  sumTag Select{}         = '5'
+  sumTag SetText{}        = '0'
+  sumTag AugmentDisplay{} = '1'
+  sumTag Track{}          = '2'
+  sumTag Relocate{}       = '3'
+  sumTag Select{}         = '4'
 
 instance MessageTag DisplayerMessage where
-  messageTag RefreshDisplay{..} = "Display\tRefresh\t"  ++ show displayerMessageIdentifier
   messageTag SetText{..}        = "Display\tText\t"     ++ show displayerMessageIdentifier
   messageTag AugmentDisplay{..} = "Display\tAugment\t"  ++ show displayerMessageIdentifier
   messageTag Track{..}          = "Display\tTrack\t"    ++ show displayerMessageIdentifier

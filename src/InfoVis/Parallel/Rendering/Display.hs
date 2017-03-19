@@ -1,4 +1,6 @@
 {-# LANGUAGE CPP             #-}
+{-# LANGUAGE DeriveAnyClass  #-}
+{-# LANGUAGE DeriveGeneric   #-}
 {-# LANGUAGE RecordWildCards #-}
 
 
@@ -14,8 +16,10 @@ import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.Exception (IOException, catch)
 import Control.Monad (join, unless, void, when)
+import Data.Binary (Binary)
 import Data.Default (Default(..))
 import Data.IORef (newIORef, modifyIORef', readIORef, writeIORef)
+import GHC.Generics (Generic)
 import Graphics.OpenGL.Util.Setup (dlpViewerDisplay, idle, setup)
 import Graphics.Rendering.OpenGL (GLfloat, ($=))
 import Graphics.Rendering.OpenGL.GL.CoordTrans (preservingMatrix, scale, translate)
@@ -48,7 +52,8 @@ import Graphics.OpenGL.Functions (joinSwapGroup)
 data Changes =
   Changes
   {
-    dirty             :: Bool
+    sync              :: Bool
+  , dirty             :: Bool
   , eyeLocation       :: Point V3 Double
   , eyeOrientation    :: Quaternion Double
   , centerOffset      :: V3 Double
@@ -59,13 +64,14 @@ data Changes =
   , newText           :: [DisplayText String Location]
   , newDisplay        :: [DisplayList (DisplayType, String) Int]
   }
-    deriving (Eq, Show)
+    deriving (Binary, Eq, Generic, Ord, Show)
 
 instance Default Changes where
   def =
     Changes
     {
-      dirty             = True
+      sync              = False
+    , dirty             = True
     , eyeLocation       = zero
     , eyeOrientation    = Quaternion 1 zero
     , centerOffset      = zero

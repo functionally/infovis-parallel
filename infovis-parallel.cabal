@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.1.0
+version      : 0.3.1.1
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -114,7 +114,7 @@ library
                    , raft                               >= 0.3.11
                    , split                              >= 0.2.2
                    , stm                                >= 2.4.4
-                   , unordered-containers               >= 0.2.7
+                   , unordered-containers               >= 0.2.5
                    , vector                             >= 0.11.0
                    , yaml                               >= 0.8.22
   hs-source-dirs   : src

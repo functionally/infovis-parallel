@@ -40,15 +40,15 @@ data Configuration =
 data AdvancedSettings =
   AdvancedSettings
   {
-    debugTiming                :: Bool
-  , debugMessages              :: Bool
-  , debugDisplay               :: Bool
-  , debugOpenGL                :: Bool
-  , useSwapGroup               :: Maybe Int
-  , synchronizeDisplays        :: Bool
-  , useIdleLoop                :: Bool
-  , delaySelection             :: Bool
-  , maximumTrackingCompression :: Int
+    debugTiming         :: Bool
+  , debugMessages       :: Bool
+  , debugDisplay        :: Bool
+  , debugOpenGL         :: Bool
+  , useSwapGroup        :: Maybe Int
+  , synchronizeDisplays :: Bool
+  , useIdleLoop         :: Bool
+  , updateDelay         :: Maybe Double
+  , trackAveraging      :: Double
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
@@ -56,15 +56,15 @@ instance Default AdvancedSettings where
   def =
     AdvancedSettings
     {
-      debugTiming                = False
-    , debugMessages              = False
-    , debugDisplay               = False
-    , debugOpenGL                = False
-    , useSwapGroup               = Nothing
-    , synchronizeDisplays        = False
-    , useIdleLoop                = True
-    , delaySelection             = True
-    , maximumTrackingCompression = maxBound
+      debugTiming         = False
+    , debugMessages       = False
+    , debugDisplay        = False
+    , debugOpenGL         = False
+    , useSwapGroup        = Nothing
+    , synchronizeDisplays = False
+    , useIdleLoop         = True
+    , updateDelay         = Just 2
+    , trackAveraging      = 0.10
     }   
 
 

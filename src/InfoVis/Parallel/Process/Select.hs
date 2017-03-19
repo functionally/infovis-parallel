@@ -9,16 +9,15 @@ module InfoVis.Parallel.Process.Select (
 
 
 import Control.Arrow (second)
-import Control.Concurrent (threadDelay)
 import Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar, swapMVar)
 import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, ReceivePort, SendPort, liftIO, receiveChan, sendChan)
-import Control.Monad (forever, void, when)
+import Control.Monad (forever, void)
 import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
 import Data.List (nub)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
-import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, currentHalfFrame, frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
@@ -101,73 +100,58 @@ selecter configuration@Configuration{..} control listener =
             AugmentSelection{} -> return message
             _                  -> waitForAugment
     AugmentSelection _ links <- waitForAugment
-    let
-      delta = selectorSize presentation * baseSize world / 2
-      spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
     timeVar <- liftIO $ newMVar 0
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
     transientColoringsRef  <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
+    let
+      delta = selectorSize presentation * baseSize world / 2
+      spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
+      refresh selecterState' =
+        do
+          itime <- liftIO $ readMVar timeVar
+          f0 <- currentHalfFrame
+          selecterPosition' <- liftIO $ readMVar  selecterVar
+          (relocation, reorientation) <- liftIO $ readMVar relocationVar
+          persistentColorings <- liftIO $ readMVar persistentColoringsRef
+          transientColorings <- liftIO $ readMVar transientColoringsRef
+          let
+            time = M.keys spatials !! itime
+            ((persistentColorings', transientColorings'), changes) =
+              selecter'
+                configuration
+                (spatials M.! time)
+                (persistentColorings, transientColorings)
+                (selecterPosition', selecterState')
+                (relocation, reorientation)
+          void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
+          void .liftIO $ swapMVar transientColoringsRef transientColorings'
+          mid2 <- nextMessageIdentifier
+          let
+            changes' = if null changes then [] else [((LinkType, ""), changes)]
+          frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 (snd time) selecterPosition' changes')
+          sendChan listener $!! Select mid2 (snd time) selecterPosition' changes'
+          f1 <- currentHalfFrame
+          frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
     forever
       $ do
-        let
-          collector   RelocateSelection{} _ = True
-          collector x@UpdateSelection{}   y = selecterState x == selecterState y
-          collector _                    _ = False
-          refresh selecterState' =
-            do
-              itime <- liftIO $ readMVar timeVar
-              f0 <- currentHalfFrame
-              selecterPosition' <- liftIO $ readMVar  selecterVar
-              (relocation, reorientation) <- liftIO $ readMVar relocationVar
-              persistentColorings <- liftIO $ readMVar persistentColoringsRef
-              transientColorings <- liftIO $ readMVar transientColoringsRef
-              let
-                time = M.keys spatials !! itime
-                ((persistentColorings', transientColorings'), changes) =
-                  selecter'
-                    configuration
-                    (spatials M.! time)
-                    (persistentColorings, transientColorings)
-                    (selecterPosition', selecterState')
-                    (relocation, reorientation)
-              void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
-              void .liftIO $ swapMVar transientColoringsRef transientColorings'
-              mid2 <- nextMessageIdentifier
-              let
-                changes' = if null changes then [] else [((LinkType, ""), changes)]
-              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 (snd time) selecterPosition' changes')
-              sendChan listener $!! Select mid2 (snd time) selecterPosition' changes'
-              f1 <- currentHalfFrame
-              frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
-              let
-                delay = maximum [floor $ 1000 * (1 - f1 + f0) / 120, 0]
-              when (delaySelection && delay > 0)
-                $ do
-                  frameDebug DebugTiming $ "DELAY\t" ++ printf "%.3f" (120 * fromIntegral delay / 1000 :: Double)
-                  liftIO $ threadDelay delay
-        messages <- collectChanMessages maximumTrackingCompression control collector
-        sequence_
-          [
-            case message of
-              RelocateSelection{..} -> do
-                                         void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
-                                         mid3 <- nextMessageIdentifier
-                                         frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Relocate mid3 relocationDisplacement relocationRotation)
-                                         sendChan listener $!! Relocate mid3 relocationDisplacement relocationRotation
-                                         refresh Highlight
-              UpdateSelection{..}   -> do
-                                         void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset world
-                                         case selecterState of
-                                           Forward  -> liftIO . modifyMVar_ timeVar $ \i -> return (minimum [i + 1, M.size spatials - 1])
-                                           Backward -> liftIO . modifyMVar_ timeVar $ \i -> return (maximum [i - 1, 0                  ])
-                                           _        -> return ()
-                                         refresh selecterState
-              _                     -> return ()
-          |
-            message <- messages
-          ]
+        message <- receiveChan control
+        case message of
+          RelocateSelection{..} -> do
+                                     void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
+                                     mid3 <- nextMessageIdentifier
+                                     frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Relocate mid3 relocationDisplacement relocationRotation)
+                                     sendChan listener $!! Relocate mid3 relocationDisplacement relocationRotation
+                                     refresh Highlight
+          UpdateSelection{..}   -> do
+                                     void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset world
+                                     case selecterState of
+                                       Forward  -> liftIO . modifyMVar_ timeVar $ \i -> return (minimum [i + 1, M.size spatials - 1])
+                                       Backward -> liftIO . modifyMVar_ timeVar $ \i -> return (maximum [i - 1, 0                  ])
+                                       _        -> return ()
+                                     refresh selecterState
+          _                     -> return ()
 
 
 selecter' :: Configuration
