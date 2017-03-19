@@ -64,7 +64,7 @@ instance Default AdvancedSettings where
     , synchronizeDisplays = False
     , useIdleLoop         = True
     , updateDelay         = Just 2
-    , trackAveraging      = 0.10
+    , trackAveraging      = 0.80
     }   
 
 
