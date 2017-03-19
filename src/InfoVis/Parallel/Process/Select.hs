@@ -8,7 +8,7 @@ module InfoVis.Parallel.Process.Select (
 ) where
 
 
-import Control.Arrow (second)
+import Control.Arrow ((***), second)
 import Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar, swapMVar)
 import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, ReceivePort, SendPort, liftIO, receiveChan, sendChan)
@@ -108,6 +108,7 @@ selecter configuration@Configuration{..} control listener =
     let
       delta = selectorSize presentation * baseSize world / 2
       spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
+      average new old = fmap (trackAveraging *) old + fmap ((1 - trackAveraging) *) new
       refresh selecterState' =
         do
           itime <- liftIO $ readMVar timeVar
@@ -139,13 +140,21 @@ selecter configuration@Configuration{..} control listener =
         message <- receiveChan control
         case message of
           RelocateSelection{..} -> do
-                                     void . liftIO $ swapMVar relocationVar (relocationDisplacement, relocationRotation)
+                                     void
+                                       . liftIO
+                                       . modifyMVar_ relocationVar
+                                       . (return .)
+                                       $ (average relocationDisplacement *** average relocationRotation)
                                      mid3 <- nextMessageIdentifier
                                      frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Relocate mid3 relocationDisplacement relocationRotation)
                                      sendChan listener $!! Relocate mid3 relocationDisplacement relocationRotation
                                      refresh Highlight
           UpdateSelection{..}   -> do
-                                     void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset world
+                                     void
+                                       . liftIO
+                                       . modifyMVar_ selecterVar
+                                       . (return .)
+                                       $ average (selecterPosition .+^ selectorOffset world)
                                      case selecterState of
                                        Forward  -> liftIO . modifyMVar_ timeVar $ \i -> return (minimum [i + 1, M.size spatials - 1])
                                        Backward -> liftIO . modifyMVar_ timeVar $ \i -> return (maximum [i - 1, 0                  ])

@@ -43,6 +43,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
       Just AdvancedSettings{..} = advanced
       updateDelay' = fromMaybe 0 updateDelay
       reset c = c {C.sync = False, C.dirty = False, C.newText = [], C.newDisplay = [], C.selectChanges = []}
+      average old new = fmap (trackAveraging *) old + fmap ((1 - trackAveraging) *) new
       loop changes remaining =
         do
           f0 <- currentHalfFrame
@@ -73,8 +74,8 @@ multiplexerProcess Configuration{..} control content displayerPids =
                 Just Track{..}          -> changes
                                            {
                                              C.dirty          = True
-                                           , C.eyeLocation    = force eyePosition
-                                           , C.eyeOrientation = force eyeOrientation
+                                           , C.eyeLocation    = force $ average (C.eyeLocation    changes) eyePosition
+                                           , C.eyeOrientation = force $ average (C.eyeOrientation changes) eyeOrientation
                                            }
                 Just Relocate{..}       -> changes
                                            {
