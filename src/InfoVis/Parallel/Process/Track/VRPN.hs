@@ -85,6 +85,8 @@ trackSelection Configuration{..} listener = -- FIXME: Support reset, termination
         | (button, pressed) == (selectButton  , True ) = void $ writeIORef buttonVar Selection   >> tryPutMVar updatedVar ()
         | (button, pressed) == (deselectButton, True ) = void $ writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
         | (button, pressed) == (clearButton   , True ) = void $ writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
+        | (button, pressed) == (forwardButton , True ) = void $ writeIORef buttonVar Forward     >> tryPutMVar updatedVar ()
+        | (button, pressed) == (backwardButton, True ) = void $ writeIORef buttonVar Backward    >> tryPutMVar updatedVar ()
         |          pressed                             = void $ writeIORef buttonVar Highlight   >> tryPutMVar updatedVar ()
         | otherwise                                    = return ()
       device :: Device Int Int Int Double

@@ -8,13 +8,15 @@ module InfoVis.Parallel.Process.Select (
 ) where
 
 
+import Control.Arrow (second)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.MVar (newMVar, readMVar, swapMVar)
+import Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar, swapMVar)
 import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, ReceivePort, SendPort, liftIO, receiveChan, sendChan)
 import Control.Monad (forever, void, when)
 import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
+import Data.List (nub)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
 import InfoVis.Parallel.Process.Util (Debug(..), collectChanMessages, currentHalfFrame, frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
@@ -32,35 +34,44 @@ import Linear.Util.Graphics (fromVertex3)
 import Linear.Vector (zero)
 import Text.Printf (printf)
 
-import qualified Data.HashMap.Strict as H (HashMap, fromListWith, lookupDefault, map)
+import qualified Data.HashMap.Strict as H (HashMap, empty, fromListWith, lookupDefault, map, unionWith)
 import qualified Data.HashSet as S (fromList, toList)
+import qualified Data.Map.Strict as M ((!), fromListWith, keys, size)
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 
 
-type Spatial a b = (a, H.HashMap (Point V3 Int) [(Int, Point V3 a)])
+type Spatial a = (a, H.HashMap (Point V3 Int) [(Int, Point V3 a)])
 
 
 consolidate :: (Eq a, Hashable a) => [a] -> [a]
 consolidate = S.toList . S.fromList
 
 
-newSpatial :: (Hashable a, RealFloat a) => a -> [DisplayList b Int]  -> Spatial a b
-newSpatial delta dis =
+newSpatial :: (Hashable a, RealFloat a) => a -> DisplayList b Int  -> (b, Spatial a)
+newSpatial delta DisplayList{..} =
   (
-    delta
-  , H.map consolidate
-      $ H.fromListWith (++)
-      [
-        (xyz, [(vertexIdentifier, realToFrac <$> fromVertex3 vertex)])
-      |
-        DisplayList{..} <- dis
-      , (vertexIdentifier, vertex) <- zip listVertexIdentifiers listVertices
-      , let xyz = floor . (/ realToFrac delta) <$> fromVertex3 vertex
-      ]
+    listIdentifier
+  , (
+      delta
+    , H.map consolidate
+        $ H.fromListWith (++)
+        [
+          (xyz, [(vertexIdentifier, realToFrac <$> fromVertex3 vertex)])
+        |
+          (vertexIdentifier, vertex) <- zip listVertexIdentifiers listVertices
+        , let xyz = floor . (/ realToFrac delta) <$> fromVertex3 vertex
+        ]
+    )
   )
 
 
-lookupSpatial :: (Hashable a, RealFrac a) => Spatial a b -> a -> Point V3 a -> [(Int, Point V3 a)]
+mergeSpatials :: Eq a => [Spatial a] -> Spatial a
+mergeSpatials spatials
+  | length (nub $ fst <$> spatials) == 1 = (fst $ head spatials, foldl (H.unionWith (++)) H.empty $ snd <$> spatials)
+  | otherwise                            = error "Incongruent spatial indices."
+
+
+lookupSpatial :: (Hashable a, RealFrac a) => Spatial a -> a -> Point V3 a -> [(Int, Point V3 a)]
 lookupSpatial (delta, spatial) d p =
   let
     P (V3 x0 y0 z0) = floor   . (/ realToFrac delta) <$> p .-^ V3 d d d
@@ -82,11 +93,18 @@ selecter configuration@Configuration{..} control listener =
     frameDebug DebugInfo  "Starting selector."
     let
       Just AdvancedSettings{..} = advanced
-    AugmentSelection mid1 links <- receiveChan control
+      waitForAugment =
+        do
+          message <- receiveChan control
+          frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag message
+          case message of
+            AugmentSelection{} -> return message
+            _                  -> waitForAugment
+    AugmentSelection _ links <- waitForAugment
     let
       delta = selectorSize presentation * baseSize world / 2
-      spatial = newSpatial delta links
-    frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag (AugmentSelection mid1 links)
+      spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
+    timeVar <- liftIO $ newMVar 0
     selecterVar <- liftIO $ newMVar zero
     relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
     persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
@@ -99,16 +117,18 @@ selecter configuration@Configuration{..} control listener =
           collector _                    _ = False
           refresh selecterState' =
             do
+              itime <- liftIO $ readMVar timeVar
               f0 <- currentHalfFrame
               selecterPosition' <- liftIO $ readMVar  selecterVar
               (relocation, reorientation) <- liftIO $ readMVar relocationVar
               persistentColorings <- liftIO $ readMVar persistentColoringsRef
               transientColorings <- liftIO $ readMVar transientColoringsRef
               let
+                time = M.keys spatials !! itime
                 ((persistentColorings', transientColorings'), changes) =
                   selecter'
                     configuration
-                    spatial
+                    (spatials M.! time)
                     (persistentColorings, transientColorings)
                     (selecterPosition', selecterState')
                     (relocation, reorientation)
@@ -117,8 +137,8 @@ selecter configuration@Configuration{..} control listener =
               mid2 <- nextMessageIdentifier
               let
                 changes' = if null changes then [] else [((LinkType, ""), changes)]
-              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 selecterPosition' changes')
-              sendChan listener $!! Select mid2 selecterPosition' changes'
+              frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 (snd time) selecterPosition' changes')
+              sendChan listener $!! Select mid2 (snd time) selecterPosition' changes'
               f1 <- currentHalfFrame
               frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
               let
@@ -139,6 +159,10 @@ selecter configuration@Configuration{..} control listener =
                                          refresh Highlight
               UpdateSelection{..}   -> do
                                          void . liftIO . swapMVar selecterVar $ selecterPosition .+^ selectorOffset world
+                                         case selecterState of
+                                           Forward  -> liftIO . modifyMVar_ timeVar $ \i -> return (minimum [i + 1, M.size spatials - 1])
+                                           Backward -> liftIO . modifyMVar_ timeVar $ \i -> return (maximum [i - 1, 0                  ])
+                                           _        -> return ()
                                          refresh selecterState
               _                     -> return ()
           |
@@ -147,7 +171,7 @@ selecter configuration@Configuration{..} control listener =
 
 
 selecter' :: Configuration
-          -> Spatial Double (DisplayType, String)
+          -> Spatial Double
           -> (U.Vector Bit, U.Vector Bit)
           -> (Point V3 Double, SelectionAction)
           -> (V3 Double, Quaternion Double)
@@ -163,10 +187,10 @@ selecter' Configuration{..} spatial (persistentColorings, transientColorings) (P
     selections = U.accum (const . const $ fromBool True) zeroBits ((, undefined) <$> g)
     persistentColorings' =
       case press of
-        Highlight       -> persistentColorings
         Deselection     -> persistentColorings `intersection` invert selections
         Selection       -> persistentColorings `union` selections
         Clear           -> zeroBits
+        _               -> persistentColorings
     dp = persistentColorings `symDiff` persistentColorings'
     dt = transientColorings  `symDiff` selections
     dd = dp `union` dt

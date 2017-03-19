@@ -21,6 +21,8 @@ data Dataset =
   {
     datasetIdentifier :: String
   , variables         :: [Variable]
+  , maxRecords        :: Maybe Int
+  , chunkSize         :: Maybe Int
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 

@@ -12,3 +12,5 @@ input               :
     selectButton    : [spacenav, 0]
     deselectButton  : [spacenav, 1]
     clearButton     : [spacenav, 9]
+    forwardButton   : [spacenav, 7]
+    backwardButton  : [spacenav, 6]

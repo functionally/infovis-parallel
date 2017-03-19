@@ -9,3 +9,5 @@ input              :
     selectButton   : 1
     deselectButton : 3
     clearButton    : 2
+    forwardButton  : 7
+    backwardButton : 6

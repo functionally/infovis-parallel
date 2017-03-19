@@ -14,6 +14,7 @@ module InfoVis.Parallel.Types.Presentation (
 , Container(..)
 , LinkAlias
 , Link(..)
+, TimeAlias
 , Characteristic(..)
 , Presentation(..)
 ) where
@@ -151,6 +152,9 @@ data Link =
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 
 
+type TimeAlias = String
+
+
 data Characteristic =
     ColorSet
     {
@@ -166,8 +170,8 @@ data Presentation =
   {
     containers    :: [Container]
   , links         :: [Link]
-  , animation     :: Maybe VariableAlias -- FIXME: Needs implementation.
-  , selectorColor :: Color               -- FIXME: Needs implementation.
-  , selectorSize  :: Double              -- FIXME: Needs implementation.
+  , animation     :: Maybe VariableAlias
+  , selectorColor :: Color
+  , selectorSize  :: Double
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

@@ -112,7 +112,7 @@ trackSelection Configuration{..} listener =
       processInput sensor (LocationEvent xyz) = processInput' sensor xyz
       processInput sensor (PointerEvent xyz) = processInput' sensor xyz
       processInput sensor (ButtonEvent (IndexButton i, Down)) =
-        case (sensor, i) `lookup` [(selectButton, Selection), (deselectButton, Deselection), (clearButton, Clear)] of
+        case (sensor, i) `lookup` [(selectButton, Selection), (deselectButton, Deselection), (clearButton, Clear), (forwardButton, Forward), (backwardButton, Backward)] of
           Nothing              -> return ()
           Just selectionAction -> do
                                     location <- liftIO $ readMVar locationVar

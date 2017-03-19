@@ -13,3 +13,5 @@ input               :
     selectButton    : [esif-joystickA, 0]
     deselectButton  : [esif-joystickA, 1]
     clearButton     : [esif-joystickA, 2]
+    forwardButton   : [esif-joystickA, 7]
+    backwardButton  : [esif-joystickA, 6]

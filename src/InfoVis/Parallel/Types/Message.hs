@@ -31,6 +31,7 @@ import Data.Binary (Binary)
 import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
+import InfoVis.Parallel.Types.Presentation (TimeAlias)
 import InfoVis.Parallel.Types.Configuration (Configuration)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
@@ -171,6 +172,7 @@ data DisplayerMessage =
   | Select
     {
       displayerMessageIdentifier :: Int
+    , currentTime                :: TimeAlias
     , selectorLocation           :: Point V3 Double
     , selectionChanges           :: [((DisplayType, String), [(Int, Coloring)])]
     }
@@ -202,7 +204,7 @@ instance SumTag DisplayerMessage' where
   sumTag (Left  Synchronize{}) = '9'
 
 
-data SelectionAction = Highlight | Selection | Deselection | Clear
+data SelectionAction = Highlight | Selection | Deselection | Clear | Forward | Backward
  deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 

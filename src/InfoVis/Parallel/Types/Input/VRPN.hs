@@ -23,6 +23,8 @@ data InputVRPN =
   , selectButton   :: Int
   , deselectButton :: Int
   , clearButton    :: Int
+  , forwardButton  :: Int
+  , backwardButton :: Int
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 

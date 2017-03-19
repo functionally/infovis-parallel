@@ -160,13 +160,13 @@ freeBuffer :: DisplayBuffer a b -> IO ()
 freeBuffer DisplayBuffer{..} = freeShape bufferShape
 
 
-updateBuffer :: (Eq a, Eq b, Hashable b) => DisplayBuffer a b -> [(a, [(b, Coloring)])] -> IO ()
-updateBuffer DisplayBuffer{..} updates =
+updateBuffer :: (Eq a, Eq b, Hashable b) => (a -> a -> Bool) -> DisplayBuffer a b -> [(a, [(b, Coloring)])] -> IO ()
+updateBuffer select DisplayBuffer{..} updates =
   updateColors bufferShape
     [
       (i, bufferColorings M.! c)
     |
-      update <- snd <$> filter ((== bufferIdentifier) . fst) updates
+      update <- snd <$> filter (select bufferIdentifier . fst) updates
     , (v, c) <- update
     , i <- H.lookupDefault [] v bufferVertexIdentifiers
     ]

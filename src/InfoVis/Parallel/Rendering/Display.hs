@@ -26,8 +26,8 @@ import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
 import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrameIO, frameDebugIO)
-import InfoVis.Parallel.Rendering.Shapes (drawBuffer, makeBuffer, updateBuffer)
-import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(LinkType))
+import InfoVis.Parallel.Rendering.Shapes (DisplayBuffer(bufferIdentifier), drawBuffer, makeBuffer, updateBuffer)
+import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Coloring, Location)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
@@ -53,6 +53,7 @@ data Changes =
   , eyeOrientation    :: Quaternion Double
   , centerOffset      :: V3 Double
   , centerOrientation :: Quaternion Double
+  , currentTime       :: String
   , selectLocation    :: Point V3 Double
   , selectChanges     :: [((DisplayType, String), [(Int, Coloring)])]
   , newText           :: [DisplayText String Location]
@@ -69,6 +70,7 @@ instance Default Changes where
     , eyeOrientation    = Quaternion 1 zero
     , centerOffset      = zero
     , centerOrientation = Quaternion 1 zero
+    , currentTime       = ""
     , selectLocation    = zero
     , selectChanges     = []
     , newText           = []
@@ -123,7 +125,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             $ do
                 f0 <- currentHalfFrameIO
                 buffers <- readIORef buffersVar
-                mapM_ (`updateBuffer` selectChanges) buffers -- FIXME: This could be split among frames.
+                mapM_ (flip (updateBuffer selectBuffer) selectChanges) buffers
                 modifyIORef' currentVar $ \c -> c {selectChanges = []}
                 f1 <- currentHalfFrameIO
                 frameDebugIO DebugDisplay $ show displayIndex ++ "\tSELECT\tSELECT\t" ++ printf "%.3f" (f1 - f0)
@@ -152,15 +154,18 @@ displayer Configuration{..} displayIndex changesVar readyVar =
           unless (null newDisplay)
             $ do
               f0 <- currentHalfFrameIO
-              let
-                -- FIXME: Use the actual link alias.
-                unalias d@(DisplayList (LinkType, _) _ _ _ _) = d {listIdentifier = (LinkType, "")}
-                unalias d                                     = d
-              newBuffers <- mapM makeBuffer $ unalias <$> newDisplay
+              newBuffers <- mapM makeBuffer newDisplay
               modifyIORef' buffersVar (newBuffers ++)
               modifyIORef' currentVar $ \c -> c {newDisplay = []}
               f1 <- currentHalfFrameIO
               frameDebugIO DebugDisplay $ show displayIndex ++ "\tADD\tDISPLAY\t" ++ printf "%.3f" (f1 - f0)
+      selectBuffer :: (DisplayType, String) -> (DisplayType, String) -> Bool
+      selectBuffer buffer (LinkType, _) = fst buffer == LinkType
+      selectBuffer buffer key           = buffer     == key
+      onlyCurrentTime time buffer =
+        fst i == GridType || i == (LinkType, time)
+          where
+            i = bufferIdentifier buffer
     idleCallback $= Just (if useIdleLoop then changeLoop else idle)
     dlpViewerDisplay dlp viewers displayIndex ((eyeLocation &&& eyeOrientation) <$> readIORef currentVar)
       $ do
@@ -175,11 +180,12 @@ displayer Configuration{..} displayIndex changesVar readyVar =
         frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tSELECT\t" ++ printf "%.3f" (f1 - f0)
         preservingMatrix
           $ do
+            time <- currentTime <$> readIORef currentVar
             (location, orientation) <- (centerOffset &&& centerOrientation) <$> readIORef currentVar
             toRotation orientation
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             buffers <- readIORef buffersVar
-            mapM_ drawBuffer buffers
+            mapM_ drawBuffer $ filter (onlyCurrentTime time) buffers
             f2 <- currentHalfFrameIO
             frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tDISPLAY\t" ++ printf "%.3f" (f2 - f1)
             join $ readIORef drawTextVar

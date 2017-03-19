@@ -12,6 +12,8 @@ input               :
     selectButton    : [none, 0]
     deselectButton  : [none, 1]
     clearButton     : [none, 2]
+    forwardButton   : [none, 7]
+    backwardButton  : [none, 6]
 
 #### Tracker0@192.168.56.100
 #### sensor 0 : glasses

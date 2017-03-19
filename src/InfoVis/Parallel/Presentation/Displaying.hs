@@ -7,13 +7,15 @@ module InfoVis.Parallel.Presentation.Displaying (
 ) where
 
 
+import Control.Arrow (first)
 import Data.Function.MapReduce (groupReduceByKey)
+import Data.List (elemIndex)
 import InfoVis.Parallel.Presentation.Presenting (linkPresentation, presentWorld)
 import InfoVis.Parallel.Presentation.Scaling (scaleToWorld)
 import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..), fromLocations)
 import InfoVis.Parallel.Types (Location)
-import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier)
-import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, LinkAlias, Presentation)
+import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(variableAlias))
+import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, Presentation(animation), TimeAlias)
 import InfoVis.Parallel.Types.World (World)
 
 
@@ -32,13 +34,19 @@ prepareGrids world presentation Dataset{..} =
     )
 
 
-prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (DisplayType, LinkAlias) RecordIdentifier]
+prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (DisplayType, TimeAlias) RecordIdentifier]
 prepareLinks world presentation dataset rs =
   prepare LinkType
-    . concat 
-    . zipWith (linkPresentation presentation) [0..]
-    $ scaleToWorld world presentation dataset
-    <$> rs
+    $ concat
+    [
+      fmap (\di@DisplayItem{..} -> di {itemIdentifier = first (const t) itemIdentifier}) -- FIXME: Avoid rewriting the display item.
+        . linkPresentation presentation n
+        $ scaleToWorld world presentation dataset r
+    |
+      let it = (`elemIndex` (variableAlias <$> variables dataset)) =<< animation presentation
+    , (r, n) <- zip rs [0..]
+    , let t = maybe "" (show . (r !!)) it
+    ]
 
 
 prepare :: Ord a => DisplayType -> [DisplayItem (a, (b, [Characteristic])) Location] -> [DisplayList (DisplayType, a) b]

@@ -137,6 +137,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
                                       c
                                       {
                                         C.dirty          = True
+                                      , C.currentTime    = force   currentTime
                                       , C.selectLocation = force   selectorLocation
                                       , C.selectChanges  = force $ selectionChanges `union` C.selectChanges c
                                       }
