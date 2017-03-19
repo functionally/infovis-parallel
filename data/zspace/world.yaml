@@ -13,7 +13,7 @@ world            :
   baseSize       : 0.001
 viewers          :
   stereo         : QuadBuffer
-  eyeSeparation  : [ 0.02  ,  0     ,  0     ]
+  eyeSeparation  : [-0.02  ,  0     ,  0     ]
   nearPlane      : 0.01
   farPlane       : 10
   displays       :

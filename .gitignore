@@ -5,3 +5,4 @@ tmp/
 dist/
 cabal.sandbox.config
 demo.ogv
+*.log
