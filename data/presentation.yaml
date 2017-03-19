@@ -24,9 +24,9 @@ presentation               :
         tag                : BoxGrid
         gridAlias          : heatingBox
         axes3D             :
-        - axisVariable     : wa
-        - axisVariable     : ra
-        - axisVariable     : hl
+        - axisVariable     : Wall Area
+        - axisVariable     : Roof Area
+        - axisVariable     : Heating Load
         divisions          : 10
         lineCharacteristics:
         - tag              : ColorSet
@@ -51,9 +51,9 @@ presentation               :
         tag                : BoxGrid
         gridAlias          : coolingBox
         axes3D             :
-        - axisVariable     : wa
-        - axisVariable     : ra
-        - axisVariable     : cl
+        - axisVariable     : Wall Area
+        - axisVariable     : Roof Area
+        - axisVariable     : Cooling Load
         divisions          : 0
         lineCharacteristics:
         - tag              : ColorSet
@@ -93,8 +93,8 @@ presentation               :
     - tag                  : RectangleGrid
       gridAlias            : plane1
       axes2D               :
-      - axisVariable       : rc
-      - axisVariable       : sa
+      - axisVariable       : Relative Compactness
+      - axisVariable       : Surface Area
       divisions            : 5
       lineCharacteristics  :
       - tag                : ColorSet
@@ -111,8 +111,8 @@ presentation               :
     - tag                  : RectangleGrid
       gridAlias            : plane2
       axes2D               :
-      - axisVariable       : wa
-      - axisVariable       : ra
+      - axisVariable       : Wall Area
+      - axisVariable       : Roof Area
       divisions            : 5
       lineCharacteristics  :
       - tag                : ColorSet
@@ -129,8 +129,8 @@ presentation               :
     - tag                  : RectangleGrid
       gridAlias            : plane3
       axes2D               :
-      - axisVariable       : oh
-      - axisVariable       : or
+      - axisVariable       : Overall Height
+      - axisVariable       : Orientation
       divisions            : 5
       lineCharacteristics  :
       - tag                : ColorSet
@@ -147,8 +147,8 @@ presentation               :
     - tag                  : RectangleGrid
       gridAlias            : plane4
       axes2D               :
-      - axisVariable       : ga
-      - axisVariable       : gd
+      - axisVariable       : Glazing Area
+      - axisVariable       : Glazing Area Distribution
       divisions            : 5
       lineCharacteristics  :
       - tag                : ColorSet
@@ -165,8 +165,8 @@ presentation               :
     - tag                  : RectangleGrid
       gridAlias            : plane5
       axes2D               :
-      - axisVariable       : hl
-      - axisVariable       : cl
+      - axisVariable       : Heating Load
+      - axisVariable       : Cooling Load
       divisions            : 5
       lineCharacteristics  :
       - tag                : ColorSet
@@ -216,7 +216,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line1
       axes1D               :
-        axisVariable       : rc
+        axisVariable       : Relative Compactness
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -228,7 +228,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line2
       axes1D               :
-        axisVariable       : sa
+        axisVariable       : Surface Area
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -240,7 +240,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line3
       axes1D               :
-        axisVariable       : wa
+        axisVariable       : Wall Area
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -252,7 +252,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line4
       axes1D               :
-        axisVariable       : ra
+        axisVariable       : Roof Area
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -264,7 +264,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line5
       axes1D               :
-        axisVariable       : oh
+        axisVariable       : Overall Height
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -276,7 +276,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line6
       axes1D               :
-        axisVariable       : or
+        axisVariable       : Orientation
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -288,7 +288,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line7
       axes1D               :
-        axisVariable       : ga
+        axisVariable       : Glazing Area
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -300,7 +300,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line8
       axes1D               :
-        axisVariable       : gd
+        axisVariable       : Glazing Area Distribution
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -312,7 +312,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line9
       axes1D               :
-        axisVariable       : hl
+        axisVariable       : Heating Load
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
@@ -324,7 +324,7 @@ presentation               :
     - tag                  : LineGrid
       gridAlias            : line10
       axes1D               :
-        axisVariable       : cl
+        axisVariable       : Cooling Load
       divisions            : 10
       lineCharacteristics  :
       - tag                : ColorSet
