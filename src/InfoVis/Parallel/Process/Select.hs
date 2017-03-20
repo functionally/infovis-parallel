@@ -181,20 +181,20 @@ selecter' Configuration{..} spatial (persistentColorings, transientColorings) (P
     d = realToFrac $ selectorSize presentation * baseSize world / 2
     inBox p0 p1 = quadrance (p0 .-. p1) <= d^(2::Int)
     g = fst <$> filter (inBox location'' . snd) (lookupSpatial spatial d location'')
-    selections = U.accum (const . const $ fromBool True) zeroBits ((, undefined) <$> g)
+    selections = U.accum (const . const $ fromBool True) zeroBits $ (, undefined) <$> g
     persistentColorings' =
       case press of
         Deselection     -> persistentColorings `intersection` invert selections
-        Selection       -> persistentColorings `union` selections
+        Selection       -> persistentColorings `union`               selections
         Clear           -> zeroBits
         _               -> persistentColorings
     dp = persistentColorings `symDiff` persistentColorings'
     dt = transientColorings  `symDiff` selections
-    dd = dp `union` dt
-    newHighlight = listBits $ selections `intersection` dd
-    newNohighlight = invert selections `intersection` dd
-    newSelect = listBits $ newNohighlight `intersection` persistentColorings'
-    newNormal = listBits $ newNohighlight `intersection` invert persistentColorings'
+    dd = dp                  `union`   dt
+    newHighlight   = listBits $ selections        `intersection` dd
+    newNohighlight =            invert selections `intersection` dd
+    newSelect      = listBits $ newNohighlight    `intersection` persistentColorings'
+    newNormal      = listBits $ newNohighlight    `intersection` invert persistentColorings'
   in
     if press == Reset
       then (

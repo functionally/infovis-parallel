@@ -23,7 +23,6 @@ import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
 import Data.Default.Util (nan)
-import Data.List (union)
 import Data.Maybe (fromJust, fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
@@ -35,7 +34,16 @@ import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), 
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
+import qualified Data.Map.Strict as M (fromList, toList, unionWith)
 import qualified InfoVis.Parallel.Rendering.Display as C (Changes(..))
+
+
+merge :: (Ord a, Ord b) => [(a, [(b, c)])] -> [(a, [(b, c)])] -> [(a, [(b, c)])]
+merge old new =
+  M.toList
+    $ M.unionWith (\old' new' -> M.toList $ M.unionWith (const id) (M.fromList old') (M.fromList new'))
+      (M.fromList old)
+      (M.fromList new)
 
 
 multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
@@ -87,7 +95,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
                                              C.dirty          = True
                                            , C.currentTime    = force   currentTime
                                            , C.selectLocation = force   selectorLocation
-                                           , C.selectChanges  = force $ selectionChanges `union` C.selectChanges changes
+                                           , C.selectChanges  = force $ C.selectChanges changes `merge` selectionChanges
                                            }
                 _                       -> changes
           elapsed <- (+ negate f0) <$> currentHalfFrame
