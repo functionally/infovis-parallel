@@ -98,6 +98,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
      catch (fontHeight Roman)
        ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
     drawTextVar <- newIORef $ return ()
+    drawStatusVar <- newIORef . const $ return ()
     buffersVar <- newIORef []
     currentVar <- newIORef def
     let
@@ -139,21 +140,10 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             $ do
               f0 <- currentHalfFrameIO
               writeIORef drawTextVar
-                $ sequence_
-                [
-                  preservingMatrix $ do
-                    color textColor
-                    translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
-                    toRotation qrot
-                    scale s s s
-                    translate $ Vector3 0 (- fontHeight') 0
-                    renderString Roman textContent
-                |
-                  DisplayText{..} <- newText
-                , let WorldExtent{..} = worldExtent world
-                , let s = realToFrac textSize * realToFrac (baseSize world) / fontHeight' :: GLfloat
-                , let qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
-                ]
+                . mapM_ (showText Nothing)
+                $ tail newText
+              writeIORef drawStatusVar
+                $ (`showText` head newText) . Just
               modifyIORef' currentVar $ \c -> c {newText = []}
               f1 <- currentHalfFrameIO
               frameDebugIO DebugDisplay $ show displayIndex ++ "\tSET\tTEXT\t" ++ printf "%.3f" (f1 - f0)
@@ -165,6 +155,19 @@ displayer Configuration{..} displayIndex changesVar readyVar =
               modifyIORef' currentVar $ \c -> c {newDisplay = []}
               f1 <- currentHalfFrameIO
               frameDebugIO DebugDisplay $ show displayIndex ++ "\tADD\tDISPLAY\t" ++ printf "%.3f" (f1 - f0)
+      showText t DisplayText{..} =
+        let
+          WorldExtent{..} = worldExtent world
+          s = realToFrac textSize * realToFrac (baseSize world) / fontHeight' :: GLfloat
+          qrot = rotationFromPlane (V3 1 0 0) (V3 0 (-1) 0) textOrigin textWidth textHeight
+        in
+          preservingMatrix $ do
+            color textColor
+            translate $ toVector3 (realToFrac <$> textOrigin .-. zero :: V3 GLfloat)
+            toRotation qrot
+            scale s s s
+            translate $ Vector3 0 (- fontHeight') 0
+            renderString Roman $ maybe textContent (textContent ++) t
       selectBuffer :: (DisplayType, String) -> (DisplayType, String) -> Bool
       selectBuffer buffer (LinkType, _) = fst buffer == LinkType
       selectBuffer buffer key           = buffer     == key
@@ -195,6 +198,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             f2 <- currentHalfFrameIO
             frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tDISPLAY\t" ++ printf "%.3f" (f2 - f1)
             join $ readIORef drawTextVar
+            join $ ($ time) <$> readIORef drawStatusVar
             f3 <- currentHalfFrameIO
             frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f3 - f2)
         f4 <- currentHalfFrameIO

@@ -9,7 +9,7 @@ module InfoVis.Parallel.Presentation.Presenting (
 ) where
 
 
-import Control.Arrow ((***))
+import Control.Arrow ((***), second)
 import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.Presentation.Scaling (scaleToExtent, scaleToWorldExtent)
 import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayText(..), PrimitiveMode(..))
@@ -244,6 +244,20 @@ presentContainer Collection{..} =
   concat' $ zipWith (\e -> scaleItems (scaleToExtent e) . presentContainer) extents containeds
 
 
+makeStatus :: World -> Presentation -> DisplayText String Location
+makeStatus world Presentation{..} =
+  DisplayText
+  {
+    textContent = maybe "" (++ ": ") animation
+  , textOrigin  = scaleToWorldExtent world statusOrigin
+  , textWidth   = scaleToWorldExtent world statusWidth
+  , textHeight  = scaleToWorldExtent world statusHeight
+  , textColor   = statusColor
+  , textSize    = statusSize
+  }
+
+
 presentWorld :: World -> Presentation -> ([DisplayItem (GridAlias, (Int, [Characteristic])) Location], [DisplayText VariableAlias Location])
-presentWorld world Presentation{..} =
-  concatMap' (scaleItems (scaleToWorldExtent world) . presentContainer) containers
+presentWorld world presentation@Presentation{..} =
+  second (makeStatus world presentation :)
+    $ concatMap' (scaleItems (scaleToWorldExtent world) . presentContainer) containers

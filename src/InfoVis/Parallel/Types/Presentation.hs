@@ -63,8 +63,8 @@ data Grid =
     , axes1D              :: Axes1D
     , divisions           :: Int
     , lineCharacteristics :: [Characteristic]
-    , labelColor          :: Color            -- FIXME: Needs implementation.
-    , labelSize           :: Double           -- FIXME: Needs implementation.
+    , labelColor          :: Color
+    , labelSize           :: Double
     }
   | RectangleGrid
     {
@@ -173,5 +173,10 @@ data Presentation =
   , animation     :: Maybe VariableAlias
   , selectorColor :: Color
   , selectorSize  :: Double
+  , statusColor   :: Color
+  , statusSize    :: Double
+  , statusOrigin  :: Location
+  , statusWidth   :: Location
+  , statusHeight  :: Location
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
