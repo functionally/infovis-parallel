@@ -11,3 +11,4 @@ input              :
     clearButton    : 2
     forwardButton  : 7
     backwardButton : 6
+    resetButton    : 11

@@ -9,11 +9,12 @@ input               :
       Right         : zspace-head
     relocationInput : none
     selectorInput   : none
-    selectButton    : [none, 0]
-    deselectButton  : [none, 1]
-    clearButton     : [none, 2]
-    forwardButton   : [none, 7]
-    backwardButton  : [none, 6]
+    selectButton    : [none,  0]
+    deselectButton  : [none,  1]
+    clearButton     : [none,  2]
+    forwardButton   : [none,  7]
+    backwardButton  : [none,  6]
+    resetButton     : [none, 11]
 
 #### Tracker0@192.168.56.100
 #### sensor 0 : glasses

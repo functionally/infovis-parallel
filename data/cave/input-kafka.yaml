@@ -10,8 +10,9 @@ input               :
       Right         : esif-head
     relocationInput : none
     selectorInput   : esif-joystick0
-    selectButton    : [esif-joystickA, 0]
-    deselectButton  : [esif-joystickA, 1]
-    clearButton     : [esif-joystickA, 2]
-    forwardButton   : [esif-joystickA, 7]
-    backwardButton  : [esif-joystickA, 6]
+    selectButton    : [esif-joystickA,  0]
+    deselectButton  : [esif-joystickA,  1]
+    clearButton     : [esif-joystickA,  2]
+    forwardButton   : [esif-joystickA,  7]
+    backwardButton  : [esif-joystickA,  6]
+    resetButton     : [esif-joystickA, 11]

@@ -33,13 +33,17 @@ import Linear.Util.Graphics (fromVertex3)
 import Linear.Vector (zero)
 import Text.Printf (printf)
 
-import qualified Data.HashMap.Strict as H (HashMap, empty, fromListWith, lookupDefault, map, unionWith)
+import qualified Data.HashMap.Strict as H (HashMap, empty, fromListWith, lookupDefault, map, toList, unionWith)
 import qualified Data.HashSet as S (fromList, toList)
 import qualified Data.Map.Strict as M ((!), fromListWith, keys, size)
 import qualified Data.Vector.Unboxed as U (Vector, accum, length, replicate)
 
 
 type Spatial a = (a, H.HashMap (Point V3 Int) [(Int, Point V3 a)])
+
+
+nubPair :: (Eq a, Hashable a) => [(a, b)] -> [(a, b)]
+nubPair = H.toList . H.fromListWith (const id)
 
 
 consolidate :: (Eq a, Hashable a) => [a] -> [a]
@@ -172,7 +176,7 @@ selecter' :: Configuration
 selecter' Configuration{..} spatial (persistentColorings, transientColorings) (P location, press) (location', orientation') =
   let
     merge = foldl (flip (:))
-    zeroBits = U.replicate (U.length transientColorings) (fromBool False)
+    zeroBits = U.replicate (U.length transientColorings) $ fromBool False
     location'' = (P $ conjugate orientation' `rotate` location) .-^ location'
     d = realToFrac $ selectorSize presentation * baseSize world / 2
     inBox p0 p1 = quadrance (p0 .-. p1) <= d^(2::Int)
@@ -192,9 +196,17 @@ selecter' Configuration{..} spatial (persistentColorings, transientColorings) (P
     newSelect = listBits $ newNohighlight `intersection` persistentColorings'
     newNormal = listBits $ newNohighlight `intersection` invert persistentColorings'
   in
-    (
-      (persistentColorings', selections)
-    ,                fmap (, HighlightColoring) newHighlight
-        `merge` fmap (, SelectColoring   ) newSelect
-        `merge` fmap (, NormalColoring   ) newNormal
-    )
+    if press == Reset
+      then (
+             (persistentColorings', selections)
+           , nubPair
+               $  fmap (, HighlightColoring) (listBits selections         )
+               ++ fmap (, SelectColoring   ) (listBits persistentColorings)
+               ++ fmap (, NormalColoring   ) (listBits $ invert zeroBits  )
+           )
+      else (
+             (persistentColorings', selections)
+           ,           fmap (, HighlightColoring) newHighlight
+               `merge` fmap (, SelectColoring   ) newSelect
+               `merge` fmap (, NormalColoring   ) newNormal
+           )

@@ -25,6 +25,7 @@ data InputVRPN =
   , clearButton    :: Int
   , forwardButton  :: Int
   , backwardButton :: Int
+  , resetButton    :: Int
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)
 

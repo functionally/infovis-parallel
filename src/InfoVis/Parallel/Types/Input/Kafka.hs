@@ -35,5 +35,6 @@ data InputKafka =
   , clearButton     :: (Sensor, Int)
   , forwardButton   :: (Sensor, Int)
   , backwardButton  :: (Sensor, Int)
+  , resetButton     :: (Sensor, Int)
   }
     deriving (Binary, Eq, FromJSON, Generic, Ord, Read, Show, ToJSON)

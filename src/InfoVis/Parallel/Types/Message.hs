@@ -198,7 +198,7 @@ instance SumTag DisplayerMessage' where
   sumTag (Left  Synchronize{}) = '9'
 
 
-data SelectionAction = Highlight | Selection | Deselection | Clear | Forward | Backward
+data SelectionAction = Highlight | Selection | Deselection | Clear | Forward | Backward | Reset
  deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 
