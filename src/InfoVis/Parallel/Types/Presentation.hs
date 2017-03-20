@@ -170,7 +170,8 @@ data Presentation =
   {
     containers    :: [Container]
   , links         :: [Link]
-  , animation     :: Maybe VariableAlias
+  , animationKey  :: Maybe VariableAlias
+  , uniqueKey     :: Maybe VariableAlias
   , selectorColor :: Color
   , selectorSize  :: Double
   , statusColor   :: Color

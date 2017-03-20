@@ -10,13 +10,16 @@ module InfoVis.Parallel.Presentation.Displaying (
 import Control.Arrow (first)
 import Data.Function.MapReduce (groupReduceByKey)
 import Data.List (elemIndex)
+import Data.Tuple.Util (trd3)
 import InfoVis.Parallel.Presentation.Presenting (linkPresentation, presentWorld)
 import InfoVis.Parallel.Presentation.Scaling (scaleToWorld)
 import InfoVis.Parallel.Rendering.Types (DisplayItem(..), DisplayList(..), DisplayText(..), DisplayType(..), fromLocations)
 import InfoVis.Parallel.Types (Location)
 import InfoVis.Parallel.Types.Dataset (Dataset(..), Record, RecordIdentifier, Variable(variableAlias))
-import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, Presentation(animation), TimeAlias)
+import InfoVis.Parallel.Types.Presentation (Characteristic, GridAlias, Presentation(animationKey, uniqueKey), TimeAlias)
 import InfoVis.Parallel.Types.World (World)
+
+import qualified Data.HashMap.Strict as H (HashMap, empty, insert, lookup)
 
 
 prepareGrids :: World -> Presentation -> Dataset -> ([DisplayList (DisplayType, GridAlias) Int], [DisplayText String Location])
@@ -34,6 +37,22 @@ prepareGrids world presentation Dataset{..} =
     )
 
 
+keyUniquely :: Maybe Int -> [Record] -> [(Record, RecordIdentifier)]
+keyUniquely Nothing   = flip zip [0..]
+keyUniquely (Just iu) =
+  let
+    assign :: (Int, H.HashMap Double Int, [(Record, RecordIdentifier)]) -> Record -> (Int, H.HashMap Double Int, [(Record, RecordIdentifier)])
+    assign (next, table, priors) r =
+      let
+        k = r !! iu
+      in
+        case k `H.lookup` table of
+          Nothing -> (next + 1, H.insert k next table, (r, next) : priors)
+          Just v  -> (next, table, (r, v) : priors)
+  in
+    trd3 . foldl assign (0, H.empty, [])
+
+
 prepareLinks :: World -> Presentation -> Dataset -> [Record] -> [DisplayList (DisplayType, TimeAlias) RecordIdentifier]
 prepareLinks world presentation dataset rs =
   prepare LinkType
@@ -43,8 +62,9 @@ prepareLinks world presentation dataset rs =
         . linkPresentation presentation n
         $ scaleToWorld world presentation dataset r
     |
-      let it = (`elemIndex` (variableAlias <$> variables dataset)) =<< animation presentation
-    , (r, n) <- zip rs [0..]
+      let it = (`elemIndex` (variableAlias <$> variables dataset)) =<< animationKey presentation
+    , let iu = (`elemIndex` (variableAlias <$> variables dataset)) =<< uniqueKey    presentation
+    , (r, n) <- keyUniquely iu rs
     , let t = maybe "" (show . (r !!)) it
     ]
 

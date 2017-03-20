@@ -1,4 +1,6 @@
 presentation               :
+# animationKey             : Orientation
+# uniqueKey                : Glazing Area Distribution
   containers               :
   - tag                    : Collection
     extents                :
@@ -432,3 +434,8 @@ presentation               :
         highlightColor     : [1.0, 0.0, 0.0, 1.0]
   selectorColor            : [0.5, 0.3, 0.2, 1.0]
   selectorSize             : 5
+  statusColor              : [0.6, 0.1, 0.2, 1.0]
+  statusSize               : 15
+  statusOrigin             : [0.05, 1.00, 0.50]
+  statusWidth              : [0.10, 1.00, 0.50]
+  statusHeight             : [0.05, 1.00, 0.40]

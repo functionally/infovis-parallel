@@ -248,7 +248,7 @@ makeStatus :: World -> Presentation -> DisplayText String Location
 makeStatus world Presentation{..} =
   DisplayText
   {
-    textContent = maybe "" (++ ": ") animation
+    textContent = maybe "" (++ ": ") animationKey
   , textOrigin  = scaleToWorldExtent world statusOrigin
   , textWidth   = scaleToWorldExtent world statusWidth
   , textHeight  = scaleToWorldExtent world statusHeight
