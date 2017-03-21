@@ -14,6 +14,7 @@ import Control.Arrow ((&&&))
 import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
+import Control.DeepSeq (NFData)
 import Control.Exception (IOException, catch)
 import Control.Monad (join, unless, void, when)
 import Data.Binary (Binary)
@@ -64,7 +65,7 @@ data Changes =
   , newText           :: [DisplayText String Location]
   , newDisplay        :: [DisplayList (DisplayType, String) Int]
   }
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance Default Changes where
   def =
@@ -196,13 +197,13 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             buffers <- readIORef buffersVar
             mapM_ drawBuffer $ filter (onlyCurrentTime time) buffers
             f2 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tDISPLAY\t" ++ printf "%.3f" (f2 - f1)
+            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tGEOM\t" ++ printf "%.3f" (f2 - f1)
             join $ readIORef drawTextVar
             join $ ($ time) <$> readIORef drawStatusVar
             f3 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f3 - f2)
+            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTEXT\t" ++ printf "%.3f" (f3 - f2)
         f4 <- currentHalfFrameIO
-        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTEXT\t" ++ printf "%.3f" (f4 - f0)
+        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f4 - f0)
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif

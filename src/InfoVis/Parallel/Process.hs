@@ -62,7 +62,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
           maybe (return ()) (\m -> frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag m) maybeContent
           let
             first = isNaN x where P (V3 x _ _) = C.eyeLocation changes
-            changes' = 
+            changes' =
               case maybeContent of
                 Just SetText{..}        -> changes
                                            {
@@ -77,32 +77,32 @@ multiplexerProcess Configuration{..} control content displayerPids =
                 Just Track{..}          -> changes
                                            {
                                              C.dirty          = True
-                                           , C.eyeLocation    = force $ if first
-                                                                          then eyePosition   
-                                                                          else average (C.eyeLocation    changes) eyePosition
-                                           , C.eyeOrientation = force $ if first
-                                                                          then eyeOrientation
-                                                                          else average (C.eyeOrientation changes) eyeOrientation
+                                           , C.eyeLocation    = if first
+                                                                  then eyePosition   
+                                                                  else average (C.eyeLocation    changes) eyePosition
+                                           , C.eyeOrientation = if first
+                                                                  then eyeOrientation
+                                                                  else average (C.eyeOrientation changes) eyeOrientation
                                            }
                 Just Relocate{..}       -> changes
                                            {
                                              C.dirty             = True
-                                           , C.centerOffset      = force centerDisplacement
-                                           , C.centerOrientation = force centerRotation
+                                           , C.centerOffset      = centerDisplacement
+                                           , C.centerOrientation = centerRotation
                                            }
                 Just Select{..}         -> changes
                                            {
                                              C.dirty          = True
-                                           , C.currentTime    = force   currentTime
-                                           , C.selectLocation = force   selectorLocation
-                                           , C.selectChanges  = force $ C.selectChanges changes `merge` selectionChanges
+                                           , C.currentTime    = currentTime
+                                           , C.selectLocation = selectorLocation
+                                           , C.selectChanges  = C.selectChanges changes `merge` selectionChanges
                                            }
                 _                       -> changes
           elapsed <- (+ negate f0) <$> currentHalfFrame
           if C.dirty changes' && elapsed > remaining
             then do
                    frameDebug DebugMessage "MX SE 1\tDISPLAY"
-                   mapM_ (`send` changes') displayerPids
+                   mapM_ (`send` force changes') displayerPids
                    when synchronizeDisplays
                      $ do
                         maybeControl <- receiveChanTimeout 10 control
@@ -115,15 +115,6 @@ multiplexerProcess Configuration{..} control content displayerPids =
                    loop (reset changes') updateDelay'
             else   loop changes' $ remaining - elapsed
     loop (def {C.eyeLocation = P $ V3 nan nan nan}) updateDelay'
-
-
-trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
-  do
-    frameDebug DebugInfo  "Starting trackers."
-    void . spawnLocal $ trackPov        configuration multiplexer
-    void . spawnLocal $ trackRelocation configuration selecterSend
-    void . spawnLocal $ trackSelection  configuration selecterSend
 
 
 displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
@@ -149,9 +140,21 @@ displayerProcess (configuration, masterSend, displayIndex) =
                 liftIO . void . atomically $ swapTMVar readyVar False
         changes <- expect
         frameDebug DebugMessage "DI EX 2\tCHANGE"
-        liftIO . atomically $ writeTVar changesVar changes
-        when (C.sync changes)
-          . liftIO . void . atomically $ takeTMVar readyVar
+        liftIO
+          . atomically
+          $ do
+            writeTVar changesVar changes
+            when (C.sync changes)
+              . void $ takeTMVar readyVar
+
+
+trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
+  do
+    frameDebug DebugInfo  "Starting trackers."
+    void . spawnLocal $ trackPov        configuration multiplexer
+    void . spawnLocal $ trackRelocation configuration selecterSend
+    void . spawnLocal $ trackSelection  configuration selecterSend
 
 
 remotable ['displayerProcess]

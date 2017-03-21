@@ -9,7 +9,8 @@ module InfoVis.Parallel.Process.Select (
 
 
 import Control.Arrow ((***), second)
-import Control.Concurrent.MVar (modifyMVar_, newMVar, readMVar, swapMVar)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (modifyTVar, newTVarIO, readTVar, swapTVar)
 import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, ReceivePort, SendPort, liftIO, receiveChan, sendChan)
 import Control.Monad (forever, void)
@@ -104,37 +105,42 @@ selecter configuration@Configuration{..} control listener =
             AugmentSelection{} -> return message
             _                  -> waitForAugment
     AugmentSelection _ links <- waitForAugment
-    timeVar <- liftIO $ newMVar 0
-    selecterVar <- liftIO $ newMVar zero
-    relocationVar <- liftIO $ newMVar (zero, Quaternion 1 zero)
-    persistentColoringsRef <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
-    transientColoringsRef  <- liftIO . newMVar $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
+    timeVar <- liftIO $ newTVarIO 0 -- FIXME: This can all be rewritten without TVars.
+    selecterVar <- liftIO $ newTVarIO zero
+    relocationVar <- liftIO $ newTVarIO  (zero, Quaternion 1 zero)
+    persistentColoringsRef <- liftIO . newTVarIO $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
+    transientColoringsRef  <- liftIO . newTVarIO $ U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False
     let
       delta = selectorSize presentation * baseSize world / 2
       spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
       average new old = fmap (trackAveraging *) old + fmap ((1 - trackAveraging) *) new
       refresh selecterState' =
         do
-          itime <- liftIO $ readMVar timeVar
           f0 <- currentHalfFrame
-          selecterPosition' <- liftIO $ readMVar  selecterVar
-          (relocation, reorientation) <- liftIO $ readMVar relocationVar
-          persistentColorings <- liftIO $ readMVar persistentColoringsRef
-          transientColorings <- liftIO $ readMVar transientColoringsRef
-          let
-            time = M.keys spatials !! itime
-            ((persistentColorings', transientColorings'), changes) =
-              selecter'
-                configuration
-                (spatials M.! time)
-                (persistentColorings, transientColorings)
-                (selecterPosition', selecterState')
-                (relocation, reorientation)
-          void .liftIO $ swapMVar persistentColoringsRef persistentColorings'
-          void .liftIO $ swapMVar transientColoringsRef transientColorings'
-          mid2 <- nextMessageIdentifier
+          (changes, selecterPosition', time) <-
+            liftIO
+              . atomically
+              $ do
+                itime <- readTVar timeVar
+                selecterPosition'' <- readTVar selecterVar
+                (relocation, reorientation) <- readTVar relocationVar
+                persistentColorings <- readTVar persistentColoringsRef
+                transientColorings <- readTVar transientColoringsRef
+                let
+                  time'' = M.keys spatials !! itime
+                  ((persistentColorings', transientColorings'), changes'') =
+                    selecter'
+                      configuration
+                      (spatials M.! time'')
+                      (persistentColorings, transientColorings)
+                      (selecterPosition'', selecterState')
+                      (relocation, reorientation)
+                void $ swapTVar persistentColoringsRef persistentColorings'
+                void $ swapTVar transientColoringsRef transientColorings'
+                return (changes'', selecterPosition'', time'')
           let
             changes' = if null changes then [] else [((LinkType, ""), changes)]
+          mid2 <- nextMessageIdentifier
           frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Select mid2 (snd time) selecterPosition' changes')
           sendChan listener $!! Select mid2 (snd time) selecterPosition' changes'
           f1 <- currentHalfFrame
@@ -142,27 +148,28 @@ selecter configuration@Configuration{..} control listener =
     forever
       $ do
         message <- receiveChan control
+        frameDebug DebugMessage $ "SE RC 3\t" ++ messageTag message
         case message of
           RelocateSelection{..} -> do
-                                     void
-                                       . liftIO
-                                       . modifyMVar_ relocationVar
-                                       . (return .)
+                                     liftIO
+                                       . void
+                                       . atomically
+                                       . modifyTVar relocationVar
                                        $ (const relocationDisplacement *** const relocationRotation) -- FIXME: Should this be averaged, too?
-                                     mid3 <- nextMessageIdentifier
-                                     frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Relocate mid3 relocationDisplacement relocationRotation)
-                                     sendChan listener $!! Relocate mid3 relocationDisplacement relocationRotation
+                                     mid4 <- nextMessageIdentifier
+                                     frameDebug DebugMessage $ "SE SC 4\t" ++ messageTag (Relocate mid4 relocationDisplacement relocationRotation)
+                                     sendChan listener $!! Relocate mid4 relocationDisplacement relocationRotation
                                      refresh Highlight
           UpdateSelection{..}   -> do
-                                     void
-                                       . liftIO
-                                       . modifyMVar_ selecterVar
-                                       . (return .)
-                                       $ average (selecterPosition .+^ selectorOffset world)
-                                     case selecterState of
-                                       Forward  -> liftIO . modifyMVar_ timeVar $ \i -> return (minimum [i + 1, M.size spatials - 1])
-                                       Backward -> liftIO . modifyMVar_ timeVar $ \i -> return (maximum [i - 1, 0                  ])
-                                       _        -> return ()
+                                     liftIO
+                                       . void
+                                       . atomically
+                                       $ do
+                                          modifyTVar selecterVar $ average (selecterPosition .+^ selectorOffset world)
+                                          case selecterState of
+                                            Forward  -> modifyTVar timeVar $ \i -> minimum [i + 1, M.size spatials - 1]
+                                            Backward -> modifyTVar timeVar $ \i -> maximum [i - 1, 0                  ]
+                                            _        -> return ()
                                      refresh selecterState
           _                     -> return ()
 
