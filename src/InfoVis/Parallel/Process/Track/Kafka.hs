@@ -15,7 +15,7 @@ import Control.DeepSeq (NFData, ($!!))
 import Control.Distributed.Process (Process, SendPort, liftIO, sendChan, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
-import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
@@ -38,8 +38,8 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => (Int -> V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
-trackVectorQuaternion messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
+trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => Debugger -> (Int -> V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion frameDebug messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     nextMessageIdentifier <- makeNextMessageIdentifier 10 0
     locationVar <- liftIO $ newMVar zero
@@ -70,8 +70,8 @@ trackVectorQuaternion messager listener topicConnection target = -- FIXME: Suppo
     consumerLoopProcess topicConnection processInput
 
 
-trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
-trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: Debugger -> Configuration -> SendPort DisplayerMessage -> Process ()
+trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting point-of-view tracker."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 1
@@ -82,21 +82,21 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
           mid1 <- nextMessageIdentifier
           frameDebug DebugMessage $ "TP SC 1\t" ++ messageTag (Track mid1 (P location) (fromEulerd orientation))
           sendChan listener $!! Track mid1 (P location) (fromEulerd orientation)
-      trackDynamic = trackVectorQuaternion ((. P) . Track) listener kafka
+      trackDynamic = trackVectorQuaternion frameDebug ((. P) . Track) listener kafka
     either trackStatic trackDynamic povInput
 
 
-trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
-trackRelocation Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
+trackRelocation frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting relocation tracker."
     let
       InputKafka Input{..} = input
-    trackVectorQuaternion RelocateSelection listener kafka relocationInput
+    trackVectorQuaternion frameDebug RelocateSelection listener kafka relocationInput
 
 
-trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
-trackSelection Configuration{..} listener =
+trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
+trackSelection frameDebug Configuration{..} listener =
   do
     frameDebug DebugInfo "Starting selection tracker."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 2

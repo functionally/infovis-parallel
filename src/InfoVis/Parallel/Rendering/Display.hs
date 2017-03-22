@@ -30,7 +30,7 @@ import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
-import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrameIO, frameDebugIO)
+import InfoVis.Parallel.Process.Util (Debug(..), makeDebuggerIO, makeTimer)
 import InfoVis.Parallel.Rendering.Shapes (DisplayBuffer(bufferIdentifier), drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -92,6 +92,8 @@ displayer :: Configuration
           -> IO ()
 displayer Configuration{..} displayIndex changesVar readyVar =
   do
+    frameDebugIO <- makeDebuggerIO advanced
+    currentHalfFrameIO <- makeTimer
     let
       Just AdvancedSettings{..} = advanced
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex

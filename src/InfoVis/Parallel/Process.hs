@@ -23,12 +23,12 @@ import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
 import Data.Default.Util (nan)
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, initializeDebug, frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeDebugger, makeTimer)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
 import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, makeNextMessageIdentifier)
 import Linear.Affine (Point(..))
@@ -46,9 +46,10 @@ merge old new =
       (M.fromList new)
 
 
-multiplexerProcess :: Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
-multiplexerProcess Configuration{..} control content displayerPids =
+multiplexerProcess :: Debugger -> Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
+multiplexerProcess frameDebug Configuration{..} control content displayerPids =
   do
+    currentHalfFrame <- makeTimer
     frameDebug DebugInfo  "Starting multiplexer."
     let
       Just AdvancedSettings{..} = advanced
@@ -120,9 +121,9 @@ multiplexerProcess Configuration{..} control content displayerPids =
 displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
 displayerProcess (configuration, masterSend, displayIndex) =
   do
-    nextMessageIdentifier <- makeNextMessageIdentifier 10 7
-    initializeDebug . fromJust $ advanced configuration
+    frameDebug <- makeDebugger $ advanced configuration
     frameDebug DebugInfo  "Starting displayer."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 7
     let
       Just AdvancedSettings{..} = advanced configuration
     readyVar <- liftIO newEmptyTMVarIO
@@ -149,13 +150,13 @@ displayerProcess (configuration, masterSend, displayIndex) =
               . void $ takeTMVar readyVar
 
 
-trackerProcesses :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-trackerProcesses configuration@Configuration{..} selecterSend multiplexer =
+trackerProcesses :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+trackerProcesses frameDebug configuration@Configuration{..} selecterSend multiplexer =
   do
     frameDebug DebugInfo  "Starting trackers."
-    void . spawnLocal $ trackPov        configuration multiplexer
-    void . spawnLocal $ trackRelocation configuration selecterSend
-    void . spawnLocal $ trackSelection  configuration selecterSend
+    void . spawnLocal $ trackPov        frameDebug configuration multiplexer
+    void . spawnLocal $ trackRelocation frameDebug configuration selecterSend
+    void . spawnLocal $ trackSelection  frameDebug configuration selecterSend
 
 
 remotable ['displayerProcess]
@@ -164,7 +165,7 @@ remotable ['displayerProcess]
 masterMain :: Configuration -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
-    initializeDebug . fromJust $ advanced configuration
+    frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
     displayerPids <-
       sequence
@@ -175,31 +176,31 @@ masterMain configuration peers =
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
-    commonMain configuration masterReceive displayerPids
+    commonMain frameDebug configuration masterReceive displayerPids
 
 
 soloMain :: Configuration -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
-    initializeDebug . fromJust $ advanced configuration
+    frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
     displayerPids <- spawnLocal (displayerProcess (configuration, masterSend, 0))
-    commonMain configuration masterReceive [displayerPids]
+    commonMain frameDebug configuration masterReceive [displayerPids]
 soloMain _ (_ : _) = error "Some peers specified."
 
 
-commonMain :: Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Process ()
-commonMain configuration masterReceive displayerPids =
+commonMain :: Debugger -> Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Process ()
+commonMain frameDebug configuration masterReceive displayerPids =
   do
     frameDebug DebugInfo  "Starting master."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 8
     (contentSend, contentReceive) <- newChan
     (controlSend, controlReceive) <- newChan
-    void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids
+    void . spawnLocal $ multiplexerProcess frameDebug configuration controlReceive contentReceive displayerPids
     (selecterSend, selecterReceive) <- newChan
-    void . spawnLocal $ selecter         configuration selecterReceive contentSend
-    void . spawnLocal $ trackerProcesses configuration selecterSend    contentSend
-    void . spawnLocal $ provider         configuration selecterSend    contentSend
+    void . spawnLocal $ selecter         frameDebug configuration selecterReceive contentSend
+    void . spawnLocal $ trackerProcesses frameDebug configuration selecterSend    contentSend
+    void . spawnLocal $ provider         frameDebug configuration selecterSend    contentSend
     let
       waitForAllReady counter =
         do

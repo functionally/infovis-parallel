@@ -13,7 +13,7 @@ import Control.DeepSeq (($!!))
 import Control.Distributed.Process (Process, SendPort, liftIO, sendChan)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
@@ -25,8 +25,8 @@ import Linear.Vector (zero)
 import Network.VRPN (ButtonCallback, PositionCallback, Device(Button, Tracker), mainLoop, openDevice)
 
 
-trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
-trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: Debugger -> Configuration -> SendPort DisplayerMessage -> Process ()
+trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting point-of-view tracker."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 3
@@ -61,13 +61,13 @@ trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and 
     loop
 
 
-trackRelocation :: Configuration -> SendPort SelecterMessage -> Process ()
-trackRelocation _ _ = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
+trackRelocation frameDebug _ _ = -- FIXME: Support reset, termination, and faults.
   frameDebug DebugInfo "Starting relocation tracker."
 
 
-trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
-trackSelection Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
+trackSelection frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting selection tracker."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 4

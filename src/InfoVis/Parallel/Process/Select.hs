@@ -18,7 +18,7 @@ import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
 import Data.List (nub)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
-import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, frameDebug)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeTimer)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
@@ -91,9 +91,10 @@ lookupSpatial (delta, spatial) d p =
       ]
 
 
-selecter :: Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-selecter configuration@Configuration{..} control listener =
+selecter :: Debugger -> Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
+selecter frameDebug configuration@Configuration{..} control listener =
   do
+    currentHalfFrame <- makeTimer
     frameDebug DebugInfo  "Starting selector."
     nextMessageIdentifier <- makeNextMessageIdentifier 10 5
     let

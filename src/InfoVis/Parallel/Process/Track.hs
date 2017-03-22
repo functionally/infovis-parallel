@@ -10,6 +10,7 @@ module InfoVis.Parallel.Process.Track (
 
 
 import Control.Distributed.Process (Process, SendPort)
+import InfoVis.Parallel.Process.Util (Debugger)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage, SelecterMessage)
@@ -23,37 +24,37 @@ import qualified InfoVis.Parallel.Process.Track.VRPN as VRPN (trackPov, trackRel
 #endif
 
 
-trackPov :: Configuration ->  SendPort DisplayerMessage -> Process ()
-trackPov configuration@Configuration{..} = 
+trackPov :: Debugger -> Configuration ->  SendPort DisplayerMessage -> Process ()
+trackPov frameDebug configuration@Configuration{..} = 
   case input of
     NoInput -> error "trackPov: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackPov configuration
+    InputKafka{} -> Kafka.trackPov frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackPov configuration
+    InputVRPN{} -> VRPN.trackPov frameDebug configuration
 #endif
 
 
-trackRelocation :: Configuration ->  SendPort SelecterMessage -> Process ()
-trackRelocation configuration@Configuration{..} =
+trackRelocation :: Debugger -> Configuration ->  SendPort SelecterMessage -> Process ()
+trackRelocation frameDebug configuration@Configuration{..} =
   case input of
     NoInput -> error "trackRelocation: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackRelocation configuration
+    InputKafka{} -> Kafka.trackRelocation frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackRelocation configuration
+    InputVRPN{} -> VRPN.trackRelocation frameDebug configuration
 #endif
 
 
-trackSelection :: Configuration ->  SendPort SelecterMessage -> Process ()
-trackSelection configuration@Configuration{..} =
+trackSelection :: Debugger -> Configuration ->  SendPort SelecterMessage -> Process ()
+trackSelection frameDebug configuration@Configuration{..} =
   case input of
     NoInput -> error "trackSelection: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackSelection configuration
+    InputKafka{} -> Kafka.trackSelection frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackSelection configuration
+    InputVRPN{} -> VRPN.trackSelection frameDebug configuration
 #endif
