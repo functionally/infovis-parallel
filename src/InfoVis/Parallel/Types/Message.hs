@@ -19,12 +19,12 @@ module InfoVis.Parallel.Types.Message (
 , SelecterMessage'
 , DisplayerMessage(..)
 , DisplayerMessage'
-, nextMessageIdentifier
+, makeNextMessageIdentifier
 ) where
 
 
-import Control.Arrow ((&&&))
-import Control.Concurrent.MVar (MVar, modifyMVar, newMVar)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TVar (newTVarIO, readTVar, writeTVar)
 import Control.Distributed.Process (Process, liftIO)
 import Control.DeepSeq (NFData)
 import Data.Binary (Binary)
@@ -36,7 +36,6 @@ import InfoVis.Parallel.Types.Configuration (Configuration)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
-import System.IO.Unsafe (unsafePerformIO)
 
 
 class SumTag a where
@@ -202,10 +201,14 @@ data SelectionAction = Highlight | Selection | Deselection | Clear | Forward | B
  deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 
-counterVar :: MVar Int
-{-# NOINLINE counterVar #-}
-counterVar = unsafePerformIO $ newMVar 0
-
-
-nextMessageIdentifier :: Process Int
-nextMessageIdentifier = liftIO . modifyMVar counterVar $ return . (id &&& id) . (+1)
+makeNextMessageIdentifier :: Int -> Int -> Process (Process Int)
+makeNextMessageIdentifier stride offset =
+  do
+    counterVar <- liftIO $ newTVarIO offset
+    return
+      $ liftIO
+      . atomically
+      $ do
+        counter <- readTVar counterVar
+        writeTVar counterVar $ counter + stride
+        return counter

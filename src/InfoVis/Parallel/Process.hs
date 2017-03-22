@@ -30,7 +30,7 @@ import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
 import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, initializeDebug, frameDebug)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag, makeNextMessageIdentifier)
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
@@ -120,6 +120,7 @@ multiplexerProcess Configuration{..} control content displayerPids =
 displayerProcess :: (Configuration , SendPort MasterMessage, Int) -> Process ()
 displayerProcess (configuration, masterSend, displayIndex) =
   do
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 7
     initializeDebug . fromJust $ advanced configuration
     frameDebug DebugInfo  "Starting displayer."
     let
@@ -191,6 +192,7 @@ commonMain :: Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Proce
 commonMain configuration masterReceive displayerPids =
   do
     frameDebug DebugInfo  "Starting master."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 8
     (contentSend, contentReceive) <- newChan
     (controlSend, controlReceive) <- newChan
     void . spawnLocal $ multiplexerProcess configuration controlReceive contentReceive displayerPids

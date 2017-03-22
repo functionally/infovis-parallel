@@ -15,13 +15,14 @@ import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
 import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Dataset (Dataset(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag, nextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag, makeNextMessageIdentifier)
 
 
 provider :: Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 provider Configuration{..} selecterSend multiplexer =
   do
     frameDebug DebugInfo  "Starting data provider."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 6
     rs <- liftIO $ readDataset dataset
     let
       (grids, texts) = prepareGrids world presentation dataset

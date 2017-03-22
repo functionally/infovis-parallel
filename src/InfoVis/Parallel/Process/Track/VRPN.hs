@@ -17,7 +17,7 @@ import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..), nextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..), makeNextMessageIdentifier)
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -29,6 +29,7 @@ trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
 trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting point-of-view tracker."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 3
     locationVar <- liftIO $ newIORef zero
     orientationVar <- liftIO $ newIORef zero
     updatedVar <- liftIO newEmptyMVar
@@ -69,6 +70,7 @@ trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
 trackSelection Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting selection tracker."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 4
     locationVar <- liftIO $ newIORef zero
     buttonVar <- liftIO $ newIORef Highlight
     updatedVar <- liftIO newEmptyMVar

@@ -22,7 +22,7 @@ import InfoVis.Parallel.Process.Util (Debug(..), currentHalfFrame, frameDebug)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag, nextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag, makeNextMessageIdentifier)
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
 import Linear.Affine (Point(..), (.-.), (.+^), (.-^))
@@ -95,6 +95,7 @@ selecter :: Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMe
 selecter configuration@Configuration{..} control listener =
   do
     frameDebug DebugInfo  "Starting selector."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 5
     let
       Just AdvancedSettings{..} = advanced
       waitForAugment =

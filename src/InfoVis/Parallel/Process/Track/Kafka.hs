@@ -19,7 +19,7 @@ import InfoVis.Parallel.Process.Util (Debug(..), frameDebug)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..), nextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..), makeNextMessageIdentifier)
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.Util (fromEulerd)
@@ -41,6 +41,7 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
 trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => (Int -> V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 0
     locationVar <- liftIO $ newMVar zero
     orientationVar <- liftIO . newMVar $ Quaternion 1 zero
     let
@@ -73,6 +74,7 @@ trackPov :: Configuration -> SendPort DisplayerMessage -> Process ()
 trackPov Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
   do
     frameDebug DebugInfo "Starting point-of-view tracker."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 1
     let
       InputKafka Input{..} = input
       trackStatic (location, orientation) =
@@ -97,6 +99,7 @@ trackSelection :: Configuration -> SendPort SelecterMessage -> Process ()
 trackSelection Configuration{..} listener =
   do
     frameDebug DebugInfo "Starting selection tracker."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 2
     locationVar <- liftIO $ newMVar zero
     let
       InputKafka Input{..} = input
