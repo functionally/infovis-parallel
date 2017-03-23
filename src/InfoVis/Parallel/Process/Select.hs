@@ -15,11 +15,11 @@ import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
 import Data.List (nub)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeTimer)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeTimer, runProcess)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag, makeNextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag)
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
 import Linear.Affine (Point(..), (.-.), (.+^), (.-^))
@@ -90,79 +90,78 @@ lookupSpatial (delta, spatial) d p =
 
 selecter :: Debugger -> Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 selecter frameDebug configuration@Configuration{..} control listener =
-  do
-    currentHalfFrame <- makeTimer
-    frameDebug DebugInfo  "Starting selector."
-    nextMessageIdentifier <- makeNextMessageIdentifier 10 5
-    let
-      Just AdvancedSettings{..} = advanced
-      waitForAugment =
-        do
-          message <- receiveChan control
-          frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag message
-          case message of
-            AugmentSelection{} -> return message
-            _                  -> waitForAugment
-    AugmentSelection _ links <- waitForAugment
-    let
-      delta = selectorSize presentation * baseSize world / 2
-      spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
-      average new old = fmap (trackAveraging *) old + fmap ((1 - trackAveraging) *) new
-    let
-      loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef =
-        do
-          message <- receiveChan control
-          f0 <- currentHalfFrame
-          frameDebug DebugMessage $ "SE RC 3\t" ++ messageTag message
-          case message of
-            RelocateSelection{..} -> do
-                                       let
-                                         relocationVar' = (relocationDisplacement, relocationRotation)
-                                         time = M.keys spatials !! timeVar
-                                         ((persistentColorings', transientColorings'), changes) =
-                                           selecter'
-                                             configuration
-                                             (spatials M.! time)
-                                             (persistentColoringsRef, transientColoringsRef)
-                                             (selecterVar, Highlight)
-                                             relocationVar'
-                                         changes' = if null changes then [] else [((LinkType, ""), changes)]
-                                       mid2 <- nextMessageIdentifier
-                                       frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Relocate mid2 relocationDisplacement relocationRotation)
-                                       sendChan listener $!! Relocate mid2 relocationDisplacement relocationRotation
-                                       mid3 <- nextMessageIdentifier
-                                       frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Select mid3 (snd time) selecterVar changes')
-                                       sendChan listener $!! Select mid3 (snd time) selecterVar changes'
-                                       f1 <- currentHalfFrame
-                                       frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
-                                       loop timeVar selecterVar relocationVar' persistentColorings' transientColorings'
-            UpdateSelection{..}   -> do
-                                       let
-                                         selecterVar' = average selecterVar $ selecterPosition .+^ selectorOffset world
-                                         timeVar' =
-                                           case selecterState of
-                                             Forward  -> minimum [timeVar + 1, M.size spatials - 1]
-                                             Backward -> maximum [timeVar - 1, 0                  ]
-                                             _        -> timeVar
-                                         time = M.keys spatials !! timeVar'
-                                         ((persistentColorings', transientColorings'), changes) =
-                                           selecter'
-                                             configuration
-                                             (spatials M.! time)
-                                             (persistentColoringsRef, transientColoringsRef)
-                                             (selecterVar', selecterState)
-                                             relocationVar
-                                         changes' = if null changes then [] else [((LinkType, ""), changes)]
-                                       mid4 <- nextMessageIdentifier
-                                       frameDebug DebugMessage $ "SE SC 4\t" ++ messageTag (Select mid4 (snd time) selecterVar changes')
-                                       sendChan listener $!! Select mid4 (snd time) selecterVar changes'
-                                       f1 <- currentHalfFrame
-                                       frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
-                                       loop timeVar' selecterVar' relocationVar persistentColorings' transientColorings'
-            _                     -> loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef
-    loop 0 zero (zero, Quaternion 1 zero) 
-      (U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False)
-      (U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False)
+  runProcess "selector" 4 frameDebug $ \nextMessageIdentifier ->
+    do
+      currentHalfFrame <- makeTimer
+      let
+        Just AdvancedSettings{..} = advanced
+        waitForAugment =
+          do
+            message <- receiveChan control
+            frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag message
+            case message of
+              AugmentSelection{} -> return message
+              _                  -> waitForAugment
+      AugmentSelection _ links <- waitForAugment
+      let
+        delta = selectorSize presentation * baseSize world / 2
+        spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
+        average new old = fmap (trackAveraging *) old + fmap ((1 - trackAveraging) *) new
+      let
+        loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef =
+          do
+            message <- receiveChan control
+            f0 <- currentHalfFrame
+            frameDebug DebugMessage $ "SE RC 3\t" ++ messageTag message
+            case message of
+              RelocateSelection{..} -> do
+                                         let
+                                           relocationVar' = (relocationDisplacement, relocationRotation)
+                                           time = M.keys spatials !! timeVar
+                                           ((persistentColorings', transientColorings'), changes) =
+                                             selecter'
+                                               configuration
+                                               (spatials M.! time)
+                                               (persistentColoringsRef, transientColoringsRef)
+                                               (selecterVar, Highlight)
+                                               relocationVar'
+                                           changes' = if null changes then [] else [((LinkType, ""), changes)]
+                                         mid2 <- nextMessageIdentifier
+                                         frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Relocate mid2 relocationDisplacement relocationRotation)
+                                         sendChan listener $!! Relocate mid2 relocationDisplacement relocationRotation
+                                         mid3 <- nextMessageIdentifier
+                                         frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Select mid3 (snd time) selecterVar changes')
+                                         sendChan listener $!! Select mid3 (snd time) selecterVar changes'
+                                         f1 <- currentHalfFrame
+                                         frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
+                                         loop timeVar selecterVar relocationVar' persistentColorings' transientColorings'
+              UpdateSelection{..}   -> do
+                                         let
+                                           selecterVar' = average selecterVar $ selecterPosition .+^ selectorOffset world
+                                           timeVar' =
+                                             case selecterState of
+                                               Forward  -> minimum [timeVar + 1, M.size spatials - 1]
+                                               Backward -> maximum [timeVar - 1, 0                  ]
+                                               _        -> timeVar
+                                           time = M.keys spatials !! timeVar'
+                                           ((persistentColorings', transientColorings'), changes) =
+                                             selecter'
+                                               configuration
+                                               (spatials M.! time)
+                                               (persistentColoringsRef, transientColoringsRef)
+                                               (selecterVar', selecterState)
+                                               relocationVar
+                                           changes' = if null changes then [] else [((LinkType, ""), changes)]
+                                         mid4 <- nextMessageIdentifier
+                                         frameDebug DebugMessage $ "SE SC 4\t" ++ messageTag (Select mid4 (snd time) selecterVar changes')
+                                         sendChan listener $!! Select mid4 (snd time) selecterVar changes'
+                                         f1 <- currentHalfFrame
+                                         frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
+                                         loop timeVar' selecterVar' relocationVar persistentColorings' transientColorings'
+              _                     -> loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef
+      loop 0 zero (zero, Quaternion 1 zero) 
+        (U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False)
+        (U.replicate (1 + maximum (concatMap listVertexIdentifiers links)) $ fromBool False)
 
 
 selecter' :: Configuration

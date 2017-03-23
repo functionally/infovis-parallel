@@ -12,17 +12,15 @@ import Data.List.Split (chunksOf)
 import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.IO (readDataset)
 import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Dataset (Dataset(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag, makeNextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag)
 
 
 provider :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 provider frameDebug Configuration{..} selecterSend multiplexer =
-  do
-    frameDebug DebugInfo  "Starting data provider."
-    nextMessageIdentifier <- makeNextMessageIdentifier 10 6
+  runProcess "data provider" 3 frameDebug $ \nextMessageIdentifier -> do
     rs <- liftIO $ readDataset dataset
     let
       (grids, texts) = prepareGrids world presentation dataset

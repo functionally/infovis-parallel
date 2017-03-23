@@ -2,7 +2,8 @@
 
 
 module InfoVis.Parallel.Process.Util (
-  asHalfFrames
+  runProcess
+, asHalfFrames
 , makeTimer
 , Debug(..)
 , Debugger
@@ -13,10 +14,21 @@ module InfoVis.Parallel.Process.Util (
 
 import Control.Distributed.Process (Process, say)
 import Control.Monad (when)
+import Control.Monad.Catch (catchAll)
 import Control.Monad.IO.Class (MonadIO(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..))
+import InfoVis.Parallel.Types.Message (makeNextMessageIdentifier)
 import System.Clock (Clock(Monotonic), TimeSpec(..), getTime, toNanoSecs)
 import Text.Printf (printf)
+
+
+runProcess :: String -> Int -> Debugger -> (Process Int -> Process ()) -> Process ()
+runProcess name offset frameDebug action =
+  do
+    frameDebug DebugInfo $ "Starting " ++ name ++ "."
+    nextMessageIdentifier <- makeNextMessageIdentifier 10 offset
+    action nextMessageIdentifier
+      `catchAll` (\e -> say $ "Fatal exception in " ++ name ++ ": " ++ show e)
 
 
 makeTimer :: MonadIO m => m (m Double)
