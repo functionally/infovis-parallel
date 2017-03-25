@@ -96,9 +96,8 @@ debugTimeIO frameDebugIO currentHalfFrameIO tags f0 =
 runProcess :: String -> Int -> Debugger -> (Process Int -> Process ()) -> Process ()
 runProcess name offset frameDebug action =
   do
-    pid <- getSelfPid
-    register name pid
-    frameDebug DebugInfo ["Starting " ++ name ++ ".", show pid]
+    register name =<< getSelfPid
+    frameDebug DebugInfo ["Starting " ++ name ++ "."]
     nextMessageIdentifier <- makeNextMessageIdentifier 10 offset
     action nextMessageIdentifier
 
@@ -149,21 +148,26 @@ makeDebugger advancedSettings =
       asTrace True  = traceOn
       asTrace False = traceOff
       trace' = maybe traceOff (asTrace . trace) advancedSettings
+      frameDebug :: [String] -> Process ()
+      frameDebug tags =
+        do
+          pid <- getSelfPid
+          traceLogFmt "\t" $ TraceStr <$> show pid : tags
     when (traceEnabled advancedSettings)
       . setTraceFlags
       $ TraceFlags trace' trace' trace' trace' traceOff traceOff True True
-    makeDebuggerImpl (traceLogFmt "\t" . fmap TraceStr) advancedSettings
+    makeDebuggerImpl frameDebug advancedSettings
 
 
 makeDebuggerIO :: Maybe AdvancedSettings -> IO DebuggerIO
-makeDebuggerIO = makeDebuggerImpl $ putStrLn . intercalate "\t"
+makeDebuggerIO = makeDebuggerImpl  $ putStrLn . intercalate "\t"
 
 
 makeDebuggerImpl :: MonadIO m => ([String] -> m ()) -> Maybe AdvancedSettings -> m (Debug -> [String] -> m ())
 makeDebuggerImpl output (Just AdvancedSettings{..}) =
   do
     f0 <- liftIO $ getTime Monotonic
-    output ["0.000", "Info", "Initial time offset.", printf "%.3f" (asHalfFrames f0)]
+    output $ ["0.000", "Info", "Initial time offset.", printf "%.3f" (asHalfFrames f0)]
     let
       debuggings =
         fmap snd
