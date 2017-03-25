@@ -19,7 +19,7 @@ import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, swapTMVar, readTMVar, take
 import Control.Concurrent.STM.TVar (newTVarIO, writeTVar)
 import Control.DeepSeq (force)
 import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, send, spawn, spawnLocal)
-import Control.Distributed.Process.Debug (enableTrace, systemLoggerTracer)
+import Control.Distributed.Process.Debug (enableTrace, startTraceRelay, systemLoggerTracer)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
@@ -162,12 +162,18 @@ remotable ['displayerProcess]
 masterMain :: Configuration -> [NodeId] -> Process ()
 masterMain configuration peers =
   do
+    let
+      traceEnabled' = traceEnabled $ advanced configuration
+    when traceEnabled'
+      $ enableTrace =<< spawnLocal systemLoggerTracer
     frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
     displayerPids <-
       sequence
         [
           do
+            when traceEnabled'
+              $ enableTrace =<< startTraceRelay peer -- FIXME: Test whether the relay needs to be enabled.
             frameDebug DebugInfo ["Spawning display " ++ show i ++ " <" ++ show peer ++ ">."]
             spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
