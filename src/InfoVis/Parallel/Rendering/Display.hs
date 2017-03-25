@@ -15,7 +15,7 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.DeepSeq (NFData)
-import Control.Exception (IOException, SomeException, handle)
+import Control.Exception (IOException, SomeException, handle, throw)
 import Control.Monad (join, unless, void, when)
 import Data.Binary (Binary)
 import Data.Default (Default(..))
@@ -30,7 +30,7 @@ import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
-import InfoVis.Parallel.Process.Util (Debug(DebugInfo), debugTimeIO, makeDebuggerIO, makeTimer)
+import InfoVis.Parallel.Process.Util (debugTimeIO, makeDebuggerIO, makeTimer)
 import InfoVis.Parallel.Rendering.Shapes (DisplayBuffer(bufferIdentifier), drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -43,6 +43,7 @@ import Linear.Util (rotationFromPlane)
 import Linear.Util.Graphics (toRotation, toVector3)
 import Linear.V3 (V3(..))
 import Linear.Vector (zero)
+import System.IO (hPutStrLn, stderr)
 
 #ifdef INFOVIS_SWAP_GROUP
 import Graphics.OpenGL.Functions (joinSwapGroup)
@@ -180,11 +181,11 @@ displayer Configuration{..} displayIndex changesVar readyVar =
     idleCallback $=
       Just (
         if useIdleLoop
-          then handle (\e -> frameDebugIO DebugInfo ["Renderer died in idle callback.", show (e :: SomeException)]) changeLoop
+          then reportException "idle loop" changeLoop
           else idle
       )
     dlpViewerDisplay dlp viewers displayIndex ((eyeLocation &&& eyeOrientation) <$> readIORef currentVar)
-      $ handle (\e -> frameDebugIO DebugInfo ["Renderer died in display callback.", show (e :: SomeException)])
+      $ reportException "display loop"
       $ do
         unless useIdleLoop changeLoop
         f0 <- currentHalfFrameIO
@@ -210,5 +211,12 @@ displayer Configuration{..} displayIndex changesVar readyVar =
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif
-    handle (\e -> frameDebugIO DebugInfo ["Renderer died in main loop.", show (e :: SomeException)])
-      mainLoop
+    reportException "main loop" mainLoop
+
+
+reportException :: String -> IO () -> IO ()
+reportException location =
+  handle $ \e ->
+    do
+      hPutStrLn stderr $ "Rendering exception in " ++ location ++ ": " ++ show e ++ "."
+      throw (e :: SomeException)
