@@ -18,9 +18,10 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, swapTMVar, readTMVar, takeTMVar)
 import Control.Concurrent.STM.TVar (newTVarIO, writeTVar)
 import Control.DeepSeq (force)
-import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, send, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ProcessMonitorNotification(..), ReceivePort, SendPort, expect, liftIO, match, newChan, receiveWait, send, spawnLocal, spawnMonitor)
 import Control.Distributed.Process.Debug (enableTrace, startTraceRelay, systemLoggerTracer)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
+import Control.Distributed.Process.Util (spawnLocalMonitor)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
 import Data.Default.Util (nan)
@@ -29,9 +30,9 @@ import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeDebugger, makeTimer, receiveChan', receiveChanTimeout', runProcess, sendChan', traceEnabled)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeDebugger, makeTimer, matchChan', receiveChanTimeout', runProcess, sendChan', traceEnabled)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..))
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..))
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
@@ -47,8 +48,8 @@ merge old new =
       (M.fromList new)
 
 
-multiplexerProcess :: Debugger -> Configuration -> ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Process ()
-multiplexerProcess frameDebug Configuration{..} control content displayerPids =
+multiplexerProcess :: ReceivePort CommonMessage -> ReceivePort DisplayerMessage -> [ProcessId] -> Debugger -> Configuration -> Process ()
+multiplexerProcess control content displayerPids frameDebug Configuration{..} =
   runProcess "multiplexer" 1 frameDebug $ \_ ->
     do
       currentHalfFrame <- makeTimer
@@ -147,15 +148,6 @@ displayerProcess (configuration, masterSend, displayIndex) =
                   . void $ takeTMVar readyVar
 
 
-trackerProcesses :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-trackerProcesses frameDebug configuration@Configuration{..} selecterSend multiplexer =
-  do
-    frameDebug DebugInfo ["Starting trackers."]
-    void . spawnLocal $ trackPov        frameDebug configuration multiplexer
-    void . spawnLocal $ trackRelocation frameDebug configuration selecterSend
-    void . spawnLocal $ trackSelection  frameDebug configuration selecterSend
-
-
 remotable ['displayerProcess]
 
 
@@ -175,11 +167,11 @@ masterMain configuration peers =
             when traceEnabled'
               $ enableTrace =<< startTraceRelay peer -- FIXME: Test whether the relay needs to be enabled.
             frameDebug DebugInfo ["Spawning display " ++ show i ++ " <" ++ show peer ++ ">."]
-            spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
+            fst <$> spawnMonitor peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
         ]
-    commonMain frameDebug configuration masterReceive displayerPids
+    commonMain masterReceive displayerPids frameDebug configuration
 
 
 soloMain :: Configuration -> [NodeId] -> Process ()
@@ -189,29 +181,45 @@ soloMain configuration [] =
       $ enableTrace =<< spawnLocal systemLoggerTracer
     frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
-    displayerPid <- spawnLocal (displayerProcess (configuration, masterSend, 0))
-    commonMain frameDebug configuration masterReceive [displayerPid]
+    displayerPid <- fst <$> spawnLocalMonitor (displayerProcess (configuration, masterSend, 0))
+    commonMain masterReceive [displayerPid] frameDebug configuration
 soloMain _ (_ : _) = error "Some peers specified."
 
-
-commonMain :: Debugger -> Configuration -> ReceivePort MasterMessage -> [ProcessId] -> Process ()
-commonMain frameDebug configuration masterReceive displayerPids =
+    
+commonMain :: ReceivePort MasterMessage -> [ProcessId] -> Debugger -> Configuration -> Process ()
+commonMain masterReceive displayerPids frameDebug configuration =
   runProcess "master" 0 frameDebug $ \nextMessageIdentifier ->
     do
-      (contentSend, contentReceive) <- newChan
-      (controlSend, controlReceive) <- newChan
-      void . spawnLocal $ multiplexerProcess frameDebug configuration controlReceive contentReceive displayerPids
-      (selecterSend, selecterReceive) <- newChan
-      void . spawnLocal $ selecter         frameDebug configuration selecterReceive contentSend
-      void . spawnLocal $ trackerProcesses frameDebug configuration selecterSend    contentSend
-      void . spawnLocal $ provider         frameDebug configuration selecterSend    contentSend
+      (multiplexerSend, multiplexerReceive) <- newChan
+      (syncSend       , syncReceive       ) <- newChan
+      (selecterSend   , selecterReceive   ) <- newChan
+      mapM_ (spawnLocalMonitor . flip ($ frameDebug) configuration)
+        [
+           multiplexerProcess syncReceive     multiplexerReceive displayerPids
+        ,  provider           selecterSend    multiplexerSend
+        ,  selecter           selecterReceive multiplexerSend
+        ,  trackPov           multiplexerSend
+        ,  trackRelocation    selecterSend
+        ,  trackSelection     selecterSend
+        ]
       let
-        waitForAllReady counter =
-          do
-            Ready _ <- receiveChan' frameDebug masterReceive "CM RC 1"
-            if counter >= length displayerPids
-              then do
-                     sendChan' frameDebug nextMessageIdentifier controlSend "CM SC 2" Synchronize
-                     waitForAllReady 1
-              else waitForAllReady $ counter + 1
-      waitForAllReady 1 :: Process ()
+        loop counter =
+          loop =<<
+            receiveWait
+              [
+                matchChan' frameDebug masterReceive "CM RC 1"
+                  $ \message ->
+                  case message of
+                    Ready _ -> if counter >= length displayerPids
+                                 then do
+                                        sendChan' frameDebug nextMessageIdentifier syncSend "CM SC 2" Synchronize
+                                        return 1
+                                 else return $ counter + 1
+                    _       -> do
+                                 frameDebug DebugInfo ["Unexpected message.", show message]
+                                 return counter
+              , match $ \(ProcessMonitorNotification _ pid reason) -> do
+                                                             frameDebug DebugInfo ["Process notification.", show pid, show reason]
+                                                             return counter
+              ]
+      loop 1

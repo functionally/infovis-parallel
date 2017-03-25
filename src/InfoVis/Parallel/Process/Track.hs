@@ -24,37 +24,37 @@ import qualified InfoVis.Parallel.Process.Track.VRPN as VRPN (trackPov, trackRel
 #endif
 
 
-trackPov :: Debugger -> Configuration ->  SendPort DisplayerMessage -> Process ()
-trackPov frameDebug configuration@Configuration{..} = 
+trackPov :: SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
+trackPov port frameDebug configuration@Configuration{..} = 
   case input of
     NoInput -> error "trackPov: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackPov frameDebug configuration
+    InputKafka{} -> Kafka.trackPov port frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackPov frameDebug configuration
+    InputVRPN{} -> VRPN.trackPov port frameDebug configuration
 #endif
 
 
-trackRelocation :: Debugger -> Configuration ->  SendPort SelecterMessage -> Process ()
-trackRelocation frameDebug configuration@Configuration{..} =
+trackRelocation :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackRelocation port frameDebug configuration@Configuration{..} =
   case input of
     NoInput -> error "trackRelocation: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackRelocation frameDebug configuration
+    InputKafka{} -> Kafka.trackRelocation port frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackRelocation frameDebug configuration
+    InputVRPN{} -> VRPN.trackRelocation port frameDebug configuration
 #endif
 
 
-trackSelection :: Debugger -> Configuration ->  SendPort SelecterMessage -> Process ()
-trackSelection frameDebug configuration@Configuration{..} =
+trackSelection :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackSelection port frameDebug configuration@Configuration{..} =
   case input of
     NoInput -> error "trackSelection: No input specified."
 #ifdef INFOVIS_KAFKA
-    InputKafka{} -> Kafka.trackSelection frameDebug configuration
+    InputKafka{} -> Kafka.trackSelection port frameDebug configuration
 #endif
 #ifdef INFOVIS_VRPN
-    InputVRPN{} -> VRPN.trackSelection frameDebug configuration
+    InputVRPN{} -> VRPN.trackSelection port frameDebug configuration
 #endif

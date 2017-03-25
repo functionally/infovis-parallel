@@ -1,5 +1,5 @@
 name         : infovis-parallel
-version      : 0.3.2.1
+version      : 0.3.2.2
 synopsis     : Parallel-planes information visualization.
 description  : This information visualization shows multidimensional data as parallel planes with scatterplots connected by lines for corresponding data points.  It is a three-dimensional generalization of the two-dimensional parallel coordinate plots.
 
@@ -82,6 +82,7 @@ library
                      InfoVis.Parallel.Types.Presentation
                      InfoVis.Parallel.Types.World
   other-modules    : Control.Distributed.Process.Backend.SimpleWidenet
+                     Control.Distributed.Process.Util
                      Data.Math.Util
                      Graphics.OpenGL.Util
                      Graphics.OpenGL.Util.Instances

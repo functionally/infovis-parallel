@@ -87,8 +87,8 @@ lookupSpatial (delta, spatial) d p =
       ]
 
 
-selecter :: Debugger -> Configuration -> ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-selecter frameDebug configuration@Configuration{..} control listener =
+selecter :: ReceivePort SelecterMessage -> SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
+selecter control listener frameDebug configuration@Configuration{..} =
   runProcess "selector" 4 frameDebug $ \nextMessageIdentifier ->
     do
       currentHalfFrame <- makeTimer

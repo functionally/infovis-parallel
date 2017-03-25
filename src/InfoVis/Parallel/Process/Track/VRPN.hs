@@ -12,7 +12,7 @@ import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
 import Control.Distributed.Process (Process, SendPort, liftIO)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess, sendChan')
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
@@ -24,8 +24,8 @@ import Linear.Vector (zero)
 import Network.VRPN (ButtonCallback, PositionCallback, Device(Button, Tracker), mainLoop, openDevice)
 
 
-trackPov :: Debugger -> Configuration -> SendPort DisplayerMessage -> Process ()
-trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
+trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "point-of-view tracker" 5 frameDebug $ \nextMessageIdentifier ->
     do
       locationVar <- liftIO $ newIORef zero
@@ -57,13 +57,13 @@ trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termin
       loop
 
 
-trackRelocation :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
-trackRelocation frameDebug _ _ = -- FIXME: Support reset, termination, and faults.
-  frameDebug DebugInfo ["Starting relocation tracker."]
+trackRelocation :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackRelocation _ frameDebug _ = -- FIXME: Support reset, termination, and faults.
+  runProcess "relocation tracker" 6 frameDebug . const $ return ()
 
 
-trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
-trackSelection frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackSelection :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackSelection listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "selection tracker" 7 frameDebug $ \nextMessageIdentifier ->
     do
       locationVar <- liftIO $ newIORef zero

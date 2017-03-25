@@ -7,6 +7,7 @@ module InfoVis.Parallel.Process.Util (
 , sendChan'
 , receiveChan'
 , receiveChanTimeout'
+, matchChan'
 , debugTime
 , debugTimeIO
 , asHalfFrames
@@ -20,7 +21,7 @@ module InfoVis.Parallel.Process.Util (
 
 
 import Control.DeepSeq (NFData, ($!!))
-import Control.Distributed.Process (Process, ReceivePort, SendPort, getSelfPid, receiveChan, receiveChanTimeout, register, sendChan)
+import Control.Distributed.Process (Match, Process, ReceivePort, SendPort, getSelfPid, matchChan, receiveChan, receiveChanTimeout, register, sendChan)
 import Control.Distributed.Process.Debug (TraceArg(..), TraceFlags(..), setTraceFlags, traceLogFmt, traceOff, traceOn)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (when)
@@ -55,6 +56,14 @@ receiveChanTimeout' frameDebug chan tag timeout =
     maybe (return ()) (frameDebug DebugMessage . (tag :) . return . messageTag) maybeMessage
     return maybeMessage
 
+matchChan' :: (MessageTag a, Serializable a) => Debugger -> ReceivePort a -> String -> (a -> Process b) -> Match b
+matchChan' frameDebug chan tag action =
+  matchChan chan
+    $ \message ->
+    do
+     frameDebug DebugMessage [tag, messageTag message]
+     action message
+
 
 debugTime :: Debugger -> Process Double -> [String] -> Double -> Process Double
 debugTime frameDebug currentHalfFrame tags f0 =
@@ -75,8 +84,9 @@ debugTimeIO frameDebugIO currentHalfFrameIO tags f0 =
 runProcess :: String -> Int -> Debugger -> (Process Int -> Process ()) -> Process ()
 runProcess name offset frameDebug action =
   do
-    register name =<< getSelfPid
-    frameDebug DebugInfo ["Starting " ++ name ++ "."]
+    pid <- getSelfPid
+    register name pid
+    frameDebug DebugInfo ["Starting " ++ name ++ ".", show pid]
     nextMessageIdentifier <- makeNextMessageIdentifier 10 offset
     action nextMessageIdentifier
 
@@ -117,8 +127,7 @@ type DebuggerIO = Debug -> [String] -> IO ()
 
 
 traceEnabled :: Maybe AdvancedSettings -> Bool
-traceEnabled (Just AdvancedSettings{..}) = debugTiming || debugMessages || trace
-traceEnabled Nothing                     = False
+traceEnabled _ = True -- FIXME: Add quiet mode.
 
 
 makeDebugger :: Maybe AdvancedSettings -> Process Debugger
@@ -142,7 +151,7 @@ makeDebuggerImpl :: MonadIO m => ([String] -> m ()) -> Maybe AdvancedSettings ->
 makeDebuggerImpl output (Just AdvancedSettings{..}) =
   do
     f0 <- liftIO $ getTime Monotonic
-    output ["0.000", "Info", "Initial time offset = " ++ printf "%.3f" (asHalfFrames f0)]
+    output ["0.000", "Info", "Initial time offset.", printf "%.3f" (asHalfFrames f0)]
     let
       debuggings =
         fmap snd

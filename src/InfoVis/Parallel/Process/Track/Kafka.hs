@@ -65,8 +65,8 @@ trackVectorQuaternion sender messager topicConnection target = -- FIXME: Support
     consumerLoopProcess topicConnection processInput
 
 
-trackPov :: Debugger -> Configuration -> SendPort DisplayerMessage -> Process ()
-trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackPov :: SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
+trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "point-of-view tracker" 5 frameDebug $ \nextMessageIdentifier ->
     do
       let
@@ -78,8 +78,8 @@ trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termin
       either trackStatic trackDynamic povInput
 
 
-trackRelocation :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
-trackRelocation frameDebug Configuration{..} listener = -- FIXME: Support reset, termination, and faults.
+trackRelocation :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackRelocation listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "relocation tracker" 6 frameDebug $ \nextMessageIdentifier ->
     do
       let
@@ -87,8 +87,8 @@ trackRelocation frameDebug Configuration{..} listener = -- FIXME: Support reset,
       trackVectorQuaternion (sendChan' frameDebug nextMessageIdentifier listener) RelocateSelection kafka relocationInput
 
 
-trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
-trackSelection frameDebug Configuration{..} listener =
+trackSelection :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
+trackSelection listener frameDebug Configuration{..} =
   runProcess "selection tracker" 7 frameDebug $ \nextMessageIdentifier ->
     do
       locationVar <- liftIO $ newMVar zero

@@ -17,8 +17,8 @@ import InfoVis.Parallel.Types.Dataset (Dataset(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..))
 
 
-provider :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-provider frameDebug Configuration{..} selecter multiplexer =
+provider :: SendPort SelecterMessage -> SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
+provider selecter multiplexer frameDebug Configuration{..} =
   runProcess "data provider" 3 frameDebug $ \nextMessageIdentifier -> do
     rs <- liftIO $ readDataset dataset
     let
