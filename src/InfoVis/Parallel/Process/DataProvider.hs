@@ -11,7 +11,7 @@ import Data.List.Split (chunksOf)
 import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.IO (readDataset)
 import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
-import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan', waitForTermination)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Dataset (Dataset(..))
 import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..))
@@ -39,3 +39,4 @@ provider selecter multiplexer frameDebug Configuration{..} =
       , let chunkSize' = fromMaybe maxBound chunkSize
       , links' <- chunksOf chunkSize' $ take maxRecords' links
       ]
+    waitForTermination frameDebug

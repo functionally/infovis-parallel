@@ -2,7 +2,8 @@
 
 
 module InfoVis.Parallel.Process.Util (
-  traceEnabled
+  waitForTermination
+, traceEnabled
 , runProcess
 , sendChan'
 , receiveChan'
@@ -21,16 +22,27 @@ module InfoVis.Parallel.Process.Util (
 
 
 import Control.DeepSeq (NFData, ($!!))
-import Control.Distributed.Process (Match, Process, ReceivePort, SendPort, getSelfPid, matchChan, receiveChan, receiveChanTimeout, register, sendChan)
+import Control.Distributed.Process (Match, Process, ReceivePort, SendPort, getSelfPid, match, matchAny, matchChan, receiveChan, receiveChanTimeout, receiveWait, register, sendChan)
 import Control.Distributed.Process.Debug (TraceArg(..), TraceFlags(..), setTraceFlags, traceLogFmt, traceOff, traceOn)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (when)
 import Control.Monad.IO.Class (MonadIO(..))
 import Data.List (intercalate)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..))
-import InfoVis.Parallel.Types.Message (MessageTag(..), makeNextMessageIdentifier)
+import InfoVis.Parallel.Types.Message (CommonMessage(Terminate), MessageTag(..), makeNextMessageIdentifier)
 import System.Clock (Clock(Monotonic), TimeSpec(..), getTime, toNanoSecs)
 import Text.Printf (printf)
+
+
+waitForTermination :: Debugger -> Process ()
+waitForTermination frameDebug =
+  receiveWait
+    [
+      match $ \message -> case message of
+                            Terminate{} -> frameDebug DebugInfo ["Received termination."]
+                            _           -> frameDebug DebugInfo ["Received unexpected message.", show message]
+    , matchAny $ \message -> frameDebug DebugInfo ["received unexpected message.", show message]
+    ]
 
 
 sendChan' :: (MessageTag a, NFData a, Serializable a) => Debugger -> Process Int -> SendPort a -> String -> (Int -> a) -> Process ()
