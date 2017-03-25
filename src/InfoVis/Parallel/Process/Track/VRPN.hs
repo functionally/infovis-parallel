@@ -8,11 +8,12 @@ module InfoVis.Parallel.Process.Track.VRPN (
 ) where
 
 
-import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TMVar -- FIXME
+import Control.Concurrent.STM.TVar -- FIXME
 import Control.Distributed.Process (Process, SendPort, liftIO)
-import Control.Monad (void, when)
-import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
+import Control.Monad (liftM2, liftM3, void, when)
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan', waitForTermination)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
@@ -28,18 +29,18 @@ trackPov :: SendPort DisplayerMessage -> Debugger -> Configuration -> Process ()
 trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "point-of-view tracker" 5 frameDebug $ \nextMessageIdentifier ->
     do
-      locationVar <- liftIO $ newIORef zero
-      orientationVar <- liftIO $ newIORef zero
-      updatedVar <- liftIO newEmptyMVar
+      (locationVar, orientationVar, updatedVar) <- liftIO . atomically $ liftM3 (,,) (newTVar zero) (newTVar zero) newEmptyTMVar
       let
         InputVRPN Input{..} = input
         callback :: PositionCallback Int Double
         callback _ sensor (lx, ly, lz) (ox, oy, oz, ow) =
           when (sensor == headSensor)
+            . liftIO
+            . atomically
             $ do
-              writeIORef locationVar . P $ V3 lx ly lz
-              writeIORef orientationVar $ Quaternion ow $ V3 ox oy oz
-              void $ tryPutMVar updatedVar ()
+              writeTVar locationVar . P $ V3 lx ly lz
+              writeTVar orientationVar $ Quaternion ow $ V3 ox oy oz
+              void $ tryPutTMVar updatedVar ()
         device :: Device Int Int Int Double
         device = Tracker headDevice (Just callback) Nothing Nothing
       remote <- liftIO $ openDevice device
@@ -47,11 +48,10 @@ trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termin
         loop =
           do
             liftIO $ mainLoop remote
-            updated <- liftIO $ tryTakeMVar updatedVar
+            updated <- liftIO . atomically $ tryTakeTMVar updatedVar
             when (updated == Just ())
               $ do
-                location <- liftIO $ readIORef locationVar
-                orientation <- liftIO $ readIORef orientationVar
+                (location, orientation) <- liftIO . atomically $ liftM2 (,) (readTVar locationVar) (readTVar orientationVar)
                 sendChan' frameDebug nextMessageIdentifier listener "TP SC 1" $ Track location orientation
             loop
       loop
@@ -59,33 +59,39 @@ trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termin
 
 trackRelocation :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
 trackRelocation _ frameDebug _ = -- FIXME: Support reset, termination, and faults.
-  runProcess "relocation tracker" 6 frameDebug . const $ return ()
+  runProcess "relocation tracker" 6 frameDebug . const $ waitForTermination frameDebug
 
 
 trackSelection :: SendPort SelecterMessage -> Debugger -> Configuration -> Process ()
 trackSelection listener frameDebug Configuration{..} = -- FIXME: Support reset, termination, and faults.
   runProcess "selection tracker" 7 frameDebug $ \nextMessageIdentifier ->
     do
-      locationVar <- liftIO $ newIORef zero
-      buttonVar <- liftIO $ newIORef Highlight
-      updatedVar <- liftIO newEmptyMVar
+      (locationVar, buttonVar, updatedVar) <- liftIO . atomically $ liftM3 (,,) (newTVar zero) (newTVar Highlight) newEmptyTMVar
       let
         InputVRPN Input{..} = input
+        updateButton button =
+          liftIO
+            . atomically 
+            $ do
+              writeTVar buttonVar button
+              void $ tryPutTMVar updatedVar ()
         callback :: PositionCallback Int Double
         callback _ sensor (lx, ly, lz) _ =
           when (sensor == selectSensor)
+            . liftIO
+            . atomically
             $ do
-              writeIORef locationVar . P $ V3 lx ly lz
-              void $ tryPutMVar updatedVar ()
+              writeTVar locationVar . P $ V3 lx ly lz
+              void $ tryPutTMVar updatedVar ()
         callback' :: ButtonCallback Int
         callback' _ button pressed
-          | (button, pressed) == (selectButton  , True ) = void $ writeIORef buttonVar Selection   >> tryPutMVar updatedVar ()
-          | (button, pressed) == (deselectButton, True ) = void $ writeIORef buttonVar Deselection >> tryPutMVar updatedVar ()
-          | (button, pressed) == (clearButton   , True ) = void $ writeIORef buttonVar Clear       >> tryPutMVar updatedVar ()
-          | (button, pressed) == (forwardButton , True ) = void $ writeIORef buttonVar Forward     >> tryPutMVar updatedVar ()
-          | (button, pressed) == (backwardButton, True ) = void $ writeIORef buttonVar Backward    >> tryPutMVar updatedVar ()
-          | (button, pressed) == (resetButton   , True ) = void $ writeIORef buttonVar Reset       >> tryPutMVar updatedVar ()
-          | otherwise                                    = void $ writeIORef buttonVar Highlight   >> tryPutMVar updatedVar ()
+          | (button, pressed) == (selectButton  , True ) = updateButton Selection  
+          | (button, pressed) == (deselectButton, True ) = updateButton Deselection
+          | (button, pressed) == (clearButton   , True ) = updateButton Clear      
+          | (button, pressed) == (forwardButton , True ) = updateButton Forward    
+          | (button, pressed) == (backwardButton, True ) = updateButton Backward   
+          | (button, pressed) == (resetButton   , True ) = updateButton Reset      
+          | otherwise                                    = updateButton Highlight  
         device :: Device Int Int Int Double
         device = Tracker selectDevice (Just callback) Nothing Nothing
         device' :: Device Int Int Int Double
@@ -95,11 +101,10 @@ trackSelection listener frameDebug Configuration{..} = -- FIXME: Support reset, 
         loop =
           do
             liftIO $ mapM_ mainLoop remotes
-            updated <- liftIO $ tryTakeMVar updatedVar
+            updated <- liftIO . atomically $ tryTakeTMVar updatedVar
             when (updated == Just ())
               $ do
-                location <- liftIO $ readIORef locationVar
-                button <- liftIO $ readIORef buttonVar
+                (location, button) <- liftIO . atomically $ liftM2 (,) (readTVar locationVar) (readTVar buttonVar)
                 sendChan' frameDebug nextMessageIdentifier listener "TS SC 1" $ UpdateSelection location button
             loop
       loop

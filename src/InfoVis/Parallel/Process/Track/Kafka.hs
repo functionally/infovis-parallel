@@ -9,13 +9,14 @@ module InfoVis.Parallel.Process.Track.Kafka (
 ) where
 
 
-import Control.Concurrent (forkIO)
-import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
+import Control.Concurrent.STM (atomically)
+import Control.Concurrent.STM.TQueue (newTQueueIO, readTQueue, writeTQueue)
+import Control.Concurrent.STM.TVar (newTVarIO, readTVar, writeTVar)
 import Control.DeepSeq (NFData)
-import Control.Distributed.Process (Process, SendPort, liftIO, spawnLocal)
+import Control.Distributed.Process (Process, SendPort, getSelfPid, kill, liftIO, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
-import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan', waitForTermination)
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
@@ -32,33 +33,48 @@ import Network.UI.Kafka.Types (Button(IndexButton), Event(..), Toggle(..))
 consumerLoopProcess :: TopicConnection -> (Sensor -> Event -> Process ()) -> Process ()
 consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and support termination.
   do
-    forward <- liftIO newEmptyMVar
-    (_, consuming) <- liftIO . consumerLoop topicConnection $ (putMVar forward .) . (,)
-    void . spawnLocal . forever $ liftIO (takeMVar forward) >>= uncurry processor
-    void . liftIO . forkIO $ void consuming
+    pid <-getSelfPid
+    forward <- liftIO newTQueueIO
+    (_, consuming) <- liftIO . consumerLoop topicConnection $ ((atomically . writeTQueue forward) .) . (,)
+    void . spawnLocal
+      $ do
+        result <- liftIO consuming
+        case result of
+          Left  message -> kill pid $ show message
+          Right ()      -> kill pid "Unexpected exit from Kafka."
+    forever
+      $ liftIO (atomically $ readTQueue forward) >>= uncurry processor
 
     
 trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => (String -> (Int -> a) -> Process ()) -> (V3 Double -> Quaternion Double -> Int -> a)  -> TopicConnection -> Sensor -> Process ()
 trackVectorQuaternion sender messager topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
-    locationVar <- liftIO $ newMVar zero
-    orientationVar <- liftIO . newMVar $ Quaternion 1 zero
+    locationVar <- liftIO $ newTVarIO zero
+    orientationVar <- liftIO . newTVarIO $ Quaternion 1 zero
     let
       processInput sensor (LocationEvent (x, y, z)) =
         when (sensor == target)
           $ do
             let
               location = V3 x y z
-            void . liftIO $ swapMVar locationVar location
-            orientation <- liftIO $ readMVar orientationVar
+            orientation <-
+              liftIO
+                . atomically
+                $ do
+                  writeTVar locationVar location
+                  readTVar orientationVar
             sender "TV SC 1" $ messager location orientation
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
           $ do
-            location <- liftIO $ readMVar locationVar
             let
               orientation = Quaternion w $ V3 x y z
-            void . liftIO $ swapMVar orientationVar orientation
+            location <-
+              liftIO
+                . atomically
+                $ do
+                  writeTVar orientationVar orientation
+                  readTVar locationVar
             sender "TV SC 2" $ messager location orientation
       processInput _ _ =
         return ()
@@ -73,7 +89,9 @@ trackPov listener frameDebug Configuration{..} = -- FIXME: Support reset, termin
         sendListener = sendChan' frameDebug nextMessageIdentifier listener
         InputKafka Input{..} = input
         trackStatic (location, orientation) =
-          sendListener "TP SC 1" $ Track (P location) (fromEulerd orientation)
+          do
+            sendListener "TP SC 1" $ Track (P location) (fromEulerd orientation)
+            waitForTermination frameDebug
         trackDynamic = trackVectorQuaternion sendListener (Track . P) kafka
       either trackStatic trackDynamic povInput
 
@@ -91,7 +109,7 @@ trackSelection :: SendPort SelecterMessage -> Debugger -> Configuration -> Proce
 trackSelection listener frameDebug Configuration{..} =
   runProcess "selection tracker" 7 frameDebug $ \nextMessageIdentifier ->
     do
-      locationVar <- liftIO $ newMVar zero
+      locationVar <- liftIO $ newTVarIO zero
       let
         sendListener = sendChan' frameDebug nextMessageIdentifier listener
         InputKafka Input{..} = input
@@ -100,7 +118,7 @@ trackSelection listener frameDebug Configuration{..} =
             $ do
               let
                 location = P $ V3 x y z
-              void . liftIO $ swapMVar locationVar location
+              liftIO . atomically $ writeTVar locationVar location
               sendListener "TS SC 1" $ UpdateSelection location Highlight
         processInput sensor (LocationEvent xyz) = processInput' sensor xyz
         processInput sensor (PointerEvent xyz) = processInput' sensor xyz
@@ -108,7 +126,7 @@ trackSelection listener frameDebug Configuration{..} =
           case (sensor, i) `lookup` [(selectButton, Selection), (deselectButton, Deselection), (clearButton, Clear), (forwardButton, Forward), (backwardButton, Backward), (resetButton, Reset)] of
             Nothing              -> return ()
             Just selectionAction -> do
-                                      location <- liftIO $ readMVar locationVar
+                                      location <- liftIO . atomically $ readTVar locationVar
                                       sendListener "TS SC 2" $ UpdateSelection location selectionAction
         processInput _ _ =
           return ()
