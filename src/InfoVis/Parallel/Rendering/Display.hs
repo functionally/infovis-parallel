@@ -30,7 +30,7 @@ import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
-import InfoVis.Parallel.Process.Util (Debug(..), makeDebuggerIO, makeTimer)
+import InfoVis.Parallel.Process.Util (debugTimeIO, makeDebuggerIO, makeTimer)
 import InfoVis.Parallel.Rendering.Shapes (DisplayBuffer(bufferIdentifier), drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -43,7 +43,6 @@ import Linear.Util (rotationFromPlane)
 import Linear.Util.Graphics (toRotation, toVector3)
 import Linear.V3 (V3(..))
 import Linear.Vector (zero)
-import Text.Printf (printf)
 
 #ifdef INFOVIS_SWAP_GROUP
 import Graphics.OpenGL.Functions (joinSwapGroup)
@@ -95,6 +94,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
     frameDebugIO <- makeDebuggerIO advanced
     currentHalfFrameIO <- makeTimer
     let
+      debugTimeIO' = debugTimeIO frameDebugIO currentHalfFrameIO
       Just AdvancedSettings{..} = advanced
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     fontHeight' <-
@@ -127,9 +127,8 @@ displayer Configuration{..} displayIndex changesVar readyVar =
               writeIORef currentVar current
               when (dirty current && useIdleLoop)
                 idle
-              f1 <- currentHalfFrameIO
               when (dirty current)
-                $ frameDebugIO DebugDisplay $ show displayIndex ++ "\tCHANGE\tLOCS\t" ++ printf "%.3f" (f1 - f0)
+                . void $ debugTimeIO' [show displayIndex, "CHANGE", "LOCS"] f0
           Changes{..} <- readIORef currentVar
           unless (null selectChanges)
             $ do
@@ -137,8 +136,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
                 buffers <- readIORef buffersVar
                 mapM_ (flip (updateBuffer selectBuffer) selectChanges) buffers
                 modifyIORef' currentVar $ \c -> c {selectChanges = []}
-                f1 <- currentHalfFrameIO
-                frameDebugIO DebugDisplay $ show displayIndex ++ "\tSELECT\tSELECT\t" ++ printf "%.3f" (f1 - f0)
+                void $ debugTimeIO' [show displayIndex, "SELECT", "SELECT"] f0
           unless (null newText)
             $ do
               f0 <- currentHalfFrameIO
@@ -148,16 +146,14 @@ displayer Configuration{..} displayIndex changesVar readyVar =
               writeIORef drawStatusVar
                 $ (`showText` head newText) . Just
               modifyIORef' currentVar $ \c -> c {newText = []}
-              f1 <- currentHalfFrameIO
-              frameDebugIO DebugDisplay $ show displayIndex ++ "\tSET\tTEXT\t" ++ printf "%.3f" (f1 - f0)
+              void $ debugTimeIO' [show displayIndex, "SET", "TEXT"] f0
           unless (null newDisplay)
             $ do
               f0 <- currentHalfFrameIO
               newBuffers <- mapM makeBuffer newDisplay
               modifyIORef' buffersVar (newBuffers ++)
               modifyIORef' currentVar $ \c -> c {newDisplay = []}
-              f1 <- currentHalfFrameIO
-              frameDebugIO DebugDisplay $ show displayIndex ++ "\tADD\tDISPLAY\t" ++ printf "%.3f" (f1 - f0)
+              void $ debugTimeIO' [show displayIndex, "ADD", "DISPLAY"] f0
       showText t DisplayText{..} =
         let
           WorldExtent{..} = worldExtent world
@@ -188,8 +184,7 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             P location <- selectLocation <$> readIORef currentVar
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             selector
-        f1 <- currentHalfFrameIO
-        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tSELECT\t" ++ printf "%.3f" (f1 - f0)
+        f1 <- debugTimeIO' [show displayIndex, "DRAW", "SELECT"] f0
         preservingMatrix
           $ do
             time <- currentTime <$> readIORef currentVar
@@ -198,14 +193,11 @@ displayer Configuration{..} displayIndex changesVar readyVar =
             translate (toVector3 $ realToFrac <$> location :: Vector3 GLfloat)
             buffers <- readIORef buffersVar
             mapM_ drawBuffer $ filter (onlyCurrentTime time) buffers
-            f2 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tGEOM\t" ++ printf "%.3f" (f2 - f1)
+            f2 <- debugTimeIO' [show displayIndex, "DRAW", "GEOM"] f1
             join $ readIORef drawTextVar
             join $ ($ time) <$> readIORef drawStatusVar
-            f3 <- currentHalfFrameIO
-            frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTEXT\t" ++ printf "%.3f" (f3 - f2)
-        f4 <- currentHalfFrameIO
-        frameDebugIO DebugDisplay $ show displayIndex ++ "\tDRAW\tTOTAL\t" ++ printf "%.3f" (f4 - f0)
+            void $ debugTimeIO' [show displayIndex, "DRAW", "TEXT"] f2
+        void $ debugTimeIO' [show displayIndex, "DRAW", "TOTAL"] f0
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif

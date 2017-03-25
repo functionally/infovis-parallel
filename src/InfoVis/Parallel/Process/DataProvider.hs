@@ -6,40 +6,33 @@ module InfoVis.Parallel.Process.DataProvider (
 ) where
 
 
-import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, SendPort, liftIO, sendChan)
+import Control.Distributed.Process (Process, SendPort, liftIO)
 import Data.List.Split (chunksOf)
 import Data.Maybe (fromMaybe)
 import InfoVis.Parallel.IO (readDataset)
 import InfoVis.Parallel.Presentation.Displaying (prepareGrids, prepareLinks)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess)
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Dataset (Dataset(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), messageTag)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..))
 
 
 provider :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
-provider frameDebug Configuration{..} selecterSend multiplexer =
+provider frameDebug Configuration{..} selecter multiplexer =
   runProcess "data provider" 3 frameDebug $ \nextMessageIdentifier -> do
     rs <- liftIO $ readDataset dataset
     let
+      sendMultiplexer = sendChan' frameDebug nextMessageIdentifier multiplexer
+      sendSelecter    = sendChan' frameDebug nextMessageIdentifier selecter
       (grids, texts) = prepareGrids world presentation dataset
       links = prepareLinks world presentation dataset rs
-    mid1 <- nextMessageIdentifier
-    frameDebug DebugMessage $ "DP SC 1\t" ++ messageTag (AugmentDisplay mid1 grids)
-    sendChan multiplexer $!! AugmentDisplay mid1 grids
-    mid2 <- nextMessageIdentifier
-    frameDebug DebugMessage $ "DP SC 2\t" ++ messageTag (SetText mid2 texts)
-    sendChan multiplexer $!! SetText mid2 texts
+    sendMultiplexer "DP SC 1" $ AugmentDisplay grids
+    sendMultiplexer "DP SC 2" $ SetText texts
     sequence_
       [
         do
-          mid3 <- nextMessageIdentifier
-          frameDebug DebugMessage $ "DP SC 3\t" ++ messageTag (AugmentSelection mid3 links')
-          sendChan selecterSend $!! AugmentSelection mid3 links'
-          mid4 <- nextMessageIdentifier
-          frameDebug DebugMessage $ "DP SC 4\t" ++ messageTag (AugmentDisplay mid4 links')
-          sendChan multiplexer $!! AugmentDisplay mid4 links'
+          sendSelecter "DP SC 3" $ AugmentSelection links'
+          sendMultiplexer "DP SC 4" $ AugmentDisplay links'
       |
         let Dataset{..} = dataset
       , let maxRecords' = fromMaybe maxBound maxRecords

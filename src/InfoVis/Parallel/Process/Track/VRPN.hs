@@ -9,15 +9,14 @@ module InfoVis.Parallel.Process.Track.VRPN (
 
 
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, tryTakeMVar)
-import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, SendPort, liftIO, sendChan)
+import Control.Distributed.Process (Process, SendPort, liftIO)
 import Control.Monad (void, when)
 import Data.IORef (newIORef, readIORef, writeIORef)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess, sendChan')
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputVRPN))
 import InfoVis.Parallel.Types.Input.VRPN (InputVRPN(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), MessageTag(..), SelecterMessage(..), SelectionAction(..))
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import Linear.Affine (Point(..))
 import Linear.Quaternion (Quaternion(..))
 import Linear.V3 (V3(..))
@@ -53,16 +52,14 @@ trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termin
               $ do
                 location <- liftIO $ readIORef locationVar
                 orientation <- liftIO $ readIORef orientationVar
-                mid1 <- nextMessageIdentifier
-                frameDebug DebugMessage $ "TP SC 1\t" ++ messageTag (Track mid1 location orientation)
-                sendChan listener $!! Track mid1 location orientation
+                sendChan' frameDebug nextMessageIdentifier listener "TP SC 1" $ Track location orientation
             loop
       loop
 
 
 trackRelocation :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
 trackRelocation frameDebug _ _ = -- FIXME: Support reset, termination, and faults.
-  frameDebug DebugInfo "Starting relocation tracker."
+  frameDebug DebugInfo ["Starting relocation tracker."]
 
 
 trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
@@ -103,8 +100,6 @@ trackSelection frameDebug Configuration{..} listener = -- FIXME: Support reset, 
               $ do
                 location <- liftIO $ readIORef locationVar
                 button <- liftIO $ readIORef buttonVar
-                mid1 <- nextMessageIdentifier
-                frameDebug DebugMessage $ "TS SC 1\t" ++ messageTag (UpdateSelection mid1 location button)
-                sendChan listener $!! UpdateSelection mid1 location button
+                sendChan' frameDebug nextMessageIdentifier listener "TS SC 1" $ UpdateSelection location button
             loop
       loop

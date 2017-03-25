@@ -11,11 +11,11 @@ module InfoVis.Parallel.Process.Track.Kafka (
 
 import Control.Concurrent (forkIO)
 import Control.Concurrent.MVar (newEmptyMVar, newMVar, putMVar, readMVar, swapMVar, takeMVar)
-import Control.DeepSeq (NFData, ($!!))
-import Control.Distributed.Process (Process, SendPort, liftIO, sendChan, spawnLocal)
+import Control.DeepSeq (NFData)
+import Control.Distributed.Process (Process, SendPort, liftIO, spawnLocal)
 import Control.Distributed.Process.Serializable (Serializable)
 import Control.Monad (forever, void, when)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, runProcess)
+import InfoVis.Parallel.Process.Util (Debugger, runProcess, sendChan')
 import InfoVis.Parallel.Types.Configuration (Configuration(..))
 import InfoVis.Parallel.Types.Input (Input(InputKafka))
 import InfoVis.Parallel.Types.Input.Kafka (InputKafka(..))
@@ -38,8 +38,8 @@ consumerLoopProcess topicConnection processor = -- FIXME: Catch exceptions and s
     void . liftIO . forkIO $ void consuming
 
     
-trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => Debugger -> Process Int -> (Int -> V3 Double -> Quaternion Double -> a) -> SendPort a -> TopicConnection -> Sensor -> Process ()
-trackVectorQuaternion frameDebug nextMessageIdentifier messager listener topicConnection target = -- FIXME: Support reset, termination, and faults.
+trackVectorQuaternion :: (MessageTag a, NFData a, Serializable a) => (String -> (Int -> a) -> Process ()) -> (V3 Double -> Quaternion Double -> Int -> a)  -> TopicConnection -> Sensor -> Process ()
+trackVectorQuaternion sender messager topicConnection target = -- FIXME: Support reset, termination, and faults.
   do
     locationVar <- liftIO $ newMVar zero
     orientationVar <- liftIO . newMVar $ Quaternion 1 zero
@@ -51,9 +51,7 @@ trackVectorQuaternion frameDebug nextMessageIdentifier messager listener topicCo
               location = V3 x y z
             void . liftIO $ swapMVar locationVar location
             orientation <- liftIO $ readMVar orientationVar
-            mid1 <- nextMessageIdentifier
-            frameDebug DebugMessage $ "TV SC 1\t" ++ messageTag (messager mid1 location orientation)
-            sendChan listener $!! messager mid1 location orientation
+            sender "TV SC 1" $ messager location orientation
       processInput sensor (OrientationEvent (w, x, y, z)) =
         when (sensor == target)
           $ do
@@ -61,9 +59,7 @@ trackVectorQuaternion frameDebug nextMessageIdentifier messager listener topicCo
             let
               orientation = Quaternion w $ V3 x y z
             void . liftIO $ swapMVar orientationVar orientation
-            mid2 <- nextMessageIdentifier
-            frameDebug DebugMessage $ "TV SC 2\t" ++ messageTag (messager mid2 location orientation)
-            sendChan listener $!! messager mid2 location orientation
+            sender "TV SC 2" $ messager location orientation
       processInput _ _ =
         return ()
     consumerLoopProcess topicConnection processInput
@@ -74,13 +70,11 @@ trackPov frameDebug Configuration{..} listener = -- FIXME: Support reset, termin
   runProcess "point-of-view tracker" 5 frameDebug $ \nextMessageIdentifier ->
     do
       let
+        sendListener = sendChan' frameDebug nextMessageIdentifier listener
         InputKafka Input{..} = input
         trackStatic (location, orientation) =
-          do
-            mid1 <- nextMessageIdentifier
-            frameDebug DebugMessage $ "TP SC 1\t" ++ messageTag (Track mid1 (P location) (fromEulerd orientation))
-            sendChan listener $!! Track mid1 (P location) (fromEulerd orientation)
-        trackDynamic = trackVectorQuaternion frameDebug nextMessageIdentifier ((. P) . Track) listener kafka
+          sendListener "TP SC 1" $ Track (P location) (fromEulerd orientation)
+        trackDynamic = trackVectorQuaternion sendListener (Track . P) kafka
       either trackStatic trackDynamic povInput
 
 
@@ -90,7 +84,7 @@ trackRelocation frameDebug Configuration{..} listener = -- FIXME: Support reset,
     do
       let
         InputKafka Input{..} = input
-      trackVectorQuaternion frameDebug nextMessageIdentifier RelocateSelection listener kafka relocationInput
+      trackVectorQuaternion (sendChan' frameDebug nextMessageIdentifier listener) RelocateSelection kafka relocationInput
 
 
 trackSelection :: Debugger -> Configuration -> SendPort SelecterMessage -> Process ()
@@ -99,6 +93,7 @@ trackSelection frameDebug Configuration{..} listener =
     do
       locationVar <- liftIO $ newMVar zero
       let
+        sendListener = sendChan' frameDebug nextMessageIdentifier listener
         InputKafka Input{..} = input
         processInput' sensor (x, y, z) =
           when (sensor == selectorInput)
@@ -106,9 +101,7 @@ trackSelection frameDebug Configuration{..} listener =
               let
                 location = P $ V3 x y z
               void . liftIO $ swapMVar locationVar location
-              mid1 <- nextMessageIdentifier
-              frameDebug DebugMessage $ "TS SC 1\t" ++ messageTag (UpdateSelection mid1 location Highlight)
-              sendChan listener $!! UpdateSelection mid1 location Highlight
+              sendListener "TS SC 1" $ UpdateSelection location Highlight
         processInput sensor (LocationEvent xyz) = processInput' sensor xyz
         processInput sensor (PointerEvent xyz) = processInput' sensor xyz
         processInput sensor (ButtonEvent (IndexButton i, Down)) =
@@ -116,9 +109,7 @@ trackSelection frameDebug Configuration{..} listener =
             Nothing              -> return ()
             Just selectionAction -> do
                                       location <- liftIO $ readMVar locationVar
-                                      mid2 <- nextMessageIdentifier
-                                      frameDebug DebugMessage $ "TS SC 2\t" ++ messageTag (UpdateSelection mid2 location selectionAction)
-                                      sendChan listener $!! UpdateSelection mid2 location selectionAction
+                                      sendListener "TS SC 2" $ UpdateSelection location selectionAction
         processInput _ _ =
           return ()
       consumerLoopProcess kafka processInput

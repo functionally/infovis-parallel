@@ -44,6 +44,7 @@ data AdvancedSettings =
   , debugMessages       :: Bool
   , debugDisplay        :: Bool
   , debugOpenGL         :: Bool
+  , trace               :: Bool
   , useSwapGroup        :: Maybe Int
   , synchronizeDisplays :: Bool
   , useIdleLoop         :: Bool
@@ -60,6 +61,7 @@ instance Default AdvancedSettings where
     , debugMessages       = False
     , debugDisplay        = False
     , debugOpenGL         = False
+    , trace               = False
     , useSwapGroup        = Nothing
     , synchronizeDisplays = False
     , useIdleLoop         = True

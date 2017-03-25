@@ -18,7 +18,8 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, swapTMVar, readTMVar, takeTMVar)
 import Control.Concurrent.STM.TVar (newTVarIO, writeTVar)
 import Control.DeepSeq (force)
-import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, receiveChan, receiveChanTimeout, send, sendChan, spawn, spawnLocal)
+import Control.Distributed.Process (NodeId, Process, ProcessId, ReceivePort, SendPort, expect, liftIO, newChan, send, spawn, spawnLocal)
+import Control.Distributed.Process.Debug (enableTrace, systemLoggerTracer)
 import Control.Distributed.Process.Closure (mkClosure, remotable)
 import Control.Monad (forever, void, when)
 import Data.Default (def)
@@ -28,9 +29,9 @@ import InfoVis.Parallel.Process.DataProvider (provider)
 import InfoVis.Parallel.Rendering.Display (displayer)
 import InfoVis.Parallel.Process.Select (selecter)
 import InfoVis.Parallel.Process.Track (trackPov, trackRelocation, trackSelection)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeDebugger, makeTimer, runProcess)
+import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeDebugger, makeTimer, receiveChan', receiveChanTimeout', runProcess, sendChan', traceEnabled)
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..), peersList)
-import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..), messageTag)
+import InfoVis.Parallel.Types.Message (CommonMessage(..), DisplayerMessage(..), MasterMessage(..), SelecterMessage(..))
 import Linear.Affine (Point(..))
 import Linear.V3 (V3(..))
 
@@ -59,8 +60,7 @@ multiplexerProcess frameDebug Configuration{..} control content displayerPids =
         loop changes remaining =
           do
             f0 <- currentHalfFrame
-            maybeContent <- receiveChanTimeout 90 content
-            maybe (return ()) (\m -> frameDebug DebugMessage $ "MX RC 3\t" ++ messageTag m) maybeContent
+            maybeContent <- receiveChanTimeout' frameDebug content "MX RC 3" 90
             let
               first = isNaN x where P (V3 x _ _) = C.eyeLocation changes
               changes' =
@@ -102,15 +102,14 @@ multiplexerProcess frameDebug Configuration{..} control content displayerPids =
             elapsed <- (+ negate f0) <$> currentHalfFrame
             if C.dirty changes' && elapsed > remaining
               then do
-                     frameDebug DebugMessage "MX SE 1\tDISPLAY"
+                     frameDebug DebugMessage ["MX SE 1", "DISPLAY"]
                      mapM_ (`send` force changes') displayerPids
                      when synchronizeDisplays
                        $ do
-                          maybeControl <- receiveChanTimeout 10 control
+                          maybeControl <- receiveChanTimeout' frameDebug control "MX RC 2" 10
                           case maybeControl of
-                            Just (Synchronize mid2) -> do
-                                                         frameDebug DebugMessage $ "MX RC 2\t" ++ messageTag (Synchronize mid2)
-                                                         frameDebug DebugMessage "MX SE 3\tSYNC"
+                            Just (Synchronize _) -> do
+                                                         frameDebug DebugMessage ["MX SE 3", "SYNC"]
                                                          mapM_ (`send` changes {C.sync = True}) displayerPids
                             _                       -> return ()
                      loop (reset changes') updateDelay'
@@ -136,12 +135,10 @@ displayerProcess (configuration, masterSend, displayIndex) =
                 ready <- liftIO . atomically $ readTMVar readyVar
                 when ready
                   $ do
-                    mid3 <- nextMessageIdentifier
-                    frameDebug DebugMessage $ "DI SC 1\t" ++ messageTag (Ready mid3)
-                    masterSend `sendChan` Ready mid3
+                    sendChan' frameDebug nextMessageIdentifier masterSend "DI SC 1" Ready
                     liftIO . void . atomically $ swapTMVar readyVar False
             changes <- expect
-            frameDebug DebugMessage "DI EX 2\tCHANGE"
+            frameDebug DebugMessage ["DI EX 2", "CHANGE"]
             liftIO
               . atomically
               $ do
@@ -153,7 +150,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
 trackerProcesses :: Debugger -> Configuration -> SendPort SelecterMessage -> SendPort DisplayerMessage -> Process ()
 trackerProcesses frameDebug configuration@Configuration{..} selecterSend multiplexer =
   do
-    frameDebug DebugInfo  "Starting trackers."
+    frameDebug DebugInfo ["Starting trackers."]
     void . spawnLocal $ trackPov        frameDebug configuration multiplexer
     void . spawnLocal $ trackRelocation frameDebug configuration selecterSend
     void . spawnLocal $ trackSelection  frameDebug configuration selecterSend
@@ -171,7 +168,7 @@ masterMain configuration peers =
       sequence
         [
           do
-            frameDebug DebugInfo $ "Spawning display " ++ show i ++ " <" ++ show peer ++ ">."
+            frameDebug DebugInfo ["Spawning display " ++ show i ++ " <" ++ show peer ++ ">."]
             spawn peer ($(mkClosure 'displayerProcess) (configuration, masterSend, i))
         |
           (peer, i) <- zip peers [0 .. length (peersList configuration)]
@@ -182,10 +179,12 @@ masterMain configuration peers =
 soloMain :: Configuration -> [NodeId] -> Process ()
 soloMain configuration [] =
   do
+    when (traceEnabled $ advanced configuration)
+      $ enableTrace =<< spawnLocal systemLoggerTracer
     frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
-    displayerPids <- spawnLocal (displayerProcess (configuration, masterSend, 0))
-    commonMain frameDebug configuration masterReceive [displayerPids]
+    displayerPid <- spawnLocal (displayerProcess (configuration, masterSend, 0))
+    commonMain frameDebug configuration masterReceive [displayerPid]
 soloMain _ (_ : _) = error "Some peers specified."
 
 
@@ -203,13 +202,10 @@ commonMain frameDebug configuration masterReceive displayerPids =
       let
         waitForAllReady counter =
           do
-            Ready mid1 <- receiveChan masterReceive
-            frameDebug DebugMessage $ "CM RC 1\t" ++ messageTag (Ready mid1)
+            Ready _ <- receiveChan' frameDebug masterReceive "CM RC 1"
             if counter >= length displayerPids
               then do
-                     mid2 <- nextMessageIdentifier
-                     frameDebug DebugMessage $ "CM SC 2\t" ++ messageTag (Synchronize mid2)
-                     controlSend `sendChan` Synchronize mid2
+                     sendChan' frameDebug nextMessageIdentifier controlSend "CM SC 2" Synchronize
                      waitForAllReady 1
               else waitForAllReady $ counter + 1
       waitForAllReady 1 :: Process ()

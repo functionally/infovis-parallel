@@ -32,7 +32,6 @@ import GHC.Generics (Generic)
 import InfoVis.Parallel.Rendering.Types (DisplayList, DisplayText, DisplayType)
 import InfoVis.Parallel.Types (Coloring, Location)
 import InfoVis.Parallel.Types.Presentation (TimeAlias)
-import InfoVis.Parallel.Types.Configuration (Configuration)
 import Linear.Affine (Point)
 import Linear.Quaternion (Quaternion)
 import Linear.V3 (V3)
@@ -53,12 +52,7 @@ type Augmentation = DisplayList AugmentationType Int
 
 
 data CommonMessage =
-    Reconfigure
-    {
-      commonMessageIdentifier :: Int
-    , configuration           :: Configuration
-    }
-  | Synchronize
+    Synchronize
     {
       commonMessageIdentifier :: Int
     }
@@ -66,10 +60,9 @@ data CommonMessage =
     {
       commonMessageIdentifier :: Int
     }
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance MessageTag CommonMessage where
-  messageTag Reconfigure{..} = "Common\tReconf\t" ++ show commonMessageIdentifier
   messageTag Synchronize{..} = "Common\tSynch\t"  ++ show commonMessageIdentifier
   messageTag Terminate{..}   = "Common\tTerm\t"   ++ show commonMessageIdentifier
 
@@ -81,14 +74,14 @@ data MasterMessage =
     }
   | Fault
     {
-      masterMessageIdentifier :: Int
-    , fault                   :: String
+      fault                   :: String
+    , masterMessageIdentifier :: Int
     }
   | Exit
     {
       masterMessageIdentifier :: Int
     }
-    deriving (Binary, Eq, Generic, Ord, Show)
+    deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
 instance SumTag MasterMessage where
   sumTag Ready{} = '0'
@@ -104,20 +97,20 @@ instance MessageTag MasterMessage where
 data SelecterMessage =
     AugmentSelection
     {
-      selecterMessageIdentifier :: Int
-    , selecterAugmentations     :: [Augmentation]
+      selecterAugmentations     :: [Augmentation]
+    , selecterMessageIdentifier :: Int
     }
   | UpdateSelection
     {
-      selecterMessageIdentifier :: Int
-    , selecterPosition          :: Point V3 Double
+      selecterPosition          :: Point V3 Double
     , selecterState             :: SelectionAction
+    , selecterMessageIdentifier :: Int
     }
   | RelocateSelection
     {
-      selecterMessageIdentifier :: Int
-    , relocationDisplacement    :: V3 Double
+      relocationDisplacement    :: V3 Double
     , relocationRotation        :: Quaternion Double
+    , selecterMessageIdentifier :: Int
     }
     deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
@@ -136,7 +129,6 @@ type SelecterMessage' = Either CommonMessage SelecterMessage
 
 instance SumTag SelecterMessage' where
   sumTag (Right x            ) = sumTag x
-  sumTag (Left  Reconfigure{}) = '7'
   sumTag (Left  Terminate{}  ) = '8'
   sumTag (Left  Synchronize{}) = '9'
 
@@ -144,32 +136,32 @@ instance SumTag SelecterMessage' where
 data DisplayerMessage =
     SetText
     {
-      displayerMessageIdentifier :: Int
-    , text                       :: [DisplayText String Location]
+      text                       :: [DisplayText String Location]
+    , displayerMessageIdentifier :: Int
     }
   | AugmentDisplay
     {
-      displayerMessageIdentifier :: Int
-    , augmentations              :: [Augmentation]
+      augmentations              :: [Augmentation]
+    , displayerMessageIdentifier :: Int
     }
   | Track
     {
-      displayerMessageIdentifier :: Int
-    , eyePosition                :: Point V3 Double
+      eyePosition                :: Point V3 Double
     , eyeOrientation             :: Quaternion Double
+    , displayerMessageIdentifier :: Int
     }
   | Relocate
     {
-      displayerMessageIdentifier :: Int
-    , centerDisplacement         :: V3 Double
+      centerDisplacement         :: V3 Double
     , centerRotation             :: Quaternion Double
+    , displayerMessageIdentifier :: Int
     }
   | Select
     {
-      displayerMessageIdentifier :: Int
-    , currentTime                :: TimeAlias
+      currentTime                :: TimeAlias
     , selectorLocation           :: Point V3 Double
     , selectionChanges           :: [((DisplayType, String), [(Int, Coloring)])]
+    , displayerMessageIdentifier :: Int
     }
     deriving (Binary, Eq, Generic, NFData, Ord, Show)
 
@@ -192,7 +184,6 @@ type DisplayerMessage' = Either CommonMessage DisplayerMessage
 
 instance SumTag DisplayerMessage' where
   sumTag (Right x            ) = sumTag x
-  sumTag (Left  Reconfigure{}) = '7'
   sumTag (Left  Terminate{}  ) = '8'
   sumTag (Left  Synchronize{}) = '9'
 

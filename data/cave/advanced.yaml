@@ -3,6 +3,7 @@ advanced              :
   debugMessages       : false
   debugDisplay        : false
   debugOpenGL         : false
+  trace               : false
   useSwapGroup        : 1
   synchronizeDisplays : false
   useIdleLoop         : false

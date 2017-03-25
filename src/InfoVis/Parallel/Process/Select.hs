@@ -9,17 +9,17 @@ module InfoVis.Parallel.Process.Select (
 
 
 import Control.Arrow (second)
-import Control.DeepSeq (($!!))
-import Control.Distributed.Process (Process, ReceivePort, SendPort, receiveChan, sendChan)
+import Control.Distributed.Process (Process, ReceivePort, SendPort)
+import Control.Monad (void)
 import Data.Bit (Bit, fromBool)
 import Data.Hashable (Hashable)
 import Data.List (nub)
 import Data.Vector.Unboxed.Bit (intersection, invert, listBits, union, symDiff)
-import InfoVis.Parallel.Process.Util (Debug(..), Debugger, makeTimer, runProcess)
+import InfoVis.Parallel.Process.Util (Debugger, debugTime, makeTimer, receiveChan', runProcess, sendChan')
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayType(LinkType))
 import InfoVis.Parallel.Types (Coloring(..))
 import InfoVis.Parallel.Types.Configuration (AdvancedSettings(..), Configuration(..))
-import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..), messageTag)
+import InfoVis.Parallel.Types.Message (DisplayerMessage(..), SelecterMessage(..), SelectionAction(..))
 import InfoVis.Parallel.Types.Presentation (Presentation(..))
 import InfoVis.Parallel.Types.World (World(..))
 import Linear.Affine (Point(..), (.-.), (.+^), (.-^))
@@ -29,7 +29,6 @@ import Linear.Quaternion (Quaternion(..), rotate)
 import Linear.V3 (V3(..))
 import Linear.Util.Graphics (fromVertex3)
 import Linear.Vector (zero)
-import Text.Printf (printf)
 
 import qualified Data.HashMap.Strict as H (HashMap, empty, fromListWith, lookupDefault, map, toList, unionWith)
 import qualified Data.HashSet as S (fromList, toList)
@@ -94,15 +93,16 @@ selecter frameDebug configuration@Configuration{..} control listener =
     do
       currentHalfFrame <- makeTimer
       let
+        receiveSelecter = receiveChan' frameDebug control
+        sendListener = sendChan' frameDebug nextMessageIdentifier listener
         Just AdvancedSettings{..} = advanced
         waitForAugment =
           do
-            message <- receiveChan control
-            frameDebug DebugMessage $ "SE RC 1\t" ++ messageTag message
+            message <- receiveSelecter "SE RC 1"
             case message of
               AugmentSelection{} -> return message
               _                  -> waitForAugment
-      AugmentSelection _ links <- waitForAugment
+      AugmentSelection links _ <- waitForAugment
       let
         delta = selectorSize presentation * baseSize world / 2
         spatials = fmap mergeSpatials . M.fromListWith (++) $ second (: []) . newSpatial delta <$> links
@@ -110,9 +110,8 @@ selecter frameDebug configuration@Configuration{..} control listener =
       let
         loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef =
           do
-            message <- receiveChan control
             f0 <- currentHalfFrame
-            frameDebug DebugMessage $ "SE RC 3\t" ++ messageTag message
+            message <- receiveSelecter "SE RC 3"
             case message of
               RelocateSelection{..} -> do
                                          let
@@ -126,14 +125,9 @@ selecter frameDebug configuration@Configuration{..} control listener =
                                                (selecterVar, Highlight)
                                                relocationVar'
                                            changes' = if null changes then [] else [((LinkType, ""), changes)]
-                                         mid2 <- nextMessageIdentifier
-                                         frameDebug DebugMessage $ "SE SC 2\t" ++ messageTag (Relocate mid2 relocationDisplacement relocationRotation)
-                                         sendChan listener $!! Relocate mid2 relocationDisplacement relocationRotation
-                                         mid3 <- nextMessageIdentifier
-                                         frameDebug DebugMessage $ "SE SC 3\t" ++ messageTag (Select mid3 (snd time) selecterVar changes')
-                                         sendChan listener $!! Select mid3 (snd time) selecterVar changes'
-                                         f1 <- currentHalfFrame
-                                         frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
+                                         sendListener "SE SC 2" $ Relocate relocationDisplacement relocationRotation
+                                         sendListener "SE SC 3" $ Select (snd time) selecterVar changes'
+                                         void $ debugTime frameDebug currentHalfFrame ["SELECT"] f0
                                          loop timeVar selecterVar relocationVar' persistentColorings' transientColorings'
               UpdateSelection{..}   -> do
                                          let
@@ -152,11 +146,8 @@ selecter frameDebug configuration@Configuration{..} control listener =
                                                (selecterVar', selecterState)
                                                relocationVar
                                            changes' = if null changes then [] else [((LinkType, ""), changes)]
-                                         mid4 <- nextMessageIdentifier
-                                         frameDebug DebugMessage $ "SE SC 4\t" ++ messageTag (Select mid4 (snd time) selecterVar changes')
-                                         sendChan listener $!! Select mid4 (snd time) selecterVar changes'
-                                         f1 <- currentHalfFrame
-                                         frameDebug DebugTiming $ "SELECT\t" ++ printf "%.3f" (f1 - f0)
+                                         sendListener "SE SC 4" $ Select (snd time) selecterVar changes'
+                                         void $ debugTime frameDebug currentHalfFrame ["SELECT"] f0
                                          loop timeVar' selecterVar' relocationVar persistentColorings' transientColorings'
               _                     -> loop timeVar selecterVar relocationVar persistentColoringsRef transientColoringsRef
       loop 0 zero (zero, Quaternion 1 zero) 
