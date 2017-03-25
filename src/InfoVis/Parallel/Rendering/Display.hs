@@ -15,7 +15,7 @@ import Control.Concurrent.STM (atomically)
 import Control.Concurrent.STM.TMVar (TMVar, isEmptyTMVar, putTMVar)
 import Control.Concurrent.STM.TVar (TVar, modifyTVar', readTVar)
 import Control.DeepSeq (NFData)
-import Control.Exception (IOException, catch)
+import Control.Exception (IOException, SomeException, handle)
 import Control.Monad (join, unless, void, when)
 import Data.Binary (Binary)
 import Data.Default (Default(..))
@@ -30,7 +30,7 @@ import Graphics.UI.GLUT.Begin (mainLoop)
 import Graphics.UI.GLUT.Callbacks.Global (idleCallback)
 import Graphics.UI.GLUT.Fonts (StrokeFont(Roman), fontHeight, renderString, stringWidth)
 import Graphics.UI.GLUT.Objects (Flavour(Solid), Object(Sphere'), renderObject)
-import InfoVis.Parallel.Process.Util (debugTimeIO, makeDebuggerIO, makeTimer)
+import InfoVis.Parallel.Process.Util (Debug(DebugInfo), debugTimeIO, makeDebuggerIO, makeTimer)
 import InfoVis.Parallel.Rendering.Shapes (DisplayBuffer(bufferIdentifier), drawBuffer, makeBuffer, updateBuffer)
 import InfoVis.Parallel.Rendering.Types (DisplayList(..), DisplayText(..), DisplayType(..))
 import InfoVis.Parallel.Types (Coloring, Location)
@@ -101,8 +101,8 @@ displayer Configuration{..} displayIndex changesVar readyVar =
       Just AdvancedSettings{..} = advanced
     dlp <- setup debugOpenGL "InfoVis Parallel" "InfoVis Parallel" viewers displayIndex
     fontHeight' <-
-     catch (fontHeight Roman)
-       ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
+       handle ((\_ -> fromIntegral <$> stringWidth Roman "wn") :: IOException -> IO GLfloat)
+         $ fontHeight Roman
     drawTextVar <- newIORef $ return ()
     drawStatusVar <- newIORef . const $ return ()
     buffersVar <- newIORef []
@@ -177,8 +177,14 @@ displayer Configuration{..} displayIndex changesVar readyVar =
         fst i == GridType || i == (LinkType, time)
           where
             i = bufferIdentifier buffer
-    idleCallback $= Just (if useIdleLoop then changeLoop else idle)
+    idleCallback $=
+      Just (
+        if useIdleLoop
+          then handle (\e -> frameDebugIO DebugInfo ["Renderer died in idle callback.", show (e :: SomeException)]) changeLoop
+          else idle
+      )
     dlpViewerDisplay dlp viewers displayIndex ((eyeLocation &&& eyeOrientation) <$> readIORef currentVar)
+      $ handle (\e -> frameDebugIO DebugInfo ["Renderer died in display callback.", show (e :: SomeException)])
       $ do
         unless useIdleLoop changeLoop
         f0 <- currentHalfFrameIO
@@ -204,4 +210,5 @@ displayer Configuration{..} displayIndex changesVar readyVar =
 #ifdef INFOVIS_SWAP_GROUP
     _ <- maybe (return False) joinSwapGroup useSwapGroup
 #endif
-    mainLoop
+    handle (\e -> frameDebugIO DebugInfo ["Renderer died in main loop.", show (e :: SomeException)])
+      mainLoop
