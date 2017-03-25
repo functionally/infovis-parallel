@@ -17,6 +17,7 @@ import Graphics.Rendering.DLP (DlpEncoding, DlpEye(..))
 import Graphics.Rendering.DLP.Callbacks (DlpDisplay(..), dlpDisplayCallback)
 import Graphics.Rendering.OpenGL (($=!))
 import Graphics.Rendering.OpenGL.GL.CoordTrans (MatrixComponent, MatrixMode(..), Position(..), loadIdentity, matrixMode, viewport)
+import Graphics.Rendering.OpenGL.GL.DebugOutput (debugMessageCallback, debugOutput)
 import Graphics.Rendering.OpenGL.GL.PerFragment (BlendingFactor(..), ComparisonFunction(..), alphaFunc, blend, blendFunc, depthFunc)
 import Graphics.Rendering.OpenGL.GL.VertexArrays (Capability(Enabled))
 import Graphics.UI.GLUT.Callbacks.Global (IdleCallback)
@@ -27,6 +28,7 @@ import Linear.Affine (Point(..), (.+^))
 import Linear.Conjugate (Conjugate)
 import Linear.Epsilon (Epsilon)
 import Linear.Vector ((*^))
+import System.IO (hPrint, stderr)
 
 import qualified Graphics.Rendering.DLP as D (DlpEncoding(..))
 import qualified Linear.Quaternion as Q (rotate)
@@ -65,6 +67,10 @@ setup debug title program Viewers{..} displayIndex =
     blend $=! Enabled
     blendFunc $=! (SrcAlpha, OneMinusSrcAlpha)
     alphaFunc $=! Just (Greater, 0)
+    when debug
+      $ do
+        debugOutput $=! Enabled
+        debugMessageCallback $=! Just (hPrint stderr)
     return dlp
 
 

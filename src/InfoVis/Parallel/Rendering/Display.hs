@@ -91,7 +91,10 @@ displayer :: Configuration
           -> IO ()
 displayer Configuration{..} displayIndex changesVar readyVar =
   do
-    frameDebugIO <- makeDebuggerIO advanced
+    frameDebugIO <-
+      case debugDisplay <$> advanced of
+        Just True -> makeDebuggerIO advanced
+        _         -> return . const . const $ return ()
     currentHalfFrameIO <- makeTimer
     let
       debugTimeIO' = debugTimeIO frameDebugIO currentHalfFrameIO
