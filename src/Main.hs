@@ -1,19 +1,18 @@
-{- |
-
-In this example, I follow vulkan-tutorial.com > Drawing
-
-Finally, it draws that damn triangle!
-
--}
 {-# LANGUAGE DataKinds        #-}
 {-# LANGUAGE RecordWildCards  #-}
 {-# LANGUAGE Strict           #-}
 {-# LANGUAGE TemplateHaskell  #-}
 {-# LANGUAGE TypeApplications #-}
-module Main (main) where
+
+
+module Main (
+  main
+) where
+
 
 import           Control.Exception
 import           Control.Monad                        (forM_)
+import Control.Monad.Log 
 import           Foreign.Marshal.Alloc
 import           Foreign.Marshal.Array
 import           Foreign.Ptr
