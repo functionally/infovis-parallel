@@ -29,13 +29,11 @@ library
   build-depends    : base >= 4.8 && < 5
                    , aeson
                    , binary
-                   , containers
                    , data-default
                    , deepseq
-                   , GLFW-b
+                   , directory
                    , linear
                    , vector
-                   , vulkan-api
                    , yaml
   hs-source-dirs   : src
   exposed          : True
@@ -47,6 +45,12 @@ library
 executable infovis-parallel
 
   main-is          : Main.hs
+  other-modules    : Lib.GLFW
+                     Lib.Utils
+                     Lib.Utils.TH
+                     Lib.Vulkan
+                     Lib.Vulkan.Pipeline
+                     Lib.Vulkan.Presentation
   hs-source-dirs   : src
   build-depends    : base
                    , aeson
@@ -54,8 +58,12 @@ executable infovis-parallel
                    , containers
                    , data-default
                    , deepseq
+                   , directory
+                   , filepath
                    , GLFW-b
                    , linear
+                   , process
+                   , template-haskell
                    , vector
                    , vulkan-api
                    , yaml
