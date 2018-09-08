@@ -1,5 +1,6 @@
 { mkDerivation, stdenv
-, aeson, base, binary, containers, data-default, deepseq, GLFW-b, linear, vector, vulkan-api, yaml
+, aeson, base, binary, data-default, deepseq, linear, vector, yaml
+, containers, directory, filepath, GLFW-b, process, template-haskell, vulkan-api
 }:
 mkDerivation {
   pname = "infovis-parallel";
@@ -8,10 +9,10 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    aeson base binary containers data-default deepseq GLFW-b linear vector vulkan-api yaml
+    aeson base binary data-default deepseq linear vector yaml
   ];
   executableHaskellDepends = [
-    aeson base binary containers data-default deepseq GLFW-b linear vector vulkan-api yaml
+    aeson base binary containers data-default deepseq directory filepath GLFW-b linear process template-haskell vector vulkan-api yaml
   ];
   homepage = "https://bitbucket.org/bwbush/infovis-parallel";
   description = "Parallel-planes information visualization";
