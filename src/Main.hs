@@ -1,6 +1,4 @@
-{-# LANGUAGE ConstraintKinds            #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 
 module Main (
@@ -8,50 +6,15 @@ module Main (
 ) where
 
 
-import Control.Exception (Exception(displayException))
-import Control.Monad (when)
-import Control.Monad.Except (ExceptT, MonadError, MonadIO, liftIO, runExceptT, throwError)
-import Control.Monad.Log (LoggingT, MonadLog, Severity(..), WithSeverity(..), logCritical, logDebug, logInfo, renderWithSeverity, runLoggingT)
-import Data.String (IsString(..))
-import           Graphics.Vulkan
-import           Graphics.Vulkan.Core_1_0
-import           Graphics.Vulkan.Ext.VK_KHR_swapchain
-import           Graphics.Vulkan.Marshal.Create
-import InfoVis.Parallel.Service (MonadService, guardBracket, guardIO, runServiceToIO, throwService)
+import Control.Monad.Log (Severity(..))
+import InfoVis.Parallel.Service (MonadService, runServiceToIO)
+import InfoVis.Parallel.Service.Creation (withVulkan)
 import System.Exit (exitFailure, exitSuccess)
-import System.IO (hPrint, stderr)
-import System.IO.Error (tryIOError)
-
-import qualified Graphics.UI.GLFW as GLFW
 
 
 service :: MonadService m => m ()
-service = do
-  _ <- guardIO $ readFile "Hello"
-  return ()
-
-
-withVulkan :: MonadService m
-           => String
-           -> Int
-           -> Int
-           -> (VkInstance -> m a)
-           -> m a
-withVulkan title width height action =
-  guardBracket
-    (
-      do
-        initialized <- guardIO GLFW.init
-        if initialized
-          then logDebug "GLFW initialized."
-          else throwService "GLFW initialization failed."
-    )
-    (
-      const
-        $ guardIO GLFW.terminate
-        >> logDebug "GLFW terminated."
-    )
-    (const $ action undefined)
+service =
+  withVulkan "InfoVis Parallel" 800 600 $ \_window _vulkan -> return ()
 
 
 main :: IO ()

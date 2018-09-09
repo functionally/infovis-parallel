@@ -10,6 +10,8 @@ module InfoVis.Parallel.Service (
 , ServiceException(..)
 , throwService
 , throwVulkan
+, tryVulkan
+, checkVulkan
 , guardIO
 , guardBracket
 ) where
@@ -17,10 +19,10 @@ module InfoVis.Parallel.Service (
 
 import Control.Exception (Exception(displayException))
 import Control.Monad (void, when)
-import Control.Monad.Except (ExceptT, MonadError, MonadIO, catchError, liftIO, runExceptT, throwError)
+import Control.Monad.Except (ExceptT, MonadError, MonadIO, catchError, liftEither, liftIO, runExceptT, throwError)
 import Control.Monad.Log (LoggingT, MonadLog, Severity(..), WithSeverity(..), logCritical, renderWithSeverity, runLoggingT)
 import Data.String (IsString(..))
-import Graphics.Vulkan.Core_1_0 (VkResult)
+import Graphics.Vulkan.Core_1_0 (VkResult(VK_SUCCESS))
 import System.IO (hPrint, stderr)
 import System.IO.Error (tryIOError)
 
@@ -32,8 +34,8 @@ data ServiceException =
     }
   | VulkanException
     {
-      vulkanCode    :: Maybe VkResult
-    , vulkanMessage :: String
+      vulkanMessage :: String
+    , vulkanCode    :: VkResult
     }
   | SystemException
     {
@@ -46,8 +48,21 @@ throwService :: MonadError ServiceException m => String -> m a
 throwService = throwError . ServiceException
 
 
-throwVulkan :: MonadError ServiceException m => Maybe VkResult -> String -> m a
+throwVulkan :: MonadError ServiceException m => String -> VkResult -> m a
 throwVulkan = (throwError .) . VulkanException
+
+
+tryVulkan :: String -> IO VkResult -> IO a -> IO (Either ServiceException a)
+tryVulkan message prerequisite action =
+  do
+    result <- prerequisite
+    if result < VK_SUCCESS
+      then return . Left $ VulkanException message result
+      else Right <$> action
+
+
+checkVulkan :: (MonadError ServiceException m, MonadIO m) => IO (Either ServiceException a) -> m a
+checkVulkan = (liftEither =<<) . guardIO
 
 
 newtype ServiceM a = ServiceM {runServiceM :: ExceptT ServiceException (LoggingT (WithSeverity String) IO) a}

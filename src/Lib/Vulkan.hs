@@ -8,6 +8,8 @@ module Lib.Vulkan
     , isDeviceSuitable
     , SwapChainSupportDetails (..), querySwapChainSupport
     , checkDeviceExtensionSupport
+, createVulkanInstance
+, destroyVulkanInstance
     ) where
 
 import           Control.Exception
