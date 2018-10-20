@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+
+package Infovis;
+
+
+option csharp_namespace = "Infovis.Protobuf";
+
+
+message Geometry {
+  int64           iden = 1;
+  int32           mask = 2;
+  repeated double posx = 3;
+  repeated double posy = 4;
+  repeated double posz = 5;
+  double          size = 6;
+  fixed32         colr = 7;
+  string          text = 8;
+}
+
+
+message Request {
+  bool              reset  = 1;
+  repeated Geometry upsert = 2;
+  repeated int64    delete = 3;
+}
+
+
+message Response {
+  string log = 1;
+}
