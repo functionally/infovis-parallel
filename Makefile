@@ -20,6 +20,7 @@ infovis-unity.sln:
 src/Infovis/Infovis.csproj:
 	dotnet new console -lang 'C#' -o $(@D)
 	dotnet add $@ package Google.Protobuf --version 3.4.0
+	dotnet add $@ package UnityEngine
 	dotnet sln add $@
 
 src/Infovis/Protobuf.cs: infovis.proto3
