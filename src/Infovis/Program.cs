@@ -11,28 +11,16 @@ namespace Infovis {
 
     static void Main(string[] arguments) {
 
+      Cache cache = new Cache();
+
       foreach (string filename in arguments) {
-
-        byte[] bytes = File.ReadAllBytes(filename);
-
-        Request request = Request.Parser.ParseFrom(bytes);
-
-        Console.Write(request.Reset);
-
-        foreach (Geometry geometry in request.Upsert) {
-
-          Console.WriteLine(geometry);
-  
-          Tuple<long, Element> element = Parsing.MakeElement(geometry);
-          Console.WriteLine(element.Item1);
-          Console.WriteLine(element.Item2);
-        }
-
-        foreach (int identifier in request.Delete)
-          Console.WriteLine(identifier);
-
+        Console.WriteLine(filename);
+        Request request = Request.Parser.ParseFrom(File.ReadAllBytes(filename));
+//      Console.WriteLine(request);
+        cache.Update(request);
+        cache.Dump("  ");
       }
-
+ 
     }
 
   }
