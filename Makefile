@@ -9,6 +9,9 @@ run: src/Infovis/Protobuf.cs
 
 clean:
 	dotnet clean
+	-rm -r src/*/obj
+
+restore:
 	dotnet restore
 
 infovis-unity.sln:
@@ -24,7 +27,7 @@ src/Infovis/Protobuf.cs: infovis.proto3
 	mv src/Infovis/Infovis.cs $@
 
 
-.PHONY: build clean run
+.PHONY: build clean restore run
 
 
 .SUFFIXES:
