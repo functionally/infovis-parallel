@@ -22,17 +22,17 @@ namespace Infovis.Protobuf {
     static InfovisReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyJ6CghHZW9tZXRyeRIMCgRpZGVu",
-            "GAEgASgDEgwKBG1hc2sYAiABKAUSDAoEcG9zeBgDIAMoARIMCgRwb3N5GAQg",
-            "AygBEgwKBHBvc3oYBSADKAESDAoEc2l6ZRgGIAEoARIMCgRjb2xyGAcgASgH",
-            "EgwKBHRleHQYCCABKAkiSwoHUmVxdWVzdBINCgVyZXNldBgBIAEoCBIhCgZ1",
-            "cHNlcnQYAiADKAsyES5JbmZvdmlzLkdlb21ldHJ5Eg4KBmRlbGV0ZRgDIAMo",
-            "AyIXCghSZXNwb25zZRILCgNsb2cYASABKAlCE6oCEEluZm92aXMuUHJvdG9i",
-            "dWZiBnByb3RvMw=="));
+            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyKIAQoIR2VvbWV0cnkSDAoEaWRl",
+            "bhgBIAEoAxIMCgR0eXBlGAIgASgFEgwKBG1hc2sYAyABKAUSDAoEcG9zeBgE",
+            "IAMoARIMCgRwb3N5GAUgAygBEgwKBHBvc3oYBiADKAESDAoEc2l6ZRgHIAEo",
+            "ARIMCgRjb2xyGAggASgHEgwKBHRleHQYCSABKAkiSwoHUmVxdWVzdBINCgVy",
+            "ZXNldBgBIAEoCBIhCgZ1cHNlcnQYAiADKAsyES5JbmZvdmlzLkdlb21ldHJ5",
+            "Eg4KBmRlbGV0ZRgDIAMoAyIXCghSZXNwb25zZRILCgNsb2cYASABKAlCE6oC",
+            "EEluZm92aXMuUHJvdG9idWZiBnByb3RvMw=="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Iden", "Mask", "Posx", "Posy", "Posz", "Size", "Colr", "Text" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Iden", "Type", "Mask", "Posx", "Posy", "Posz", "Size", "Colr", "Text" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Request), global::Infovis.Protobuf.Request.Parser, new[]{ "Reset", "Upsert", "Delete" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Response), global::Infovis.Protobuf.Response.Parser, new[]{ "Log" }, null, null, null)
           }));
@@ -66,6 +66,7 @@ namespace Infovis.Protobuf {
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public Geometry(Geometry other) : this() {
       iden_ = other.iden_;
+      type_ = other.type_;
       mask_ = other.mask_;
       posx_ = other.posx_.Clone();
       posy_ = other.posy_.Clone();
@@ -91,8 +92,19 @@ namespace Infovis.Protobuf {
       }
     }
 
+    /// <summary>Field number for the "type" field.</summary>
+    public const int TypeFieldNumber = 2;
+    private int type_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int Type {
+      get { return type_; }
+      set {
+        type_ = value;
+      }
+    }
+
     /// <summary>Field number for the "mask" field.</summary>
-    public const int MaskFieldNumber = 2;
+    public const int MaskFieldNumber = 3;
     private int mask_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int Mask {
@@ -103,9 +115,9 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "posx" field.</summary>
-    public const int PosxFieldNumber = 3;
+    public const int PosxFieldNumber = 4;
     private static readonly pb::FieldCodec<double> _repeated_posx_codec
-        = pb::FieldCodec.ForDouble(26);
+        = pb::FieldCodec.ForDouble(34);
     private readonly pbc::RepeatedField<double> posx_ = new pbc::RepeatedField<double>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<double> Posx {
@@ -113,9 +125,9 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "posy" field.</summary>
-    public const int PosyFieldNumber = 4;
+    public const int PosyFieldNumber = 5;
     private static readonly pb::FieldCodec<double> _repeated_posy_codec
-        = pb::FieldCodec.ForDouble(34);
+        = pb::FieldCodec.ForDouble(42);
     private readonly pbc::RepeatedField<double> posy_ = new pbc::RepeatedField<double>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<double> Posy {
@@ -123,9 +135,9 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "posz" field.</summary>
-    public const int PoszFieldNumber = 5;
+    public const int PoszFieldNumber = 6;
     private static readonly pb::FieldCodec<double> _repeated_posz_codec
-        = pb::FieldCodec.ForDouble(42);
+        = pb::FieldCodec.ForDouble(50);
     private readonly pbc::RepeatedField<double> posz_ = new pbc::RepeatedField<double>();
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<double> Posz {
@@ -133,7 +145,7 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "size" field.</summary>
-    public const int SizeFieldNumber = 6;
+    public const int SizeFieldNumber = 7;
     private double size_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public double Size {
@@ -144,7 +156,7 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "colr" field.</summary>
-    public const int ColrFieldNumber = 7;
+    public const int ColrFieldNumber = 8;
     private uint colr_;
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public uint Colr {
@@ -155,7 +167,7 @@ namespace Infovis.Protobuf {
     }
 
     /// <summary>Field number for the "text" field.</summary>
-    public const int TextFieldNumber = 8;
+    public const int TextFieldNumber = 9;
     private string text_ = "";
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Text {
@@ -179,6 +191,7 @@ namespace Infovis.Protobuf {
         return true;
       }
       if (Iden != other.Iden) return false;
+      if (Type != other.Type) return false;
       if (Mask != other.Mask) return false;
       if(!posx_.Equals(other.posx_)) return false;
       if(!posy_.Equals(other.posy_)) return false;
@@ -193,6 +206,7 @@ namespace Infovis.Protobuf {
     public override int GetHashCode() {
       int hash = 1;
       if (Iden != 0L) hash ^= Iden.GetHashCode();
+      if (Type != 0) hash ^= Type.GetHashCode();
       if (Mask != 0) hash ^= Mask.GetHashCode();
       hash ^= posx_.GetHashCode();
       hash ^= posy_.GetHashCode();
@@ -214,23 +228,27 @@ namespace Infovis.Protobuf {
         output.WriteRawTag(8);
         output.WriteInt64(Iden);
       }
-      if (Mask != 0) {
+      if (Type != 0) {
         output.WriteRawTag(16);
+        output.WriteInt32(Type);
+      }
+      if (Mask != 0) {
+        output.WriteRawTag(24);
         output.WriteInt32(Mask);
       }
       posx_.WriteTo(output, _repeated_posx_codec);
       posy_.WriteTo(output, _repeated_posy_codec);
       posz_.WriteTo(output, _repeated_posz_codec);
       if (Size != 0D) {
-        output.WriteRawTag(49);
+        output.WriteRawTag(57);
         output.WriteDouble(Size);
       }
       if (Colr != 0) {
-        output.WriteRawTag(61);
+        output.WriteRawTag(69);
         output.WriteFixed32(Colr);
       }
       if (Text.Length != 0) {
-        output.WriteRawTag(66);
+        output.WriteRawTag(74);
         output.WriteString(Text);
       }
     }
@@ -240,6 +258,9 @@ namespace Infovis.Protobuf {
       int size = 0;
       if (Iden != 0L) {
         size += 1 + pb::CodedOutputStream.ComputeInt64Size(Iden);
+      }
+      if (Type != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Type);
       }
       if (Mask != 0) {
         size += 1 + pb::CodedOutputStream.ComputeInt32Size(Mask);
@@ -266,6 +287,9 @@ namespace Infovis.Protobuf {
       }
       if (other.Iden != 0L) {
         Iden = other.Iden;
+      }
+      if (other.Type != 0) {
+        Type = other.Type;
       }
       if (other.Mask != 0) {
         Mask = other.Mask;
@@ -297,33 +321,37 @@ namespace Infovis.Protobuf {
             break;
           }
           case 16: {
-            Mask = input.ReadInt32();
+            Type = input.ReadInt32();
             break;
           }
-          case 26:
-          case 25: {
-            posx_.AddEntriesFrom(input, _repeated_posx_codec);
+          case 24: {
+            Mask = input.ReadInt32();
             break;
           }
           case 34:
           case 33: {
-            posy_.AddEntriesFrom(input, _repeated_posy_codec);
+            posx_.AddEntriesFrom(input, _repeated_posx_codec);
             break;
           }
           case 42:
           case 41: {
+            posy_.AddEntriesFrom(input, _repeated_posy_codec);
+            break;
+          }
+          case 50:
+          case 49: {
             posz_.AddEntriesFrom(input, _repeated_posz_codec);
             break;
           }
-          case 49: {
+          case 57: {
             Size = input.ReadDouble();
             break;
           }
-          case 61: {
+          case 69: {
             Colr = input.ReadFixed32();
             break;
           }
-          case 66: {
+          case 74: {
             Text = input.ReadString();
             break;
           }
