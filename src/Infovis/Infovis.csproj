@@ -8,6 +8,7 @@
   <ItemGroup>
     <PackageReference Include="Google.Protobuf" Version="3.4.0" />
     <PackageReference Include="UnityEngine" Version="1.0.0" />
+    <PackageReference Include="WebSocketSharp" Version="1.0.3-rc11" />
   </ItemGroup>
 
 </Project>
