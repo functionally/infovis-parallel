@@ -1,4 +1,4 @@
-﻿using Google.Protobuf;
+using Google.Protobuf;
 using Infovis.Protobuf;
 using System;
 using System.IO;
