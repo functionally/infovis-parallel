@@ -10,24 +10,22 @@ namespace Infovis {
 
     static void Main(string[] arguments) {
 
-      Cache cache = new Cache();
-      
       WebSocketServer server = new WebSocketServer("ws://127.0.0.1:8080");
-      server.AddWebSocketService<GeometrySocket>("/Infovis");
+      server.Log.Level = LogLevel.Trace;
+      server.AddWebSocketService<GeometrySocket>("/Infovis", () => new GeometrySocket() {IgnoreExtensions = true});
 
       server.Start();
 
       if (server.IsListening) {
-        Console.WriteLine("Listening on port {0}, and providing WebSocket services:", server.Port);
-        foreach (var path in server.WebSocketServices.Paths)
-          Console.WriteLine("  {0}", path);
-      }
-      while (true) {
-        Cache.Refresh();
-        Thread.Sleep(10);
-      }
 
-      server.Stop(); 
+        while (true) {
+          State.Refresh();
+          Thread.Sleep(10);
+        }
+
+        server.Stop(); 
+
+      }
 
     }
 
