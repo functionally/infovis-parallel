@@ -3,6 +3,7 @@ module Main (
 ) where
 
 
+import Control.Concurrent
 import Data.ByteString.Base64 (encode)
 import Network.WebSockets
 import System.Environment
@@ -31,6 +32,5 @@ main =
         |
           file <- files
         ]
-      x <- getContents
-      print $ length x
-      return ()
+      threadDelay 500000
+      sendClose connection $ T.pack "Done."
