@@ -7,10 +7,26 @@ namespace Infovis {
 
   public class Cache {
 
-    public Cache() {
+    public static void Process(Request request) {
+      lock (pending)
+        pending.Enqueue(request);
     }
 
-    public void Update(Request request) {
+    public static void Refresh() {
+      while (pending.Count > 0)
+        lock (pending) {
+          Request request = pending.Dequeue();          
+          Console.WriteLine(request);
+          cache.Update(request);
+          cache.Dump("  ");
+        }
+    }
+
+    private static Queue<Request> pending = new Queue<Request>();
+
+    private static Cache cache = new Cache();
+
+    private void Update(Request request) {
 
       if (request.Reset)
         elements.Clear();
@@ -29,11 +45,11 @@ namespace Infovis {
 
     }
 
-    public void Dump() {
+    private void Dump() {
       Dump("");
     }
 
-    public void Dump(string prefix) {
+    private void Dump(string prefix) {
       foreach (long identifier in elements.Keys) {
         Console.WriteLine(prefix + identifier);
         elements[identifier].Dump(prefix + "  ");
