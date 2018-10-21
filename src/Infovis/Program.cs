@@ -15,7 +15,7 @@ namespace Infovis {
 
       Cache cache = new Cache();
       
-      WebSocketServer server = new WebSocketServer("ws://127.0.0.1:8081");
+      WebSocketServer server = new WebSocketServer("ws://127.0.0.1:8080");
       server.AddWebSocketService<GeometrySocket>("/Infovis");
 
       server.Start();
