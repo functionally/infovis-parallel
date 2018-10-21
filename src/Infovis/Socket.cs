@@ -14,11 +14,7 @@ namespace Infovis {
     protected override void OnMessage(MessageEventArgs evt) {
       byte[] bytes = evt.IsText ? Convert.FromBase64String(evt.Data) : evt.RawData;
       Request request = Request.Parser.ParseFrom(bytes);
-      Console.WriteLine(request);
-      lock (cache) {
-        cache.Update(request);
-        cache.Dump("  ");
-      }
+      Cache.Process(request);
     }
 
     protected override void OnError(ErrorEventArgs evt) {
@@ -28,8 +24,6 @@ namespace Infovis {
     protected override void OnClose(CloseEventArgs evt) {
       Console.WriteLine(evt);
     }
-
-    private Cache cache = new Cache();
 
   }
 
