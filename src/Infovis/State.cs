@@ -5,7 +5,7 @@ using System.Collections.Generic;
 
 namespace Infovis {
 
-  public class Cache {
+  public class State {
 
     public static void Process(Request request) {
       lock (pending)
@@ -17,14 +17,17 @@ namespace Infovis {
         lock (pending) {
           Request request = pending.Dequeue();          
           Console.WriteLine(request);
-          cache.Update(request);
-          cache.Dump("  ");
+          state.Update(request);
+          state.Dump("  ");
         }
+    }
+
+    private State() {
     }
 
     private static Queue<Request> pending = new Queue<Request>();
 
-    private static Cache cache = new Cache();
+    private static State state = new State();
 
     private void Update(Request request) {
 

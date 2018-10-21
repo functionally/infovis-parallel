@@ -14,7 +14,7 @@ namespace Infovis {
     protected override void OnMessage(MessageEventArgs evt) {
       byte[] bytes = evt.IsText ? Convert.FromBase64String(evt.Data) : evt.RawData;
       Request request = Request.Parser.ParseFrom(bytes);
-      Cache.Process(request);
+      Infovis.State.Process(request);
     }
 
     protected override void OnError(ErrorEventArgs evt) {
