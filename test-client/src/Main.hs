@@ -18,7 +18,8 @@ useBinary = True
 
 main :: IO ()
 main =
-  runClient "127.0.0.1" 8080 "/Infovis"
+--runClient "127.0.0.1" 8080 "/Infovis"
+  runClient "192.168.86.157" 8080 "/Infovis"
     $ \connection ->
     do
       files <- getArgs
