@@ -22,13 +22,39 @@ namespace Infovis {
 
       server.Start();
 
+      GameObject camera = GameObject.Find("OVRCameraRig");
+      home = camera.transform.position;
+
     }
 
     void Update() {
 
       State.Refresh();
 
+      GameObject camera = GameObject.Find("OVRCameraRig");
+      OVRInput.Controller controller = OVRInput.GetActiveController();
+
+      if (OVRInput.GetDown(OVRInput.Button.Two, controller))
+
+        camera.transform.position = home;
+
+      else {
+
+        Vector2 joystick = OVRInput.Get(OVRInput.Axis2D.PrimaryTouchpad, controller);
+  
+        if (OVRInput.GetDown(OVRInput.Button.One, controller))
+          upwards = - upwards;
+        float shift = OVRInput.Get(OVRInput.Button.One, controller) ? upwards : 0;
+  
+        camera.transform.position = camera.transform.position - 0.008f * (new Vector3(joystick[0], shift, joystick[1]));
+
+      }
+
     }
+
+    private Vector3 home = Vector3.zero;
+
+    private float upwards = -0.5f;
 
   }
 
