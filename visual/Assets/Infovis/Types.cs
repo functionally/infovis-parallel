@@ -46,6 +46,14 @@ namespace Infovis {
       Debug.Log(prefix + "  text = " + text);
     }
 
+    protected static Object LoadCone() {
+      if (cone == null)
+        cone = Resources.Load("cone");
+      return cone;
+    }
+
+    private static Object cone = null;
+
   }
 
   public class Point : Element {
@@ -115,6 +123,12 @@ namespace Infovis {
         obj.transform.position = midpoint;
         obj.transform.rotation = Quaternion.LookRotation(displacement);
         obj.transform.Rotate(90, 0, 0);
+
+        if (geometry.Glyp == 1) {
+          GameObject glyph = (GameObject) Object.Instantiate(LoadCone(), obj.transform, false);
+          foreach (MeshRenderer renderer in glyph.GetComponentsInChildren<MeshRenderer>())
+            renderer.material.color = color;
+        }
 
       }
 
