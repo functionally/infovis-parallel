@@ -3,7 +3,7 @@ reset: true
 upsert {
   iden: 1001
   type: 2
-  mask: 15
+  mask: 31
   posx: 0.0
   posx: 1.0
   posy: 0.0
@@ -19,7 +19,7 @@ upsert {
 upsert {
   iden: 1002
   type: 2
-  mask: 15
+  mask: 31
   posx: 0.0
   posx: 0.0
   posy: 0.0
@@ -35,7 +35,7 @@ upsert {
 upsert {
   iden: 1003
   type: 2
-  mask: 15
+  mask: 31
   posx: 0.0
   posx: 0.0
   posy: 0.0

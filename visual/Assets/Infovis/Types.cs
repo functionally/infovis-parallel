@@ -32,6 +32,8 @@ namespace Infovis {
         float a = (geometry.Colr & 0x000000FF) / (float) 0x000000FF;
         color = new Color(r, g, b, a);
         obj.GetComponent<Renderer>().material.color = color;
+        foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
+          renderer.material.color = color;
       }
 
       if (Parsing.DirtyText(geometry))
@@ -118,17 +120,23 @@ namespace Infovis {
           new Vector3((float) geometry.Posx[1], (float) geometry.Posy[1], (float) geometry.Posz[1])
         };
 
+        // FIXME: The length should shrink when there is an arrowhead.
         Vector3 midpoint = (locations[0] + locations[1]) / 2;
         Vector3 displacement = locations[1] - locations[0];
         obj.transform.position = midpoint;
         obj.transform.rotation = Quaternion.LookRotation(displacement);
         obj.transform.Rotate(90, 0, 0);
 
-        if (geometry.Glyp == 1) {
+      }
+
+      if (Parsing.DirtyGlyph(geometry)) {
+
+        if (geometry.Glyp == 1 && obj.transform.childCount == 0) {
           GameObject glyph = (GameObject) Object.Instantiate(LoadCone(), obj.transform, false);
-          foreach (MeshRenderer renderer in glyph.GetComponentsInChildren<MeshRenderer>())
+          foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
             renderer.material.color = color;
-        }
+        } else if (geometry.Glyp == 0 && obj.transform.childCount == 1)
+          GameObject.Destroy(obj.transform.GetChild(0));
 
       }
 
@@ -228,6 +236,10 @@ namespace Infovis {
 
     public static bool DirtyText(Geometry geometry) {
       return (geometry.Mask & 1 << 3) != 0;
+    }
+
+    public static bool DirtyGlyph(Geometry geometry) {
+      return (geometry.Mask & 1 << 4) != 0;
     }
 
     public static Vector3[] MakeLocations(Geometry geometry) {
