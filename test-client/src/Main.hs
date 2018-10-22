@@ -18,20 +18,20 @@ useBinary = True
 
 main :: IO ()
 main =
---runClient "127.0.0.1" 8080 "/Infovis"
-  runClient "192.168.86.157" 8080 "/Infovis"
-    $ \connection ->
-    do
-      files <- getArgs
-      sequence_
-        [
-          do
-            bytes <- BS.readFile file
-            if useBinary
-              then sendBinaryData connection bytes
-              else sendTextData connection $ encode bytes
-        |
-          file <- files
-        ]
-      threadDelay 500000
-      sendClose connection $ T.pack "Done."
+  do
+    host : files <- getArgs
+    runClient host {- 192.168.86.157 -} 8080 "/Infovis"
+      $ \connection ->
+      do
+        sequence_
+          [
+            do
+              bytes <- BS.readFile file
+              if useBinary
+                then sendBinaryData connection bytes
+                else sendTextData connection $ encode bytes
+          |
+            file <- files
+          ]
+        threadDelay 500000
+        sendClose connection $ T.pack "Done."

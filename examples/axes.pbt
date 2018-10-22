@@ -13,6 +13,7 @@ upsert {
   size: 0.02
   colr: 55612992
   text: "x"
+  glyp: 1
 }
 
 upsert {
@@ -28,6 +29,7 @@ upsert {
   size: 0.02
   colr: 55612992
   text: "y"
+  glyp: 1
 }
 
 upsert {
@@ -43,4 +45,5 @@ upsert {
   size: 0.02
   colr: 55612992
   text: "z"
+  glyp: 1
 }
