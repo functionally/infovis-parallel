@@ -22,17 +22,18 @@ namespace Infovis.Protobuf {
     static InfovisReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyKIAQoIR2VvbWV0cnkSDAoEaWRl",
+            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyKkAQoIR2VvbWV0cnkSDAoEaWRl",
             "bhgBIAEoAxIMCgR0eXBlGAIgASgFEgwKBG1hc2sYAyABKAUSDAoEcG9zeBgE",
             "IAMoARIMCgRwb3N5GAUgAygBEgwKBHBvc3oYBiADKAESDAoEc2l6ZRgHIAEo",
-            "ARIMCgRjb2xyGAggASgHEgwKBHRleHQYCSABKAkiSwoHUmVxdWVzdBINCgVy",
-            "ZXNldBgBIAEoCBIhCgZ1cHNlcnQYAiADKAsyES5JbmZvdmlzLkdlb21ldHJ5",
-            "Eg4KBmRlbGV0ZRgDIAMoAyIXCghSZXNwb25zZRILCgNsb2cYASABKAlCE6oC",
-            "EEluZm92aXMuUHJvdG9idWZiBnByb3RvMw=="));
+            "ARIMCgRjb2xyGAggASgHEgwKBHRleHQYCSABKAkSDAoEZ2x5cBgKIAEoBRIM",
+            "CgR0aW1lGAsgASgFIksKB1JlcXVlc3QSDQoFcmVzZXQYASABKAgSIQoGdXBz",
+            "ZXJ0GAIgAygLMhEuSW5mb3Zpcy5HZW9tZXRyeRIOCgZkZWxldGUYAyADKAMi",
+            "FwoIUmVzcG9uc2USCwoDbG9nGAEgASgJQhOqAhBJbmZvdmlzLlByb3RvYnVm",
+            "YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Iden", "Type", "Mask", "Posx", "Posy", "Posz", "Size", "Colr", "Text" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Iden", "Type", "Mask", "Posx", "Posy", "Posz", "Size", "Colr", "Text", "Glyp", "Time" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Request), global::Infovis.Protobuf.Request.Parser, new[]{ "Reset", "Upsert", "Delete" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Response), global::Infovis.Protobuf.Response.Parser, new[]{ "Log" }, null, null, null)
           }));
@@ -74,6 +75,8 @@ namespace Infovis.Protobuf {
       size_ = other.size_;
       colr_ = other.colr_;
       text_ = other.text_;
+      glyp_ = other.glyp_;
+      time_ = other.time_;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -177,6 +180,28 @@ namespace Infovis.Protobuf {
       }
     }
 
+    /// <summary>Field number for the "glyp" field.</summary>
+    public const int GlypFieldNumber = 10;
+    private int glyp_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int Glyp {
+      get { return glyp_; }
+      set {
+        glyp_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "time" field.</summary>
+    public const int TimeFieldNumber = 11;
+    private int time_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int Time {
+      get { return time_; }
+      set {
+        time_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Geometry);
@@ -199,6 +224,8 @@ namespace Infovis.Protobuf {
       if (Size != other.Size) return false;
       if (Colr != other.Colr) return false;
       if (Text != other.Text) return false;
+      if (Glyp != other.Glyp) return false;
+      if (Time != other.Time) return false;
       return true;
     }
 
@@ -214,6 +241,8 @@ namespace Infovis.Protobuf {
       if (Size != 0D) hash ^= Size.GetHashCode();
       if (Colr != 0) hash ^= Colr.GetHashCode();
       if (Text.Length != 0) hash ^= Text.GetHashCode();
+      if (Glyp != 0) hash ^= Glyp.GetHashCode();
+      if (Time != 0) hash ^= Time.GetHashCode();
       return hash;
     }
 
@@ -251,6 +280,14 @@ namespace Infovis.Protobuf {
         output.WriteRawTag(74);
         output.WriteString(Text);
       }
+      if (Glyp != 0) {
+        output.WriteRawTag(80);
+        output.WriteInt32(Glyp);
+      }
+      if (Time != 0) {
+        output.WriteRawTag(88);
+        output.WriteInt32(Time);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -276,6 +313,12 @@ namespace Infovis.Protobuf {
       }
       if (Text.Length != 0) {
         size += 1 + pb::CodedOutputStream.ComputeStringSize(Text);
+      }
+      if (Glyp != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Glyp);
+      }
+      if (Time != 0) {
+        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Time);
       }
       return size;
     }
@@ -305,6 +348,12 @@ namespace Infovis.Protobuf {
       }
       if (other.Text.Length != 0) {
         Text = other.Text;
+      }
+      if (other.Glyp != 0) {
+        Glyp = other.Glyp;
+      }
+      if (other.Time != 0) {
+        Time = other.Time;
       }
     }
 
@@ -353,6 +402,14 @@ namespace Infovis.Protobuf {
           }
           case 74: {
             Text = input.ReadString();
+            break;
+          }
+          case 80: {
+            Glyp = input.ReadInt32();
+            break;
+          }
+          case 88: {
+            Time = input.ReadInt32();
             break;
           }
         }
