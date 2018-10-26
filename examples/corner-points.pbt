@@ -1,9 +1,10 @@
 reset: false
 
 upsert {
-  iden: 1
+  iden: 201
   type: 1
   mask: 15
+  cnts: 1
   posx: 0.0
   posy: 0.0
   posz: 0.0
@@ -13,9 +14,10 @@ upsert {
 }
 
 upsert {
-  iden: 2
+  iden: 202
   type: 1
   mask: 15
+  cnts: 1
   posx: 1.0
   posy: 0.0
   posz: 0.0
@@ -25,9 +27,10 @@ upsert {
 }
 
 upsert {
-  iden: 3
+  iden: 203
   type: 1
   mask: 15
+  cnts: 1
   posx: 0.0
   posy: 1.0
   posz: 0.0
@@ -37,9 +40,10 @@ upsert {
 }
 
 upsert {
-  iden: 4
+  iden: 204
   type: 1
   mask: 15
+  cnts: 1
   posx: 1.0
   posy: 1.0
   posz: 0.0
@@ -49,9 +53,10 @@ upsert {
 }
 
 upsert {
-  iden: 5
+  iden: 205
   type: 1
   mask: 15
+  cnts: 1
   posx: 0.0
   posy: 0.0
   posz: 1.0
@@ -61,9 +66,10 @@ upsert {
 }
 
 upsert {
-  iden: 6
+  iden: 206
   type: 1
   mask: 15
+  cnts: 1
   posx: 1.0
   posy: 0.0
   posz: 1.0
@@ -73,9 +79,10 @@ upsert {
 }
 
 upsert {
-  iden: 7
+  iden: 207
   type: 1
   mask: 15
+  cnts: 1
   posx: 0.0
   posy: 1.0
   posz: 1.0
@@ -85,9 +92,10 @@ upsert {
 }
 
 upsert {
-  iden: 8
+  iden: 208
   type: 1
   mask: 15
+  cnts: 1
   posx: 1.0
   posy: 1.0
   posz: 1.0

@@ -22,18 +22,18 @@ namespace Infovis.Protobuf {
     static InfovisReflection() {
       byte[] descriptorData = global::System.Convert.FromBase64String(
           string.Concat(
-            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyKyAQoIR2VvbWV0cnkSDAoEZnJh",
+            "Cg5pbmZvdmlzLnByb3RvMxIHSW5mb3ZpcyKkAQoIR2VvbWV0cnkSDAoEZnJh",
             "bRgBIAEoBRIMCgRpZGVuGAIgASgDEgwKBHR5cGUYAyABKAUSDAoEbWFzaxgE",
             "IAEoBRIMCgRjbnRzGAUgAygFEgwKBHBvc3gYBiADKAESDAoEcG9zeRgHIAMo",
-            "ARIMCgRwb3N6GAggAygBEgwKBGdseXAYCSABKAUSDAoEc2l6ZRgKIAEoARIM",
-            "CgRjb2xyGAsgASgHEgwKBHRleHQYDCABKAkiSwoHUmVxdWVzdBINCgVyZXNl",
-            "dBgBIAEoCBIhCgZ1cHNlcnQYAiADKAsyES5JbmZvdmlzLkdlb21ldHJ5Eg4K",
-            "BmRlbGV0ZRgDIAMoAyIXCghSZXNwb25zZRILCgNsb2cYASABKAlCE6oCEElu",
-            "Zm92aXMuUHJvdG9idWZiBnByb3RvMw=="));
+            "ARIMCgRwb3N6GAggAygBEgwKBHNpemUYCiABKAESDAoEY29schgLIAEoBxIM",
+            "CgR0ZXh0GAwgASgJIksKB1JlcXVlc3QSDQoFcmVzZXQYASABKAgSIQoGdXBz",
+            "ZXJ0GAIgAygLMhEuSW5mb3Zpcy5HZW9tZXRyeRIOCgZkZWxldGUYAyADKAMi",
+            "FwoIUmVzcG9uc2USCwoDbG9nGAEgASgJQhOqAhBJbmZvdmlzLlByb3RvYnVm",
+            "YgZwcm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
-            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Fram", "Iden", "Type", "Mask", "Cnts", "Posx", "Posy", "Posz", "Glyp", "Size", "Colr", "Text" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Fram", "Iden", "Type", "Mask", "Cnts", "Posx", "Posy", "Posz", "Size", "Colr", "Text" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Request), global::Infovis.Protobuf.Request.Parser, new[]{ "Reset", "Upsert", "Delete" }, null, null, null),
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Response), global::Infovis.Protobuf.Response.Parser, new[]{ "Log" }, null, null, null)
           }));
@@ -74,7 +74,6 @@ namespace Infovis.Protobuf {
       posx_ = other.posx_.Clone();
       posy_ = other.posy_.Clone();
       posz_ = other.posz_.Clone();
-      glyp_ = other.glyp_;
       size_ = other.size_;
       colr_ = other.colr_;
       text_ = other.text_;
@@ -110,6 +109,9 @@ namespace Infovis.Protobuf {
     /// <summary>Field number for the "type" field.</summary>
     public const int TypeFieldNumber = 3;
     private int type_;
+    /// <summary>
+    /// 1 = points, 2 = polylines, 3 = rectangles, 4 = label, 5 = axis
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public int Type {
       get { return type_; }
@@ -144,6 +146,9 @@ namespace Infovis.Protobuf {
     private static readonly pb::FieldCodec<double> _repeated_posx_codec
         = pb::FieldCodec.ForDouble(50);
     private readonly pbc::RepeatedField<double> posx_ = new pbc::RepeatedField<double>();
+    /// <summary>
+    /// mask = 0001b = 1
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public pbc::RepeatedField<double> Posx {
       get { return posx_; }
@@ -169,20 +174,12 @@ namespace Infovis.Protobuf {
       get { return posz_; }
     }
 
-    /// <summary>Field number for the "glyp" field.</summary>
-    public const int GlypFieldNumber = 9;
-    private int glyp_;
-    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
-    public int Glyp {
-      get { return glyp_; }
-      set {
-        glyp_ = value;
-      }
-    }
-
     /// <summary>Field number for the "size" field.</summary>
     public const int SizeFieldNumber = 10;
     private double size_;
+    /// <summary>
+    /// mask = 0100b = 2
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public double Size {
       get { return size_; }
@@ -194,6 +191,9 @@ namespace Infovis.Protobuf {
     /// <summary>Field number for the "colr" field.</summary>
     public const int ColrFieldNumber = 11;
     private uint colr_;
+    /// <summary>
+    /// mask = 1000b = 4
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public uint Colr {
       get { return colr_; }
@@ -205,6 +205,9 @@ namespace Infovis.Protobuf {
     /// <summary>Field number for the "text" field.</summary>
     public const int TextFieldNumber = 12;
     private string text_ = "";
+    /// <summary>
+    /// mask = 0000b = 8
+    /// </summary>
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public string Text {
       get { return text_; }
@@ -234,7 +237,6 @@ namespace Infovis.Protobuf {
       if(!posx_.Equals(other.posx_)) return false;
       if(!posy_.Equals(other.posy_)) return false;
       if(!posz_.Equals(other.posz_)) return false;
-      if (Glyp != other.Glyp) return false;
       if (Size != other.Size) return false;
       if (Colr != other.Colr) return false;
       if (Text != other.Text) return false;
@@ -252,7 +254,6 @@ namespace Infovis.Protobuf {
       hash ^= posx_.GetHashCode();
       hash ^= posy_.GetHashCode();
       hash ^= posz_.GetHashCode();
-      if (Glyp != 0) hash ^= Glyp.GetHashCode();
       if (Size != 0D) hash ^= Size.GetHashCode();
       if (Colr != 0) hash ^= Colr.GetHashCode();
       if (Text.Length != 0) hash ^= Text.GetHashCode();
@@ -286,10 +287,6 @@ namespace Infovis.Protobuf {
       posx_.WriteTo(output, _repeated_posx_codec);
       posy_.WriteTo(output, _repeated_posy_codec);
       posz_.WriteTo(output, _repeated_posz_codec);
-      if (Glyp != 0) {
-        output.WriteRawTag(72);
-        output.WriteInt32(Glyp);
-      }
       if (Size != 0D) {
         output.WriteRawTag(81);
         output.WriteDouble(Size);
@@ -323,9 +320,6 @@ namespace Infovis.Protobuf {
       size += posx_.CalculateSize(_repeated_posx_codec);
       size += posy_.CalculateSize(_repeated_posy_codec);
       size += posz_.CalculateSize(_repeated_posz_codec);
-      if (Glyp != 0) {
-        size += 1 + pb::CodedOutputStream.ComputeInt32Size(Glyp);
-      }
       if (Size != 0D) {
         size += 1 + 8;
       }
@@ -359,9 +353,6 @@ namespace Infovis.Protobuf {
       posx_.Add(other.posx_);
       posy_.Add(other.posy_);
       posz_.Add(other.posz_);
-      if (other.Glyp != 0) {
-        Glyp = other.Glyp;
-      }
       if (other.Size != 0D) {
         Size = other.Size;
       }
@@ -415,10 +406,6 @@ namespace Infovis.Protobuf {
           case 66:
           case 65: {
             posz_.AddEntriesFrom(input, _repeated_posz_codec);
-            break;
-          }
-          case 72: {
-            Glyp = input.ReadInt32();
             break;
           }
           case 81: {

@@ -11,16 +11,19 @@ namespace Infovis {
       Element result;
       switch (geometry.Type) {
         case 1:
-          result = new Point(root, identifier);
+          result = new Points(root, identifier);
           break;
         case 2:
-          result = new Line(root, identifier);
+          result = new Polylines(root, identifier);
           break;
         case 3:
-          result = new Rectangle(root, identifier);
+          result = new Rectangles(root, identifier);
           break;
         case 4:
           result = new Label(root, identifier);
+          break;
+        case 5:
+          result = new Axis(root, identifier);
           break;
         default:
           result = null;

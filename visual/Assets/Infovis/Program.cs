@@ -1,7 +1,9 @@
+using System.Collections;
 using UnityEngine;
 using WebSocketSharp.Server;
 
 using Debug = UnityEngine.Debug;
+using Text = UnityEngine.UI.Text;
 
 
 namespace Infovis {
@@ -14,6 +16,8 @@ namespace Infovis {
 
     private WebSocketServer server = null;
 
+    public Text infoText;
+
     void Start() {
 
       server = new WebSocketServer(serviceAddress);
@@ -25,6 +29,15 @@ namespace Infovis {
       GameObject camera = GameObject.Find("OVRCameraRig");
       home = camera.transform.position;
 
+      StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080"));
+
+    }
+
+    public IEnumerator ShowMessage(string text) {
+      infoText.text = text;
+      infoText.enabled = true;
+      yield return new WaitForSeconds(10);
+      infoText.enabled = false;
     }
 
     void Update() {
@@ -34,11 +47,13 @@ namespace Infovis {
       GameObject camera = GameObject.Find("OVRCameraRig");
       OVRInput.Controller controller = OVRInput.GetActiveController();
 
-      if (OVRInput.GetDown(OVRInput.Button.Two, controller))
+      if (OVRInput.GetDown(OVRInput.Button.Two, controller)) {
 
         camera.transform.position = home;
 
-      else {
+        StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080"));
+
+      } else {
 
         Vector2 joystick = OVRInput.Get(OVRInput.Axis2D.PrimaryTouchpad, controller);
   
