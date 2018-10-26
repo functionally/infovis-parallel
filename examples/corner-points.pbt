@@ -1,5 +1,3 @@
-reset: false
-
 upsert {
   iden: 201
   type: 1
