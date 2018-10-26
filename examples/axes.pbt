@@ -12,7 +12,7 @@ upsert {
   posz: 0.0
   posz: 0.0
   size: 0.02
-  colr: 55612992
+  colr: 55613088
   text: "x axis"
 }
 
@@ -28,7 +28,7 @@ upsert {
   posz: 0.0
   posz: 0.0
   size: 0.02
-  colr: 55612992
+  colr: 55613088
   text: "y axis"
 }
 
@@ -44,7 +44,7 @@ upsert {
   posz: 0.0
   posz: 1.0
   size: 0.02
-  colr: 55612992
+  colr: 55613088
   text: "z axis"
 }
 
@@ -63,7 +63,7 @@ upsert {
   posz: 0.0
   posz: 0.0
   size: 0.10
-  colr: 55612992
+  colr: 55613088
   text: "x axis"
 }
 
@@ -82,7 +82,7 @@ upsert {
   posz: -0.07
   posz: 1.0
   size: 0.10
-  colr: 55612992
+  colr: 55613088
   text: "y axis"
 }
 
@@ -101,6 +101,6 @@ upsert {
   posz: 1.0
   posz: 0.1
   size: 0.10
-  colr: 55612992
+  colr: 55613088
   text: "z axis"
 }

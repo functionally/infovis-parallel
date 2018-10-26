@@ -9,7 +9,7 @@ upsert {
   posy: 0.0
   posz: 0.0
   size: 0.05
-  colr: 2798576384
+  colr: 2798576639
   text: "one"
 }
 
@@ -22,7 +22,7 @@ upsert {
   posy: 0.0
   posz: 0.0
   size: 0.10
-  colr: 528004096
+  colr: 528004351
   text: "two"
 }
 
@@ -35,7 +35,7 @@ upsert {
   posy: 1.0
   posz: 0.0
   size: 0.15
-  colr: 3000994304
+  colr: 3000994559
   text: "three"
 }
 
@@ -48,7 +48,7 @@ upsert {
   posy: 1.0
   posz: 0.0
   size: 0.20
-  colr: 866135040
+  colr: 866135295
   text: "four"
 }
 
@@ -61,7 +61,7 @@ upsert {
   posy: 0.0
   posz: 1.0
   size: 0.25
-  colr: 4221212928
+  colr: 4221213183
   text: "five"
 }
 
@@ -74,7 +74,7 @@ upsert {
   posy: 0.0
   posz: 1.0
   size: 0.30
-  colr: 3810139136
+  colr: 3810139391
   text: "six"
 }
 
@@ -87,7 +87,7 @@ upsert {
   posy: 1.0
   posz: 1.0
   size: 0.35
-  colr: 4257181440
+  colr: 4257181695
   text: "seven"
 }
 
@@ -100,6 +100,6 @@ upsert {
   posy: 1.0
   posz: 1.0
   size: 0.40
-  colr: 4286513152
+  colr: 4286513407
   text: "eight"
 }
