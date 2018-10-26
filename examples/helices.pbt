@@ -613,6 +613,6 @@ upsert {
   posz: 0.896846
   posz: 0.9
   size: 0.05
-  colr: 4278190080
+  colr: 4278190335
   text: "two helices"
 }

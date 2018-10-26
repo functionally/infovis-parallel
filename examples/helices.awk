@@ -26,7 +26,7 @@ BEGIN {
   for (i = 0; i <= 100; ++i)
     print "  posz: " (0.5 + 0.4 * cos(4 * 3.1415926 / 100 * i))
   print "  size: 0.05"
-  print "  colr: 4278190080"
+  print "  colr: 4278190335"
   print "  text: \"two helices\""
   print "}"
 

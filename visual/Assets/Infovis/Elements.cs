@@ -55,12 +55,19 @@ namespace Infovis {
 
     }
 
+    private static Material transparentMaterial = null;
+
     protected void PostUpdate(Geometry geometry) {
 
       if (DirtyColor(geometry)) {
+        if (transparentMaterial == null)
+          transparentMaterial = Resources.Load<Material>("transparent-material");
         obj.GetComponent<Renderer>().material.color = color;
-        foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
+        foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>()) {
+          if (renderer.material.name != "font-material (Instance)")
+            renderer.material = transparentMaterial;
           renderer.material.color = color;
+        }
       }
 
     }

@@ -14,6 +14,6 @@ upsert {
   posz: 1.0
   posz: 1.0
   size: 0.50
-  colr: 2155872256
+  colr: 2155872511
   text: "some text"
 }
