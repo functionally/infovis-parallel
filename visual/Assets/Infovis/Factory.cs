@@ -39,6 +39,10 @@ namespace Infovis {
       return element;
     }
 
+    public static void RemoveElement(Element element) {
+      GameObject.Destroy(element.obj);
+    }
+
   }
 
 }
