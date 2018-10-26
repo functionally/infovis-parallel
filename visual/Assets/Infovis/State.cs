@@ -2,8 +2,6 @@ using Infovis.Protobuf;
 using System.Collections.Generic;
 using UnityEngine;
 
-using Debug = UnityEngine.Debug;
-
 
 namespace Infovis {
 
@@ -18,7 +16,6 @@ namespace Infovis {
       while (pending.Count > 0)
         lock (pending) {
           Request request = pending.Dequeue();          
-          Debug.Log(request);
           state.Update(request);
 
         }
@@ -56,8 +53,13 @@ namespace Infovis {
           elements[identifier] = Factory.CreateElement(root, geometry);
       }
 
-      foreach (long identifier in request.Delete)
-        elements.Remove(identifier);
+      foreach (long identifier in request.Delete) {
+        Element element = null;
+        if (elements.TryGetValue(identifier, out element)) {
+          elements.Remove(identifier);
+          Factory.RemoveElement(element);
+        }
+      }
 
     }
 
