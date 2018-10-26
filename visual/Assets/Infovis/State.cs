@@ -20,7 +20,6 @@ namespace Infovis {
           Request request = pending.Dequeue();          
           Debug.Log(request);
           state.Update(request);
-          state.Dump("  ");
 
         }
     }
@@ -60,17 +59,6 @@ namespace Infovis {
       foreach (long identifier in request.Delete)
         elements.Remove(identifier);
 
-    }
-
-    private void Dump() {
-      Dump("");
-    }
-
-    private void Dump(string prefix) {
-      foreach (long identifier in elements.Keys) {
-        Debug.Log(prefix + identifier);
-        elements[identifier].Dump(prefix + "  ");
-      }
     }
 
     private Dictionary<long, Element> elements = new Dictionary<long, Element>();

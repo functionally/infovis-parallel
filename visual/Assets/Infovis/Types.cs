@@ -1,4 +1,5 @@
 using Infovis.Protobuf;
+using System.Linq;
 using UnityEngine;
 
 using Debug = UnityEngine.Debug;
@@ -6,12 +7,21 @@ using Debug = UnityEngine.Debug;
 
 namespace Infovis {
 
-  public class Element {
+  public abstract class Element {
 
-    public GameObject obj   = null       ;
-    public float      size  = 0          ;
+    public GameObject obj   = null;
+
+    public float      size  = 0;
+
     public Color      color = Color.white;
-    public string     text  = ""         ;
+
+    public string     text  = "";
+
+    protected static GameObject MakeGeometric() {
+      GameObject obj = new GameObject();
+      obj.AddComponent<MeshRenderer>();
+      return obj;
+    }
 
     public Element(GameObject root, GameObject o, string identifier) {
       obj = o;
@@ -21,9 +31,16 @@ namespace Infovis {
     }
 
     public virtual void Update(Geometry geometry) {
+      PreUpdate(geometry);
+      PostUpdate(geometry);
+    }
 
-      if (Parsing.DirtySize(geometry))
+    protected void PreUpdate(Geometry geometry) {
+
+      if (Parsing.DirtySize(geometry)) {
+        Debug.Assert(geometry.Size >= 0, "Size must be non-negative: " + obj.name);
         size = (float) geometry.Size;
+      }
 
       if (Parsing.DirtyColor(geometry)) {
         float r = (geometry.Colr & 0xFF000000) / (float) 0xFF000000;
@@ -31,9 +48,6 @@ namespace Infovis {
         float b = (geometry.Colr & 0x0000FF00) / (float) 0x0000FF00;
         float a = (geometry.Colr & 0x000000FF) / (float) 0x000000FF;
         color = new Color(r, g, b, a);
-        obj.GetComponent<Renderer>().material.color = color;
-        foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
-          renderer.material.color = color;
       }
 
       if (Parsing.DirtyText(geometry))
@@ -41,185 +55,257 @@ namespace Infovis {
 
     }
 
-    public virtual void Dump(string prefix) {
-      Debug.Log(prefix + "Element");
-      Debug.Log(prefix + "  size = " + size);
-      Debug.Log(prefix + "  color = " + color);
-      Debug.Log(prefix + "  text = " + text);
+    protected void PostUpdate(Geometry geometry) {
+
+      if (Parsing.DirtyColor(geometry)) {
+        obj.GetComponent<Renderer>().material.color = color;
+        foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
+          renderer.material.color = color;
+      }
+
     }
 
-    protected static Object LoadCone() {
-      if (cone == null)
-        cone = Resources.Load("cone");
-      return cone;
+    protected void DestroyChildren() {
+       foreach (Transform child in obj.transform) {
+         child.parent = null;
+         GameObject.Destroy(child.gameObject);
+       }
     }
-
-    private static Object cone = null;
 
   }
 
-  public class Point : Element {
+  public class Points : Element {
 
-    public Point(GameObject root, string identifier)
-      : base(root, GameObject.CreatePrimitive(PrimitiveType.Sphere), identifier) {
+    public Points(GameObject root, string identifier)
+      : base(root, MakeGeometric(), identifier) {
     }
-
-    public Vector3 location = Vector3.zero;
 
     public override void Update(Geometry geometry) {
 
-      base.Update(geometry);
-
-      if (Parsing.DirtySize(geometry)) {
-        float radius = size / 2;
-        obj.transform.localScale = new Vector3(radius, radius, radius);
-      }
+      base.PreUpdate(geometry);
 
       if (Parsing.DirtyLocation(geometry)) {
 
-        Debug.Assert(geometry.Posx.Count == 1);
-        Debug.Assert(geometry.Posy.Count == 1);
-        Debug.Assert(geometry.Posz.Count == 1);
+        DestroyChildren();
 
-        location = new Vector3((float) geometry.Posx[0], (float) geometry.Posy[0], (float) geometry.Posz[0]);
+        int n = geometry.Cnts.Sum();
+        Debug.Assert(geometry.Posx.Count == n, "Number of x positions must match count: " + obj.name);
+        Debug.Assert(geometry.Posy.Count == n, "Number of y positions must match count: " + obj.name);
+        Debug.Assert(geometry.Posz.Count == n, "Number of z positions must match count: " + obj.name);
 
-        obj.transform.position = location;
+        for (int i = 0; i < n; ++i) {
+          GameObject point = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+          point.transform.localPosition = new Vector3((float) geometry.Posx[i], (float) geometry.Posy[i], (float) geometry.Posz[i]);
+          point.transform.parent = obj.transform;
+        }
 
       }
 
-    }
+      if (Parsing.DirtyLocation(geometry) || Parsing.DirtySize(geometry)) {
+        float radius = size / 2;
+        Vector3 scale = new Vector3(radius, radius, radius);
+        foreach (Transform point in obj.transform)
+          point.localScale = scale;
+      }
 
-    public override void Dump(string prefix) {
-      Debug.Log(prefix + "Point");
-      base.Dump(prefix + "  ");
-      Debug.Log(prefix + " location = " + location);
+      base.PostUpdate(geometry);
+
     }
 
   }
     
-  public class Line : Element {
+  public class Polylines : Element {
 
-    public Vector3[] locations = {};
-
-    public Line(GameObject root, string identifier)
-      : base(root, GameObject.CreatePrimitive(PrimitiveType.Cylinder), identifier) {
+    public Polylines(GameObject root, string identifier)
+      : base(root, MakeGeometric(), identifier) {
     }
 
     public override void Update(Geometry geometry) {
 
-      base.Update(geometry);
+      base.PreUpdate(geometry);
 
       if (Parsing.DirtyLocation(geometry)) {
 
-        Debug.Assert(geometry.Posx.Count == 2);
-        Debug.Assert(geometry.Posy.Count == 2);
-        Debug.Assert(geometry.Posz.Count == 2);
+        DestroyChildren();
 
-        locations = new Vector3[]{
-          new Vector3((float) geometry.Posx[0], (float) geometry.Posy[0], (float) geometry.Posz[0]),
-          new Vector3((float) geometry.Posx[1], (float) geometry.Posy[1], (float) geometry.Posz[1])
-        };
+        int n = geometry.Cnts.Sum();
+        Debug.Assert(geometry.Posx.Count == n, "Number of endpoints must match number of x positions: " + obj.name);
+        Debug.Assert(geometry.Posy.Count == n, "Number of endpoints must match number of y positions: " + obj.name);
+        Debug.Assert(geometry.Posz.Count == n, "Number of endpoints must match number of z positions: " + obj.name);
 
-        // FIXME: The length should shrink when there is an arrowhead.
-        Vector3 midpoint = (locations[0] + locations[1]) / 2;
-        Vector3 displacement = locations[1] - locations[0];
-        obj.transform.position = midpoint;
-        obj.transform.rotation = Quaternion.LookRotation(displacement);
-        obj.transform.Rotate(90, 0, 0);
+        int j = 0;
+        int k = geometry.Cnts[j];
+        for (int i = 0; i < n; ++i) {
 
-      }
+          if (i + 1 == k) {
+            if (++j < geometry.Cnts.Count)
+              k += geometry.Cnts[j];
+            continue;
+          }
 
-      if (Parsing.DirtyGlyph(geometry)) {
+          Vector3[] locations = new Vector3[]{
+            new Vector3((float) geometry.Posx[i  ], (float) geometry.Posy[i  ], (float) geometry.Posz[i  ]),
+            new Vector3((float) geometry.Posx[i+1], (float) geometry.Posy[i+1], (float) geometry.Posz[i+1])
+          };
 
-        if (geometry.Glyp == 1 && obj.transform.childCount == 0) {
-          GameObject glyph = (GameObject) Object.Instantiate(LoadCone(), obj.transform, false);
-          foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
-            renderer.material.color = color;
-        } else if (geometry.Glyp == 0 && obj.transform.childCount == 1)
-          GameObject.Destroy(obj.transform.GetChild(0));
+          Vector3 midpoint = (locations[0] + locations[1]) / 2;
+          Vector3 displacement = locations[1] - locations[0];
+          GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+          line.transform.parent = obj.transform;
+          line.transform.localPosition = midpoint;
+          { // FIXME: Replace with a pure quaternion computation.
+            line.transform.localRotation = Quaternion.LookRotation(displacement);
+            line.transform.Rotate(90, 0, 0);
+          }
+          line.transform.localScale = new Vector3(0, displacement.magnitude / 2, 0);
+
+        }
 
       }
 
       if (Parsing.DirtySize(geometry) || Parsing.DirtyLocation(geometry)) {
         float radius = size / 2;
-        Vector3 displacement = locations[1] - locations[0];
-        obj.transform.localScale = new Vector3(radius, displacement.magnitude / 2, radius);
+        foreach (Transform line in obj.transform) 
+          line.transform.localScale = new Vector3(radius, line.transform.localScale.y, radius);
       }
 
-    }
+      base.PostUpdate(geometry);
 
-    public override void Dump(string prefix) {
-      Debug.Log(prefix + "Line");
-      base.Dump(prefix + "  ");
-      Debug.Log(prefix + " locations = ");
-      foreach(Vector3 xyz in locations)
-        Debug.Log(prefix + "  " + xyz);
     }
 
   }
     
-  public class Rectangle : Element {
+  public class Rectangles : Element {
 
-    public Vector3[] locations = {};
-
-    public Rectangle(GameObject root, string identifier)
+    public Rectangles(GameObject root, string identifier)
       : base(root, GameObject.CreatePrimitive(PrimitiveType.Plane), identifier) {
     }
 
     public override void Update(Geometry geometry) {
 
-      base.Update(geometry);
+      base.PreUpdate(geometry);
 
-      if (Parsing.DirtyLocation(geometry))
-        locations = Parsing.MakeLocations(geometry);
+      base.PostUpdate(geometry);
 
-    }
-
-    public override void Dump(string prefix) {
-      Debug.Log(prefix + "Rectangle");
-      base.Dump(prefix + "  ");
-      Debug.Log(prefix + " locations = ");
-      foreach(Vector3 xyz in locations)
-        Debug.Log(prefix + "  " + xyz);
     }
 
   }
-    
+  
   public class Label : Element {
 
-    public Vector3 origin     = Vector3.zero ;
-    public Vector3 horizontal = Vector3.right;
-    public Vector3 vertical   = Vector3.up   ;
+    private static Material textMaterial = null;
+
+    private static Font textFont = null;
+
+    private static GameObject MakeTextObject() {
+      GameObject obj = new GameObject();
+      MeshRenderer meshRenderer = obj.AddComponent<MeshRenderer>();
+      if (textMaterial == null)
+        textMaterial = Resources.Load<Material>("font-material");
+      meshRenderer.material = textMaterial;
+      TextMesh textComponent = obj.AddComponent<TextMesh>();
+      if (textFont == null)
+        textFont = Resources.Load<Font>("NotoSans-Regular");
+      textComponent.font = textFont;
+      textComponent.alignment = TextAlignment.Left;
+      textComponent.fontSize = 50;
+      textComponent.transform.localScale = new Vector3(0.25f, 0.25f, 0.25f);
+      return obj;
+    }
 
     public Label(GameObject root, string identifier)
-      : base(root, new GameObject(), identifier) {
+      : base(root, MakeTextObject(), identifier) {
     }
 
     public override void Update(Geometry geometry) {
 
-      base.Update(geometry);
+      base.PreUpdate(geometry);
 
       if (Parsing.DirtyLocation(geometry)) {
-        Debug.Assert(geometry.Posx.Count == 3);
-        Debug.Assert(geometry.Posy.Count == 3);
-        Debug.Assert(geometry.Posz.Count == 3);
-        origin     = new Vector3((float) geometry.Posx[0], (float) geometry.Posy[0], (float) geometry.Posz[0]);
-        horizontal = new Vector3((float) geometry.Posx[1], (float) geometry.Posy[1], (float) geometry.Posz[1]);
-        vertical   = new Vector3((float) geometry.Posx[2], (float) geometry.Posy[2], (float) geometry.Posz[2]);
+
+        Debug.Assert(geometry.Cnts.Count == 1, "Label must have one group of points: " + obj.name);
+        Debug.Assert(geometry.Cnts[0]    == 3, "Label group must have three points: "  + obj.name);
+        Debug.Assert(geometry.Posx.Count == 3, "Label must have three x positions: "   + obj.name);
+        Debug.Assert(geometry.Posy.Count == 3, "Label must have three y positions: "   + obj.name);
+        Debug.Assert(geometry.Posz.Count == 3, "Label must have three z positions: "   + obj.name);
+
+        Vector3 origin     = new Vector3((float) geometry.Posx[0], (float) geometry.Posy[0], (float) geometry.Posz[0]);
+        Vector3 horizontal = new Vector3((float) geometry.Posx[1], (float) geometry.Posy[1], (float) geometry.Posz[1]);
+        Vector3 vertical   = new Vector3((float) geometry.Posx[2], (float) geometry.Posy[2], (float) geometry.Posz[2]);
+        Quaternion q = Math.RotationFromPlane(Vector3.right, Vector3.up, origin, horizontal, vertical);
+
+        TextMesh textComponent = obj.GetComponent<TextMesh>();
+        textComponent.transform.localRotation = q;
+        textComponent.transform.localPosition = origin + q * new Vector3(- 0.1f * size, 1.4f * size, 0f);
+        textComponent.transform.localScale = new Vector3(0.25f * size, 0.25f * size, 0.25f * size);
       }
 
-    }
+      if (Parsing.DirtyText(geometry)) {
+        TextMesh textComponent = obj.GetComponent<TextMesh>();
+        textComponent.text = geometry.Text;
+      }
 
-    public override void Dump(string prefix) {
-      Debug.Log(prefix + "Label");
-      base.Dump(prefix + "  ");
-      Debug.Log(prefix + "  origin = " + origin);
-      Debug.Log(prefix + "  horizontal = " + horizontal);
-      Debug.Log(prefix + "  vertical = " + vertical);
+      base.PostUpdate(geometry);
+
     }
 
   }
 
+  public class Axis : Element {
+
+    public Axis(GameObject root, string identifier)
+      : base(root, GameObject.CreatePrimitive(PrimitiveType.Cylinder), identifier) {
+    }
+
+    private static Object cone = null;
+
+    public override void Update(Geometry geometry) {
+
+      base.PreUpdate(geometry);
+
+      if (Parsing.DirtyLocation(geometry)) {
+
+        Debug.Assert(geometry.Cnts.Count == 1, "Arrow must have one group of points: " + obj.name);
+        Debug.Assert(geometry.Cnts[0]    == 2, "Arrow group must have two points: "    + obj.name);
+        Debug.Assert(geometry.Posx.Count == 2, "Arrow must have two x positions: "     + obj.name);
+        Debug.Assert(geometry.Posy.Count == 2, "Arrow must have two y positions: "     + obj.name);
+        Debug.Assert(geometry.Posz.Count == 2, "Arrow must have two z positions: "     + obj.name);
+
+        Vector3[] locations = new Vector3[]{
+          new Vector3((float) geometry.Posx[0], (float) geometry.Posy[0], (float) geometry.Posz[0]),
+          new Vector3((float) geometry.Posx[1], (float) geometry.Posy[1], (float) geometry.Posz[1])
+        };
+
+        Vector3 midpoint = (locations[0] + locations[1]) / 2;
+        Vector3 displacement = locations[1] - locations[0];
+        obj.transform.localPosition = midpoint;
+        { // FIXME: Replace with a pure quaternion computation.
+          obj.transform.localRotation = Quaternion.LookRotation(displacement);
+          obj.transform.Rotate(90, 0, 0);
+        }
+        obj.transform.localScale = new Vector3(0, displacement.magnitude / 2, 0);
+
+        if (obj.transform.childCount == 0) {
+          if (cone == null)
+            cone = Resources.Load("cone");
+          GameObject glyph = (GameObject) Object.Instantiate(cone, obj.transform, false); // FIXME
+          foreach (MeshRenderer renderer in obj.GetComponentsInChildren<MeshRenderer>())
+            renderer.material.color = color;
+        }
+
+      }
+
+      if (Parsing.DirtySize(geometry) || Parsing.DirtyLocation(geometry)) {
+        float radius = size / 2;
+        obj.transform.localScale = new Vector3(radius, obj.transform.localScale.y, radius);
+      }
+
+      base.PostUpdate(geometry);
+
+    }
+
+  }
+    
   static class Parsing {
 
     public static bool DirtyLocation(Geometry geometry) {
@@ -236,10 +322,6 @@ namespace Infovis {
 
     public static bool DirtyText(Geometry geometry) {
       return (geometry.Mask & 1 << 3) != 0;
-    }
-
-    public static bool DirtyGlyph(Geometry geometry) {
-      return (geometry.Mask & 1 << 4) != 0;
     }
 
     public static Vector3[] MakeLocations(Geometry geometry) {

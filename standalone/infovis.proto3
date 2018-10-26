@@ -8,18 +8,17 @@ option csharp_namespace = "Infovis.Protobuf";
 
 
 message Geometry {
-  int32           fram =  1;
+  int32           fram =  1; // not supported
   int64           iden =  2;
-  int32           type =  3;
+  int32           type =  3; // 1 = points, 2 = polylines, 3 = rectangles, 4 = label, 5 = axis
   int32           mask =  4;
   repeated int32  cnts =  5;
-  repeated double posx =  6;
+  repeated double posx =  6; // mask = 0001b = 1
   repeated double posy =  7;
   repeated double posz =  8;
-  int32           glyp =  9;          
-  double          size = 10;
-  fixed32         colr = 11;
-  string          text = 12;
+  double          size = 10; // mask = 0010b = 2
+  fixed32         colr = 11; // mask = 0100b = 4
+  string          text = 12; // mask = 1000b = 8
 }
 
 
