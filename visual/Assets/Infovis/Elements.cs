@@ -1,8 +1,10 @@
 using Infovis.Protobuf;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 using Debug = UnityEngine.Debug;
+using OVRRayPointerEventData = ControllerSelection.OVRRayPointerEventData;
 
 
 namespace Infovis {
@@ -28,11 +30,29 @@ namespace Infovis {
       obj.name = identifier;
       obj.tag = "infovis";
       obj.transform.parent = root.transform;
+      AddTrigger(obj);
     }
 
     public virtual void Update(Geometry geometry) {
       PreUpdate(geometry);
       PostUpdate(geometry);
+    }
+
+    protected void AddTrigger(GameObject child) {
+      EventTrigger trigger = child.AddComponent<EventTrigger>();
+      EventTrigger.Entry entry = new EventTrigger.Entry();
+      entry.eventID = EventTriggerType.PointerClick;
+      entry.callback.AddListener(data => { OnPointerClickDelegate((OVRRayPointerEventData) data); });
+      trigger.triggers.Add(entry);
+    }
+
+    private static Program program = null;
+
+    public void OnPointerClickDelegate(OVRRayPointerEventData data) {
+      if (program == null)
+        program = GameObject.Find("Program").GetComponent<Program>();  
+      if (text != "")
+        program.StartCoroutine(program.ShowMessage(text));
     }
 
     protected void PreUpdate(Geometry geometry) {
@@ -118,6 +138,7 @@ namespace Infovis {
 
         for (int i = 0; i < n; ++i) {
           GameObject point = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+//        AddTrigger(point); // FIXME: Why isn't this necessary?
           point.transform.parent = obj.transform;
           point.transform.localPosition = new Vector3((float) geometry.Posx[i], (float) geometry.Posy[i], (float) geometry.Posz[i]);
         }
@@ -167,6 +188,7 @@ namespace Infovis {
           }
 
           GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+//        AddTrigger(line); // FIXME: Why isn't this necessary?
           line.transform.parent = obj.transform;
 
           Vector3[] locations = new Vector3[]{
@@ -223,6 +245,7 @@ namespace Infovis {
         for (int i = 0; i < n; i += 3) {
 
           GameObject rectangle = GameObject.CreatePrimitive(PrimitiveType.Quad);
+//        AddTrigger(rectangle); // FIXME: Why isn't this necessary?
           rectangle.transform.parent = obj.transform;
 
           Vector3 origin     = new Vector3((float) geometry.Posx[i+0], (float) geometry.Posy[i+0], (float) geometry.Posz[i+0]);
