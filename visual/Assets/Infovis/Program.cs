@@ -18,6 +18,8 @@ namespace Infovis {
 
     public Text infoText;
 
+    public GameObject selectionVisualizer;
+
     void Start() {
 
       server = new WebSocketServer(serviceAddress);
@@ -29,14 +31,14 @@ namespace Infovis {
       GameObject camera = GameObject.Find("OVRCameraRig");
       home = camera.transform.position;
 
-      StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080"));
+      StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080", 5f));
 
     }
 
-    public IEnumerator ShowMessage(string text) {
+    public IEnumerator ShowMessage(string text, float duration) {
       infoText.text = text;
       infoText.enabled = true;
-      yield return new WaitForSeconds(10);
+      yield return new WaitForSeconds(duration);
       infoText.enabled = false;
     }
 
@@ -51,7 +53,7 @@ namespace Infovis {
 
         camera.transform.position = home;
 
-        StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080"));
+        StartCoroutine(ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080", 5f));
 
       } else {
 
@@ -65,11 +67,14 @@ namespace Infovis {
 
       }
 
+      if (OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, controller)) {
+      }
+
     }
 
     private Vector3 home = Vector3.zero;
 
-    private float upwards = -0.5f;
+    private float upwards = - 0.5f;
 
   }
 
