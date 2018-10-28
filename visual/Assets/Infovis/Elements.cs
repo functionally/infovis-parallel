@@ -52,7 +52,7 @@ namespace Infovis {
       if (infoScreen == null)
         infoScreen = GameObject.Find("Info").GetComponent<InfoScreen>();  
       if (text != "")
-        infoScreen.StartCoroutine(infoScreen.ShowMessage(text, 3f));
+        infoScreen.ShowMessage(text, 3f);
     }
 
     protected void PreUpdate(Geometry geometry) {
