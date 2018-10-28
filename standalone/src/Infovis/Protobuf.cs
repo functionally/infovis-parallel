@@ -26,17 +26,24 @@ namespace Infovis.Protobuf {
             "bRgBIAEoBRIMCgRpZGVuGAIgASgDEgwKBHR5cGUYAyABKAUSDAoEbWFzaxgE",
             "IAEoBRIMCgRjbnRzGAUgAygFEgwKBHBvc3gYBiADKAESDAoEcG9zeRgHIAMo",
             "ARIMCgRwb3N6GAggAygBEgwKBHNpemUYCiABKAESDAoEY29schgLIAEoBxIM",
-            "CgR0ZXh0GAwgASgJIksKB1JlcXVlc3QSDQoFcmVzZXQYASABKAgSIQoGdXBz",
-            "ZXJ0GAIgAygLMhEuSW5mb3Zpcy5HZW9tZXRyeRIOCgZkZWxldGUYAyADKAMi",
-            "XQoIUmVzcG9uc2USDwoHbWVzc2FnZRgBIAEoCRINCgVob3ZlchgCIAMoAxIP",
-            "Cgd1bmhvdmVyGAMgAygDEg4KBnNlbGVjdBgEIAMoAxIQCghkZXNlbGVjdBgF",
-            "IAMoA0ITqgIQSW5mb3Zpcy5Qcm90b2J1ZmIGcHJvdG8z"));
+            "CgR0ZXh0GAwgASgJIl4KCExvY2F0aW9uEgwKBHBvc3gYASABKAESDAoEcG9z",
+            "eRgCIAEoARIMCgRwb3N6GAMgASgBEgwKBHJvdHgYBCABKAESDAoEcm90eRgF",
+            "IAEoARIMCgRyb3R6GAYgASgBIpMBCgdSZXF1ZXN0Eg0KBXJlc2V0GAEgASgI",
+            "EiEKBnVwc2VydBgCIAMoCzIRLkluZm92aXMuR2VvbWV0cnkSDgoGZGVsZXRl",
+            "GAMgAygDEiIKB3ZpZXdsb2MYBCABKAsyES5JbmZvdmlzLkxvY2F0aW9uEiIK",
+            "B3Rvb2xsb2MYBSABKAsyES5JbmZvdmlzLkxvY2F0aW9uIqUBCghSZXNwb25z",
+            "ZRIPCgdtZXNzYWdlGAEgASgJEg0KBWhvdmVyGAIgAygDEg8KB3VuaG92ZXIY",
+            "AyADKAMSDgoGc2VsZWN0GAQgAygDEhAKCGRlc2VsZWN0GAUgAygDEiIKB3Zp",
+            "ZXdsb2MYBiABKAsyES5JbmZvdmlzLkxvY2F0aW9uEiIKB3Rvb2xsb2MYByAB",
+            "KAsyES5JbmZvdmlzLkxvY2F0aW9uQhOqAhBJbmZvdmlzLlByb3RvYnVmYgZw",
+            "cm90bzM="));
       descriptor = pbr::FileDescriptor.FromGeneratedCode(descriptorData,
           new pbr::FileDescriptor[] { },
           new pbr::GeneratedClrTypeInfo(null, new pbr::GeneratedClrTypeInfo[] {
             new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Geometry), global::Infovis.Protobuf.Geometry.Parser, new[]{ "Fram", "Iden", "Type", "Mask", "Cnts", "Posx", "Posy", "Posz", "Size", "Colr", "Text" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Request), global::Infovis.Protobuf.Request.Parser, new[]{ "Reset", "Upsert", "Delete" }, null, null, null),
-            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Response), global::Infovis.Protobuf.Response.Parser, new[]{ "Message", "Hover", "Unhover", "Select", "Deselect" }, null, null, null)
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Location), global::Infovis.Protobuf.Location.Parser, new[]{ "Posx", "Posy", "Posz", "Rotx", "Roty", "Rotz" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Request), global::Infovis.Protobuf.Request.Parser, new[]{ "Reset", "Upsert", "Delete", "Viewloc", "Toolloc" }, null, null, null),
+            new pbr::GeneratedClrTypeInfo(typeof(global::Infovis.Protobuf.Response), global::Infovis.Protobuf.Response.Parser, new[]{ "Message", "Hover", "Unhover", "Select", "Deselect", "Viewloc", "Toolloc" }, null, null, null)
           }));
     }
     #endregion
@@ -436,6 +443,263 @@ namespace Infovis.Protobuf {
 
   }
 
+  public sealed partial class Location : pb::IMessage<Location> {
+    private static readonly pb::MessageParser<Location> _parser = new pb::MessageParser<Location>(() => new Location());
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pb::MessageParser<Location> Parser { get { return _parser; } }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public static pbr::MessageDescriptor Descriptor {
+      get { return global::Infovis.Protobuf.InfovisReflection.Descriptor.MessageTypes[1]; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    pbr::MessageDescriptor pb::IMessage.Descriptor {
+      get { return Descriptor; }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Location() {
+      OnConstruction();
+    }
+
+    partial void OnConstruction();
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Location(Location other) : this() {
+      posx_ = other.posx_;
+      posy_ = other.posy_;
+      posz_ = other.posz_;
+      rotx_ = other.rotx_;
+      roty_ = other.roty_;
+      rotz_ = other.rotz_;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public Location Clone() {
+      return new Location(this);
+    }
+
+    /// <summary>Field number for the "posx" field.</summary>
+    public const int PosxFieldNumber = 1;
+    private double posx_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Posx {
+      get { return posx_; }
+      set {
+        posx_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "posy" field.</summary>
+    public const int PosyFieldNumber = 2;
+    private double posy_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Posy {
+      get { return posy_; }
+      set {
+        posy_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "posz" field.</summary>
+    public const int PoszFieldNumber = 3;
+    private double posz_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Posz {
+      get { return posz_; }
+      set {
+        posz_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "rotx" field.</summary>
+    public const int RotxFieldNumber = 4;
+    private double rotx_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Rotx {
+      get { return rotx_; }
+      set {
+        rotx_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "roty" field.</summary>
+    public const int RotyFieldNumber = 5;
+    private double roty_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Roty {
+      get { return roty_; }
+      set {
+        roty_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "rotz" field.</summary>
+    public const int RotzFieldNumber = 6;
+    private double rotz_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public double Rotz {
+      get { return rotz_; }
+      set {
+        rotz_ = value;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override bool Equals(object other) {
+      return Equals(other as Location);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public bool Equals(Location other) {
+      if (ReferenceEquals(other, null)) {
+        return false;
+      }
+      if (ReferenceEquals(other, this)) {
+        return true;
+      }
+      if (Posx != other.Posx) return false;
+      if (Posy != other.Posy) return false;
+      if (Posz != other.Posz) return false;
+      if (Rotx != other.Rotx) return false;
+      if (Roty != other.Roty) return false;
+      if (Rotz != other.Rotz) return false;
+      return true;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override int GetHashCode() {
+      int hash = 1;
+      if (Posx != 0D) hash ^= Posx.GetHashCode();
+      if (Posy != 0D) hash ^= Posy.GetHashCode();
+      if (Posz != 0D) hash ^= Posz.GetHashCode();
+      if (Rotx != 0D) hash ^= Rotx.GetHashCode();
+      if (Roty != 0D) hash ^= Roty.GetHashCode();
+      if (Rotz != 0D) hash ^= Rotz.GetHashCode();
+      return hash;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public override string ToString() {
+      return pb::JsonFormatter.ToDiagnosticString(this);
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void WriteTo(pb::CodedOutputStream output) {
+      if (Posx != 0D) {
+        output.WriteRawTag(9);
+        output.WriteDouble(Posx);
+      }
+      if (Posy != 0D) {
+        output.WriteRawTag(17);
+        output.WriteDouble(Posy);
+      }
+      if (Posz != 0D) {
+        output.WriteRawTag(25);
+        output.WriteDouble(Posz);
+      }
+      if (Rotx != 0D) {
+        output.WriteRawTag(33);
+        output.WriteDouble(Rotx);
+      }
+      if (Roty != 0D) {
+        output.WriteRawTag(41);
+        output.WriteDouble(Roty);
+      }
+      if (Rotz != 0D) {
+        output.WriteRawTag(49);
+        output.WriteDouble(Rotz);
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public int CalculateSize() {
+      int size = 0;
+      if (Posx != 0D) {
+        size += 1 + 8;
+      }
+      if (Posy != 0D) {
+        size += 1 + 8;
+      }
+      if (Posz != 0D) {
+        size += 1 + 8;
+      }
+      if (Rotx != 0D) {
+        size += 1 + 8;
+      }
+      if (Roty != 0D) {
+        size += 1 + 8;
+      }
+      if (Rotz != 0D) {
+        size += 1 + 8;
+      }
+      return size;
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(Location other) {
+      if (other == null) {
+        return;
+      }
+      if (other.Posx != 0D) {
+        Posx = other.Posx;
+      }
+      if (other.Posy != 0D) {
+        Posy = other.Posy;
+      }
+      if (other.Posz != 0D) {
+        Posz = other.Posz;
+      }
+      if (other.Rotx != 0D) {
+        Rotx = other.Rotx;
+      }
+      if (other.Roty != 0D) {
+        Roty = other.Roty;
+      }
+      if (other.Rotz != 0D) {
+        Rotz = other.Rotz;
+      }
+    }
+
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public void MergeFrom(pb::CodedInputStream input) {
+      uint tag;
+      while ((tag = input.ReadTag()) != 0) {
+        switch(tag) {
+          default:
+            input.SkipLastField();
+            break;
+          case 9: {
+            Posx = input.ReadDouble();
+            break;
+          }
+          case 17: {
+            Posy = input.ReadDouble();
+            break;
+          }
+          case 25: {
+            Posz = input.ReadDouble();
+            break;
+          }
+          case 33: {
+            Rotx = input.ReadDouble();
+            break;
+          }
+          case 41: {
+            Roty = input.ReadDouble();
+            break;
+          }
+          case 49: {
+            Rotz = input.ReadDouble();
+            break;
+          }
+        }
+      }
+    }
+
+  }
+
   public sealed partial class Request : pb::IMessage<Request> {
     private static readonly pb::MessageParser<Request> _parser = new pb::MessageParser<Request>(() => new Request());
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -443,7 +707,7 @@ namespace Infovis.Protobuf {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Infovis.Protobuf.InfovisReflection.Descriptor.MessageTypes[1]; }
+      get { return global::Infovis.Protobuf.InfovisReflection.Descriptor.MessageTypes[2]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -463,6 +727,8 @@ namespace Infovis.Protobuf {
       reset_ = other.reset_;
       upsert_ = other.upsert_.Clone();
       delete_ = other.delete_.Clone();
+      Viewloc = other.viewloc_ != null ? other.Viewloc.Clone() : null;
+      Toolloc = other.toolloc_ != null ? other.Toolloc.Clone() : null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -501,6 +767,28 @@ namespace Infovis.Protobuf {
       get { return delete_; }
     }
 
+    /// <summary>Field number for the "viewloc" field.</summary>
+    public const int ViewlocFieldNumber = 4;
+    private global::Infovis.Protobuf.Location viewloc_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Infovis.Protobuf.Location Viewloc {
+      get { return viewloc_; }
+      set {
+        viewloc_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "toolloc" field.</summary>
+    public const int ToollocFieldNumber = 5;
+    private global::Infovis.Protobuf.Location toolloc_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Infovis.Protobuf.Location Toolloc {
+      get { return toolloc_; }
+      set {
+        toolloc_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Request);
@@ -517,6 +805,8 @@ namespace Infovis.Protobuf {
       if (Reset != other.Reset) return false;
       if(!upsert_.Equals(other.upsert_)) return false;
       if(!delete_.Equals(other.delete_)) return false;
+      if (!object.Equals(Viewloc, other.Viewloc)) return false;
+      if (!object.Equals(Toolloc, other.Toolloc)) return false;
       return true;
     }
 
@@ -526,6 +816,8 @@ namespace Infovis.Protobuf {
       if (Reset != false) hash ^= Reset.GetHashCode();
       hash ^= upsert_.GetHashCode();
       hash ^= delete_.GetHashCode();
+      if (viewloc_ != null) hash ^= Viewloc.GetHashCode();
+      if (toolloc_ != null) hash ^= Toolloc.GetHashCode();
       return hash;
     }
 
@@ -542,6 +834,14 @@ namespace Infovis.Protobuf {
       }
       upsert_.WriteTo(output, _repeated_upsert_codec);
       delete_.WriteTo(output, _repeated_delete_codec);
+      if (viewloc_ != null) {
+        output.WriteRawTag(34);
+        output.WriteMessage(Viewloc);
+      }
+      if (toolloc_ != null) {
+        output.WriteRawTag(42);
+        output.WriteMessage(Toolloc);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -552,6 +852,12 @@ namespace Infovis.Protobuf {
       }
       size += upsert_.CalculateSize(_repeated_upsert_codec);
       size += delete_.CalculateSize(_repeated_delete_codec);
+      if (viewloc_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Viewloc);
+      }
+      if (toolloc_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Toolloc);
+      }
       return size;
     }
 
@@ -565,6 +871,18 @@ namespace Infovis.Protobuf {
       }
       upsert_.Add(other.upsert_);
       delete_.Add(other.delete_);
+      if (other.viewloc_ != null) {
+        if (viewloc_ == null) {
+          viewloc_ = new global::Infovis.Protobuf.Location();
+        }
+        Viewloc.MergeFrom(other.Viewloc);
+      }
+      if (other.toolloc_ != null) {
+        if (toolloc_ == null) {
+          toolloc_ = new global::Infovis.Protobuf.Location();
+        }
+        Toolloc.MergeFrom(other.Toolloc);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -588,6 +906,20 @@ namespace Infovis.Protobuf {
             delete_.AddEntriesFrom(input, _repeated_delete_codec);
             break;
           }
+          case 34: {
+            if (viewloc_ == null) {
+              viewloc_ = new global::Infovis.Protobuf.Location();
+            }
+            input.ReadMessage(viewloc_);
+            break;
+          }
+          case 42: {
+            if (toolloc_ == null) {
+              toolloc_ = new global::Infovis.Protobuf.Location();
+            }
+            input.ReadMessage(toolloc_);
+            break;
+          }
         }
       }
     }
@@ -601,7 +933,7 @@ namespace Infovis.Protobuf {
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public static pbr::MessageDescriptor Descriptor {
-      get { return global::Infovis.Protobuf.InfovisReflection.Descriptor.MessageTypes[2]; }
+      get { return global::Infovis.Protobuf.InfovisReflection.Descriptor.MessageTypes[3]; }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -623,6 +955,8 @@ namespace Infovis.Protobuf {
       unhover_ = other.unhover_.Clone();
       select_ = other.select_.Clone();
       deselect_ = other.deselect_.Clone();
+      Viewloc = other.viewloc_ != null ? other.Viewloc.Clone() : null;
+      Toolloc = other.toolloc_ != null ? other.Toolloc.Clone() : null;
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -681,6 +1015,28 @@ namespace Infovis.Protobuf {
       get { return deselect_; }
     }
 
+    /// <summary>Field number for the "viewloc" field.</summary>
+    public const int ViewlocFieldNumber = 6;
+    private global::Infovis.Protobuf.Location viewloc_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Infovis.Protobuf.Location Viewloc {
+      get { return viewloc_; }
+      set {
+        viewloc_ = value;
+      }
+    }
+
+    /// <summary>Field number for the "toolloc" field.</summary>
+    public const int ToollocFieldNumber = 7;
+    private global::Infovis.Protobuf.Location toolloc_;
+    [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
+    public global::Infovis.Protobuf.Location Toolloc {
+      get { return toolloc_; }
+      set {
+        toolloc_ = value;
+      }
+    }
+
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
     public override bool Equals(object other) {
       return Equals(other as Response);
@@ -699,6 +1055,8 @@ namespace Infovis.Protobuf {
       if(!unhover_.Equals(other.unhover_)) return false;
       if(!select_.Equals(other.select_)) return false;
       if(!deselect_.Equals(other.deselect_)) return false;
+      if (!object.Equals(Viewloc, other.Viewloc)) return false;
+      if (!object.Equals(Toolloc, other.Toolloc)) return false;
       return true;
     }
 
@@ -710,6 +1068,8 @@ namespace Infovis.Protobuf {
       hash ^= unhover_.GetHashCode();
       hash ^= select_.GetHashCode();
       hash ^= deselect_.GetHashCode();
+      if (viewloc_ != null) hash ^= Viewloc.GetHashCode();
+      if (toolloc_ != null) hash ^= Toolloc.GetHashCode();
       return hash;
     }
 
@@ -728,6 +1088,14 @@ namespace Infovis.Protobuf {
       unhover_.WriteTo(output, _repeated_unhover_codec);
       select_.WriteTo(output, _repeated_select_codec);
       deselect_.WriteTo(output, _repeated_deselect_codec);
+      if (viewloc_ != null) {
+        output.WriteRawTag(50);
+        output.WriteMessage(Viewloc);
+      }
+      if (toolloc_ != null) {
+        output.WriteRawTag(58);
+        output.WriteMessage(Toolloc);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -740,6 +1108,12 @@ namespace Infovis.Protobuf {
       size += unhover_.CalculateSize(_repeated_unhover_codec);
       size += select_.CalculateSize(_repeated_select_codec);
       size += deselect_.CalculateSize(_repeated_deselect_codec);
+      if (viewloc_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Viewloc);
+      }
+      if (toolloc_ != null) {
+        size += 1 + pb::CodedOutputStream.ComputeMessageSize(Toolloc);
+      }
       return size;
     }
 
@@ -755,6 +1129,18 @@ namespace Infovis.Protobuf {
       unhover_.Add(other.unhover_);
       select_.Add(other.select_);
       deselect_.Add(other.deselect_);
+      if (other.viewloc_ != null) {
+        if (viewloc_ == null) {
+          viewloc_ = new global::Infovis.Protobuf.Location();
+        }
+        Viewloc.MergeFrom(other.Viewloc);
+      }
+      if (other.toolloc_ != null) {
+        if (toolloc_ == null) {
+          toolloc_ = new global::Infovis.Protobuf.Location();
+        }
+        Toolloc.MergeFrom(other.Toolloc);
+      }
     }
 
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute]
@@ -787,6 +1173,20 @@ namespace Infovis.Protobuf {
           case 42:
           case 40: {
             deselect_.AddEntriesFrom(input, _repeated_deselect_codec);
+            break;
+          }
+          case 50: {
+            if (viewloc_ == null) {
+              viewloc_ = new global::Infovis.Protobuf.Location();
+            }
+            input.ReadMessage(viewloc_);
+            break;
+          }
+          case 58: {
+            if (toolloc_ == null) {
+              toolloc_ = new global::Infovis.Protobuf.Location();
+            }
+            input.ReadMessage(toolloc_);
             break;
           }
         }
