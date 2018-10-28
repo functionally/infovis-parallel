@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 using Debug = UnityEngine.Debug;
+using Float = System.Single;
 using OVRRayPointerEventData = ControllerSelection.OVRRayPointerEventData;
 
 
@@ -39,11 +40,24 @@ namespace Infovis {
     }
 
     protected void AddTrigger(GameObject child) {
+
       EventTrigger trigger = child.AddComponent<EventTrigger>();
+
       EventTrigger.Entry entry = new EventTrigger.Entry();
       entry.eventID = EventTriggerType.PointerClick;
       entry.callback.AddListener(data => { OnPointerClickDelegate((OVRRayPointerEventData) data); });
       trigger.triggers.Add(entry);
+
+//    entry = new EventTrigger.Entry();
+//    entry.eventID = EventTriggerType.PointerEnter;
+//    entry.callback.AddListener(data => { OnPointerEnterDelegate((OVRRayPointerEventData) data); });
+//    trigger.triggers.Add(entry);
+
+//    entry = new EventTrigger.Entry();
+//    entry.eventID = EventTriggerType.PointerExit;
+//    entry.callback.AddListener(data => { OnPointerExitDelegate((OVRRayPointerEventData) data); });
+//    trigger.triggers.Add(entry);
+
     }
 
     private static InfoScreen infoScreen = null;
@@ -53,6 +67,19 @@ namespace Infovis {
         infoScreen = GameObject.Find("Info").GetComponent<InfoScreen>();  
       if (text != "")
         infoScreen.ShowMessage(text, 3f);
+    }
+
+    public void OnPointerEnterDelegate(OVRRayPointerEventData data) {
+      if (infoScreen == null)
+        infoScreen = GameObject.Find("Info").GetComponent<InfoScreen>();  
+      if (text != "")
+        infoScreen.ShowMessage(text, 1f /*Float.PositiveInfinity*/);
+    }
+
+    public void OnPointerExitDelegate(OVRRayPointerEventData data) {
+      if (infoScreen == null)
+        infoScreen = GameObject.Find("Info").GetComponent<InfoScreen>();  
+      infoScreen.ShowMessage("", -1f);
     }
 
     protected void PreUpdate(Geometry geometry) {
