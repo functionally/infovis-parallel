@@ -41,7 +41,7 @@ namespace Infovis {
 
         camera.transform.position = home;
 
-        StartCoroutine(infoScreen.ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080", 5f));
+        infoScreen.ShowMessage("Infovis Parallel\nws://" + Network.player.ipAddress + ":8080", 5f);
 
       } else {
 
