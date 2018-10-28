@@ -20,8 +20,10 @@ namespace Infovis {
 
     void Update() {
 
-      if (turnedOn && Time.time > turnOff)
+      if (turnedOn && Time.time > turnOff) {
         infoText.enabled = false;
+        turnedOn = false;
+      }
 
       OVRInput.Controller controller = OVRInput.Controller.Gamepad;
 
@@ -37,8 +39,12 @@ namespace Infovis {
 
     public void ShowMessage(string text, float duration) {
       turnOff = Time.time + duration;
-      infoText.text = text;
-      infoText.enabled = true;
+      if (text != infoText.text)
+        infoText.text = text;
+      if (!turnedOn) {
+        infoText.enabled = true;
+        turnedOn = true;
+      }
     }
 
   }
