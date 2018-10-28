@@ -46,13 +46,13 @@ namespace Infovis {
       trigger.triggers.Add(entry);
     }
 
-    private static Program program = null;
+    private static InfoScreen infoScreen = null;
 
     public void OnPointerClickDelegate(OVRRayPointerEventData data) {
-      if (program == null)
-        program = GameObject.Find("Program").GetComponent<Program>();  
+      if (infoScreen == null)
+        infoScreen = GameObject.Find("Info").GetComponent<InfoScreen>();  
       if (text != "")
-        program.StartCoroutine(program.ShowMessage(text, 3f));
+        infoScreen.StartCoroutine(infoScreen.ShowMessage(text, 3f));
     }
 
     protected void PreUpdate(Geometry geometry) {
