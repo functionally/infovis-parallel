@@ -14,8 +14,8 @@ message Geometry {
   int32           mask =  4;
   repeated int32  cnts =  5;
   repeated double posx =  6; // mask = 0001b = 1
-  repeated double posy =  7;
-  repeated double posz =  8;
+  repeated double posy =  7; // mask = 0001b = 1
+  repeated double posz =  8; // mask = 0001b = 1
   double          size = 10; // mask = 0010b = 2
   fixed32         colr = 11; // mask = 0100b = 4
   string          text = 12; // mask = 1000b = 8
@@ -30,5 +30,9 @@ message Request {
 
 
 message Response {
-  string log = 1;
+  string         message   = 1;
+  repeated int64 hover     = 2;
+  repeated int64 unhover   = 3;
+  repeated int64 select    = 4;
+  repeated int64 deselect  = 5;
 }
