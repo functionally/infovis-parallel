@@ -19,6 +19,16 @@ namespace Infovis {
 
     }
 
+    void Update() {
+
+      OVRInput.Controller controller = OVRInput.Controller.Gamepad;
+
+      if (OVRInput.GetDown(OVRInput.Button.Four, controller)) {
+        StartCoroutine(ShowMessage("BUTTON FOUR", 2));
+      }
+
+    }
+
     public IEnumerator ShowMessage(string text, float duration) {
       infoText.text = text;
       infoText.enabled = true;
