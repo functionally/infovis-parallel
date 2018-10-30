@@ -12,6 +12,10 @@ namespace Infovis {
 
   public abstract class Element {
 
+    public static bool enableSelection = true;
+
+    public static bool enableTooltips = false;
+
     public GameObject obj = null;
 
     public float size = 0;
@@ -41,22 +45,30 @@ namespace Infovis {
 
     protected void AddTrigger(GameObject child) {
 
-      EventTrigger trigger = child.AddComponent<EventTrigger>();
+      if (enableSelection) {
 
-      EventTrigger.Entry entry = new EventTrigger.Entry();
-      entry.eventID = EventTriggerType.PointerClick;
-      entry.callback.AddListener(data => { OnPointerClickDelegate((OVRRayPointerEventData) data); });
-      trigger.triggers.Add(entry);
+        EventTrigger trigger = child.AddComponent<EventTrigger>();
 
-//    entry = new EventTrigger.Entry();
-//    entry.eventID = EventTriggerType.PointerEnter;
-//    entry.callback.AddListener(data => { OnPointerEnterDelegate((OVRRayPointerEventData) data); });
-//    trigger.triggers.Add(entry);
+        EventTrigger.Entry entry = new EventTrigger.Entry();
+        entry.eventID = EventTriggerType.PointerClick;
+        entry.callback.AddListener(data => { OnPointerClickDelegate((OVRRayPointerEventData) data); });
+        trigger.triggers.Add(entry);
 
-//    entry = new EventTrigger.Entry();
-//    entry.eventID = EventTriggerType.PointerExit;
-//    entry.callback.AddListener(data => { OnPointerExitDelegate((OVRRayPointerEventData) data); });
-//    trigger.triggers.Add(entry);
+      } else if (enableTooltips) {
+
+        EventTrigger trigger = child.AddComponent<EventTrigger>();
+
+        EventTrigger.Entry entry = new EventTrigger.Entry();
+        entry.eventID = EventTriggerType.PointerEnter;
+        entry.callback.AddListener(data => { OnPointerEnterDelegate((OVRRayPointerEventData) data); });
+        trigger.triggers.Add(entry);
+    
+        entry = new EventTrigger.Entry();
+        entry.eventID = EventTriggerType.PointerExit;
+        entry.callback.AddListener(data => { OnPointerExitDelegate((OVRRayPointerEventData) data); });
+        trigger.triggers.Add(entry);
+
+      }
 
     }
 
