@@ -17,6 +17,10 @@ namespace Infovis {
 
     public InfoScreen infoScreen;
 
+    public bool enableSelection = true;
+
+    public bool enableTooltips = false;
+
     void Start() {
 
       server = new WebSocketServer(serviceAddress);
@@ -27,6 +31,9 @@ namespace Infovis {
 
       GameObject camera = GameObject.Find("OVRCameraRig");
       home = camera.transform.position;
+
+      Element.enableSelection = enableSelection;
+      Element.enableTooltips = enableTooltips;
 
     }
 
