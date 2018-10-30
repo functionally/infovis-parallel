@@ -58,7 +58,7 @@ namespace Infovis {
           upwards = - upwards;
         float shift = OVRInput.Get(OVRInput.Button.One, controller) ? upwards : 0;
   
-        camera.transform.position = camera.transform.position - 0.008f * (new Vector3(joystick[0], shift, joystick[1]));
+        camera.transform.position = camera.transform.position + 0.008f * (new Vector3(joystick[0], shift, joystick[1]));
 
       }
 
@@ -69,7 +69,7 @@ namespace Infovis {
 
     private Vector3 home = Vector3.zero;
 
-    private float upwards = - 0.5f;
+    private float upwards = 0.5f;
 
   }
 
