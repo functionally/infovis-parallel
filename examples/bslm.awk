@@ -8,6 +8,8 @@ BEGIN {
   ymax = -1e10
   zmin = 1e10
   zmax = -1e10
+  cmin = 1e10
+  cmax = -1e10
 }
 
 {
@@ -30,20 +32,26 @@ BEGIN {
     zmin = $17
   if ($17 > zmax)
     zmax = $17
+
+  c[i] = $14
+  if ($14 < cmin)
+    cmin = $14
+  if ($14 > cmax)
+    cmax = $14
 }
 
 END {
   for (i in x) {
     print "upsert {"
-    print "  iden: " i
+    print "  iden: " (1000000 + i)
     print "  type: 1"
     print "  mask: 15"
     print "  cnts: 1"
-    print "  posx: " ((x[i] - xmin) / (xmax - xmin))
+    print "  posx: " ((x[i] - xmin) / (xmax - xmin) + 1.25)
     print "  posy: " ((y[i] - ymin) / (ymax - ymin))
     print "  posz: " ((z[i] - zmin) / (zmax - zmin))
-    print "  size: 0.025"
-    print "  colr: 4294967295"
+    print "  size: 0.020"
+    print "  colr: " (4278204415 - 16776960 * int(200 * (c[i] - cmin) / (cmax - cmin)))
     print "  text: \"Run " i "\""
     print "}"
   }
