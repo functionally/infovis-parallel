@@ -16,6 +16,8 @@ namespace Infovis {
 
     public static bool enableTooltips = false;
 
+    public static bool useBoxes = true;
+
     public GameObject obj = null;
 
     public float size = 0;
@@ -176,7 +178,7 @@ namespace Infovis {
         Debug.Assert(geometry.Posz.Count == n, "Number of z positions must match count: " + obj.name);
 
         for (int i = 0; i < n; ++i) {
-          GameObject point = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+          GameObject point = GameObject.CreatePrimitive(useBoxes ? PrimitiveType.Cube : PrimitiveType.Sphere);
 //        AddTrigger(point); // FIXME: Why isn't this necessary?
           point.transform.parent = obj.transform;
           point.transform.localPosition = new Vector3((float) geometry.Posx[i], (float) geometry.Posy[i], (float) geometry.Posz[i]);
@@ -226,7 +228,7 @@ namespace Infovis {
             continue;
           }
 
-          GameObject line = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+          GameObject line = GameObject.CreatePrimitive(useBoxes ? PrimitiveType.Cube : PrimitiveType.Cylinder);
 //        AddTrigger(line); // FIXME: Why isn't this necessary?
           line.transform.parent = obj.transform;
 
@@ -242,7 +244,7 @@ namespace Infovis {
             line.transform.localRotation = Quaternion.LookRotation(displacement);
             line.transform.Rotate(90, 0, 0);
           }
-          line.transform.localScale = new Vector3(1, displacement.magnitude / 2, 1);
+          line.transform.localScale = new Vector3(1, displacement.magnitude / (useBoxes ? 1 : 2), 1);
 
         }
 
