@@ -21,6 +21,8 @@ namespace Infovis {
 
     public bool enableTooltips = false;
 
+    public bool useBoxes = true;
+
     void Start() {
 
       server = new WebSocketServer(serviceAddress);
@@ -34,6 +36,7 @@ namespace Infovis {
 
       Element.enableSelection = enableSelection;
       Element.enableTooltips = enableTooltips;
+      Element.useBoxes = useBoxes;
 
     }
 
