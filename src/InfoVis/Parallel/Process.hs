@@ -103,8 +103,8 @@ multiplexerProcess control content displayerPids frameDebug Configuration{..} =
             elapsed <- (+ negate f0) <$> currentHalfFrame
             if C.dirty changes' && elapsed > remaining
               then do
-                     frameDebug DebugMessage ["MX SE 1", "DISPLAY"]
-                     mapM_ (`send` force changes') displayerPids
+--                   frameDebug DebugMessage ["MX SE 1", "DISPLAY"]
+--                   mapM_ (`send` force changes') displayerPids
                      when synchronizeDisplays
                        $ do
                           maybeControl <- receiveChanTimeout' frameDebug control "MX RC 2" 10
@@ -128,7 +128,7 @@ displayerProcess (configuration, masterSend, displayIndex) =
           Just AdvancedSettings{..} = advanced configuration
         readyVar <- liftIO newEmptyTMVarIO
         changesVar <- liftIO $ newTVarIO def
-        void . liftIO . forkOS $ displayer configuration displayIndex changesVar readyVar
+--      void . liftIO . forkOS $ displayer configuration displayIndex changesVar readyVar
         forever
           $ do
             when synchronizeDisplays
@@ -181,8 +181,8 @@ soloMain configuration [] =
       $ enableTrace =<< spawnLocal systemLoggerTracer
     frameDebug <- makeDebugger $ advanced configuration
     (masterSend, masterReceive) <- newChan
-    displayerPid <- fst <$> spawnLocalMonitor (displayerProcess (configuration, masterSend, 0))
-    commonMain masterReceive [displayerPid] frameDebug configuration
+--  displayerPid <- fst <$> spawnLocalMonitor (displayerProcess (configuration, masterSend, 0))
+    commonMain masterReceive [ {-displayerPid-} ] frameDebug configuration
 soloMain _ (_ : _) = error "Some peers specified."
 
     
@@ -192,15 +192,15 @@ commonMain masterReceive displayerPids frameDebug configuration =
     do
       (multiplexerSend, multiplexerReceive) <- newChan
       (syncSend       , syncReceive       ) <- newChan
-      (selecterSend   , selecterReceive   ) <- newChan
+--    (selecterSend   , selecterReceive   ) <- newChan
       mapM_ (spawnLocalMonitor . flip ($ frameDebug) configuration)
         [
            multiplexerProcess syncReceive     multiplexerReceive displayerPids
-        ,  provider           selecterSend    multiplexerSend
-        ,  selecter           selecterReceive multiplexerSend
+--      ,  provider           selecterSend    multiplexerSend
+--      ,  selecter           selecterReceive multiplexerSend
         ,  trackPov           multiplexerSend
-        ,  trackRelocation    selecterSend
-        ,  trackSelection     selecterSend
+--      ,  trackRelocation    selecterSend
+--      ,  trackSelection     selecterSend
         ]
       let
         loop counter =
@@ -222,4 +222,5 @@ commonMain masterReceive displayerPids frameDebug configuration =
                                                              frameDebug DebugInfo ["Process notification.", show pid, show reason]
                                                              return counter
               ]
+      () <- expect
       loop 1

@@ -1,0 +1,44 @@
+dataset:
+  datasetIdentifier: bsm-learning-study-2.tsv
+  maxRecords       : 20
+  variables:
+  - variableAlias: A. Annual Production
+    variableName: A. Annual Production
+    lowerBound: 0
+    upperBound: 18344584891.3
+  - variableAlias: A. Cumulative Subsidies
+    variableName: A. Cumulative Subsidies
+    lowerBound: 0
+    upperBound: 14518705133.729
+  - variableAlias: A. Progress Ratio
+    variableName: A. Progress Ratio
+    lowerBound: 0.6
+    upperBound: 0.95
+  - variableAlias: B. Annual Production
+    variableName: B. Annual Production
+    lowerBound: 0
+    upperBound: 12945736336.8
+  - variableAlias: B. Cumulative Subsidies
+    variableName: B. Cumulative Subsidies
+    lowerBound: 157617041.451
+    upperBound: 9069378091.411
+  - variableAlias: B. Progress Ratio
+    variableName: B. Progress Ratio
+    lowerBound: 0.6
+    upperBound: 0.95
+  - variableAlias: Run
+    variableName: Run
+    lowerBound: 200
+    upperBound: 640
+  - variableAlias: Total Annual Production
+    variableName: Total Annual Production
+    lowerBound: 0
+    upperBound: 18361822286.7525
+  - variableAlias: Total Cumulative Subsidies
+    variableName: Total Cumulative Subsidies
+    lowerBound: 540718813.419
+    upperBound: 16260383897.3
+  - variableAlias: Year
+    variableName: Year
+    lowerBound: 2015
+    upperBound: 2030

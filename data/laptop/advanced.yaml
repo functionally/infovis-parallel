@@ -1,9 +1,9 @@
 advanced              :
   debugTiming         : false
-  debugMessages       : false
+  debugMessages       : true
   debugDisplay        : false
   debugOpenGL         : false
-  trace               : false
+  trace               : true
   synchronizeDisplays : false
   useIdleLoop         : true
   updateDelay         : 2
